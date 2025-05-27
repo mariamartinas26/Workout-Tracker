@@ -1,6 +1,7 @@
 package com.marecca.workoutTracker.entity;
 
 import com.marecca.workoutTracker.entity.enums.WorkoutStatusType;
+import com.marecca.workoutTracker.repository.WorkoutPlanRepository;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -10,12 +11,16 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 
 @Entity
 @Table(name = "scheduled_workouts")
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ScheduledWorkout {
 
     @Id
@@ -29,7 +34,7 @@ public class ScheduledWorkout {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workout_plan_id")
-    private WorkoutPlan workoutPlan;
+    private WorkoutPlan workoutPlan;  // Referință corectă la entitatea WorkoutPlan
 
     @Column(name = "scheduled_date", nullable = false)
     private LocalDate scheduledDate;
@@ -83,5 +88,21 @@ public class ScheduledWorkout {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Metodă helper pentru adăugarea unui log de exercițiu
+     */
+    public void addExerciseLog(WorkoutExerciseLog log) {
+        exerciseLogs.add(log);
+        log.setScheduledWorkout(this);
+    }
+
+    /**
+     * Metodă helper pentru eliminarea unui log de exercițiu
+     */
+    public void removeExerciseLog(WorkoutExerciseLog log) {
+        exerciseLogs.remove(log);
+        log.setScheduledWorkout(null);
     }
 }

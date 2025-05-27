@@ -3,15 +3,23 @@ package com.marecca.workoutTracker.entity;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Entitate WorkoutExerciseLog corespunzătoare tabelului 'workout_exercise_logs' din baza de date
+ */
 @Entity
 @Table(name = "workout_exercise_logs")
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class WorkoutExerciseLog {
 
     @Id

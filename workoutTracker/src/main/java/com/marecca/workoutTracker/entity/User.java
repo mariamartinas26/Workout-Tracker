@@ -1,9 +1,8 @@
 package com.marecca.workoutTracker.entity;
+
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
+import lombok.NoArgsConstructor;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -11,10 +10,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
 public class User {
 
     @Id
@@ -47,26 +47,31 @@ public class User {
     private BigDecimal weightKg;
 
     @Column(name = "fitness_level", length = 20)
-    private String fitnessLevel;
+    private String fitnessLevel = "BEGINNER";
 
     @Column(name = "is_active")
     private Boolean isActive = true;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(name = "last_login")
-    private LocalDateTime lastLogin;
-
-    // Relații
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<WorkoutPlan> workoutPlans = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<ScheduledWorkout> scheduledWorkouts = new ArrayList<>();
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

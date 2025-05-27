@@ -1,20 +1,29 @@
 package com.marecca.workoutTracker.entity;
 
+
 import com.marecca.workoutTracker.entity.enums.ExerciseCategoryType;
 import com.marecca.workoutTracker.entity.enums.MuscleGroupType;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@Setter
+/**
+ * Entitate Exercise corespunzătoare tabelului 'exercises' din baza de date
+ */
 @Entity
 @Table(name = "exercises")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Exercise {
 
     @Id
@@ -36,9 +45,16 @@ public class Exercise {
     @Column(name = "primary_muscle_group", nullable = false)
     private MuscleGroupType primaryMuscleGroup;
 
-    // PostgreSQL are un tip array pentru coloane, JPA va gestiona acest lucru
-    @Column(name = "secondary_muscle_groups")
-    private MuscleGroupType[] secondaryMuscleGroups;
+    /**
+     * Acest câmp necesită suport special pentru array-uri PostgreSQL
+     * Folosim @Convert cu un convertor personalizat sau o bibliotecă precum Hibernate Types
+     */
+    @ElementCollection(targetClass = MuscleGroupType.class)
+    @CollectionTable(name = "exercise_secondary_muscles", joinColumns = @JoinColumn(name = "exercise_id"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "muscle_group")
+    private List<MuscleGroupType> secondaryMuscleGroups;
+
 
     @Column(name = "equipment_needed", length = 200)
     private String equipmentNeeded;
@@ -49,18 +65,8 @@ public class Exercise {
     @Column(name = "instructions", columnDefinition = "TEXT")
     private String instructions;
 
-    @Column(name = "safety_tips", columnDefinition = "TEXT")
-    private String safetyTips;
-
-    @Column(name = "video_url", length = 500)
-    private String videoUrl;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
-
-    @Column(name = "is_active")
-    private Boolean isActive = true;
 
     // Relații
     @OneToMany(mappedBy = "exercise")
@@ -68,4 +74,9 @@ public class Exercise {
 
     @OneToMany(mappedBy = "exercise")
     private List<WorkoutExerciseLog> workoutExerciseLogs = new ArrayList<>();
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
 }

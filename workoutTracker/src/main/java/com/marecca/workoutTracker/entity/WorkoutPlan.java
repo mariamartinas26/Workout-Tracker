@@ -1,19 +1,29 @@
 package com.marecca.workoutTracker.entity;
 
+import com.marecca.workoutTracker.repository.WorkoutPlanRepository;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@Setter
+
+
+/**
+ * Entitate WorkoutPlan corespunzătoare tabelului 'workout_plans' din baza de date
+ */
 @Entity
 @Table(name = "workout_plans")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class WorkoutPlan {
 
     @Id
@@ -43,17 +53,9 @@ public class WorkoutPlan {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
-    @Column(name = "is_template")
-    private Boolean isTemplate = false;
-
-    @Column(name = "is_active")
-    private Boolean isActive = true;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
@@ -63,4 +65,39 @@ public class WorkoutPlan {
 
     @OneToMany(mappedBy = "workoutPlan")
     private List<ScheduledWorkout> scheduledWorkouts = new ArrayList<>();
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Metodă helper pentru adăugarea unui exercițiu la plan
+     */
+    public void addExerciseDetail(WorkoutExerciseDetail detail) {
+        exerciseDetails.add(detail);
+        detail.setWorkoutPlan(this);
+    }
+
+    /**
+     * Metodă helper pentru eliminarea unui exercițiu din plan
+     */
+    public void removeExerciseDetail(WorkoutExerciseDetail detail) {
+        exerciseDetails.remove(detail);
+        detail.setWorkoutPlan(null);
+    }
+
+    /**
+     * Metodă helper pentru adăugarea unei programări de workout
+     */
+    public void addScheduledWorkout(ScheduledWorkout scheduledWorkout) {
+        scheduledWorkouts.add(scheduledWorkout);
+        scheduledWorkout.setWorkoutPlan(this);  // Folosește this (WorkoutPlan), nu (WorkoutPlanRepository) this
+    }
 }

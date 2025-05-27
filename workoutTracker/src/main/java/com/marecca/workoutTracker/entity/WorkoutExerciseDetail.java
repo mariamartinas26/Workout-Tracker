@@ -6,12 +6,16 @@ import lombok.NoArgsConstructor;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 
 @Entity
 @Table(name = "workout_exercise_details")
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class WorkoutExerciseDetail {
 
     @Id
@@ -21,7 +25,7 @@ public class WorkoutExerciseDetail {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workout_plan_id", nullable = false)
-    private WorkoutPlan workoutPlan;
+    private WorkoutPlan workoutPlan;  // Referință corectă la entitatea WorkoutPlan
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exercise_id", nullable = false)
