@@ -1,6 +1,7 @@
+// src/components/Register.js - Updated cu callback pentru Complete Profile
 import React, { useState } from 'react';
 
-const Register = ({ onSwitchToLogin }) => {
+const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -85,8 +86,15 @@ const Register = ({ onSwitchToLogin }) => {
             if (response.ok) {
                 const data = await response.json();
                 console.log('Registration successful:', data);
-                alert('Account created successfully! You can now sign in.');
-                onSwitchToLogin();
+
+                // Apelează callback-ul cu token-ul pentru a naviga către complete profile
+                if (onRegisterSuccess && data.token) {
+                    onRegisterSuccess(data.token);
+                } else {
+                    // Fallback dacă nu avem callback
+                    alert('Account created successfully! Please complete your profile.');
+                    onSwitchToLogin();
+                }
             } else {
                 const errorData = await response.json();
                 setErrors({ general: errorData.message || 'Registration failed' });

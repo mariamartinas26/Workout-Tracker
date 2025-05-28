@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Homepage from './components/Homepage';
 import Login from './components/Login';
 import Register from './components/Register';
+import CompleteProfile from './components/CompleteProfile';
 
 const App = () => {
-    const [currentView, setCurrentView] = useState('homepage'); // 'homepage', 'login' or 'register'
+    const [currentView, setCurrentView] = useState('homepage'); // 'homepage', 'login', 'register', 'complete-profile'
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState(null);
+    const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false);
 
     // Check if user is already authenticated on app load
     useEffect(() => {
@@ -14,10 +16,28 @@ const App = () => {
         const userData = localStorage.getItem('userData');
 
         if (isAuth === 'true' && userData) {
+            const parsedUser = JSON.parse(userData);
             setIsAuthenticated(true);
-            setUser(JSON.parse(userData));
+            setUser(parsedUser);
+
+            // Check if profile needs completion
+            checkProfileCompletion(parsedUser);
         }
     }, []);
+
+    // Check if user profile needs completion
+    const checkProfileCompletion = (userData) => {
+        // If any of these fields are missing, show profile completion
+        const hasIncompleteProfile = !userData.dateOfBirth ||
+            !userData.heightCm ||
+            !userData.weightKg ||
+            !userData.fitnessLevel;
+
+        if (hasIncompleteProfile) {
+            setNeedsProfileCompletion(true);
+            setCurrentView('complete-profile');
+        }
+    };
 
     const handleSwitchToLogin = () => {
         setCurrentView('login');
@@ -34,6 +54,42 @@ const App = () => {
     const handleLoginSuccess = (data) => {
         setIsAuthenticated(true);
         setUser(data);
+
+        // Store user data in localStorage
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userData', JSON.stringify(data));
+
+        // Check if profile needs completion
+        checkProfileCompletion(data);
+    };
+
+    const handleRegistrationSuccess = (data) => {
+        setIsAuthenticated(true);
+        setUser(data);
+
+        // Store user data in localStorage
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userData', JSON.stringify(data));
+
+        // After registration, always show profile completion
+        setNeedsProfileCompletion(true);
+        setCurrentView('complete-profile');
+    };
+
+    const handleProfileComplete = (updatedUser) => {
+        // Update user data with profile information
+        setUser(updatedUser);
+        localStorage.setItem('userData', JSON.stringify(updatedUser));
+
+        // Profile is now complete
+        setNeedsProfileCompletion(false);
+        setCurrentView('dashboard');
+    };
+
+    const handleSkipProfile = () => {
+        // User chose to skip profile completion
+        setNeedsProfileCompletion(false);
+        setCurrentView('dashboard');
     };
 
     const handleLogout = () => {
@@ -41,11 +97,23 @@ const App = () => {
         localStorage.removeItem('userData');
         setIsAuthenticated(false);
         setUser(null);
+        setNeedsProfileCompletion(false);
         setCurrentView('homepage');
     };
 
-    // If user is authenticated, show dashboard
-    if (isAuthenticated) {
+    // Show profile completion if needed
+    if (isAuthenticated && needsProfileCompletion && currentView === 'complete-profile') {
+        return (
+            <CompleteProfile
+                user={user}
+                onProfileComplete={handleProfileComplete}
+                onSkip={handleSkipProfile}
+            />
+        );
+    }
+
+    // If user is authenticated and profile is complete, show dashboard
+    if (isAuthenticated && !needsProfileCompletion) {
         return (
             <div style={{
                 minHeight: '100vh',
@@ -134,32 +202,63 @@ const App = () => {
                                 )}
                             </div>
                         </div>
-                        <button
-                            onClick={handleLogout}
-                            style={{
-                                background: 'linear-gradient(135deg, #e53e3e, #c53030)',
-                                color: 'white',
-                                border: 'none',
-                                padding: '12px 24px',
-                                borderRadius: '10px',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                boxShadow: '0 4px 16px rgba(229, 62, 62, 0.3)',
-                                letterSpacing: '0.025em'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.target.style.transform = 'translateY(-2px)';
-                                e.target.style.boxShadow = '0 6px 20px rgba(229, 62, 62, 0.4)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.transform = 'translateY(0)';
-                                e.target.style.boxShadow = '0 4px 16px rgba(229, 62, 62, 0.3)';
-                            }}
-                        >
-                            Sign Out
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <button
+                                onClick={() => {
+                                    setNeedsProfileCompletion(true);
+                                    setCurrentView('complete-profile');
+                                }}
+                                style={{
+                                    background: 'linear-gradient(135deg, #38b2ac, #319795)',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '12px 20px',
+                                    borderRadius: '10px',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    boxShadow: '0 4px 16px rgba(56, 178, 172, 0.3)',
+                                    letterSpacing: '0.025em'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.target.style.transform = 'translateY(-2px)';
+                                    e.target.style.boxShadow = '0 6px 20px rgba(56, 178, 172, 0.4)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.transform = 'translateY(0)';
+                                    e.target.style.boxShadow = '0 4px 16px rgba(56, 178, 172, 0.3)';
+                                }}
+                            >
+                                Edit Profile
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                style={{
+                                    background: 'linear-gradient(135deg, #e53e3e, #c53030)',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '12px 24px',
+                                    borderRadius: '10px',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    boxShadow: '0 4px 16px rgba(229, 62, 62, 0.3)',
+                                    letterSpacing: '0.025em'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.target.style.transform = 'translateY(-2px)';
+                                    e.target.style.boxShadow = '0 6px 20px rgba(229, 62, 62, 0.4)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.transform = 'translateY(0)';
+                                    e.target.style.boxShadow = '0 4px 16px rgba(229, 62, 62, 0.3)';
+                                }}
+                            >
+                                Sign Out
+                            </button>
+                        </div>
                     </div>
 
                     {/* Dashboard Content */}
@@ -223,6 +322,119 @@ const App = () => {
                         }}>
                             Your personal fitness companion to track workouts, monitor progress, and achieve your goals.
                         </p>
+
+                        {/* User Profile Summary */}
+                        {user && (user.dateOfBirth || user.heightCm || user.weightKg || user.fitnessLevel) && (
+                            <div style={{
+                                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.05))',
+                                borderRadius: '16px',
+                                padding: '24px',
+                                marginBottom: '40px',
+                                border: '1px solid rgba(102, 126, 234, 0.1)'
+                            }}>
+                                <h3 style={{
+                                    color: '#1a202c',
+                                    fontSize: '18px',
+                                    fontWeight: '700',
+                                    marginBottom: '16px',
+                                    letterSpacing: '-0.25px'
+                                }}>
+                                    Your Profile
+                                </h3>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                                    gap: '16px',
+                                    textAlign: 'center'
+                                }}>
+                                    {user.dateOfBirth && (
+                                        <div>
+                                            <div style={{
+                                                color: '#667eea',
+                                                fontSize: '20px',
+                                                fontWeight: '800',
+                                                marginBottom: '4px'
+                                            }}>
+                                                {Math.floor((new Date() - new Date(user.dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000))}
+                                            </div>
+                                            <div style={{
+                                                color: '#718096',
+                                                fontSize: '12px',
+                                                fontWeight: '600',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px'
+                                            }}>
+                                                Years Old
+                                            </div>
+                                        </div>
+                                    )}
+                                    {user.heightCm && (
+                                        <div>
+                                            <div style={{
+                                                color: '#667eea',
+                                                fontSize: '20px',
+                                                fontWeight: '800',
+                                                marginBottom: '4px'
+                                            }}>
+                                                {user.heightCm}cm
+                                            </div>
+                                            <div style={{
+                                                color: '#718096',
+                                                fontSize: '12px',
+                                                fontWeight: '600',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px'
+                                            }}>
+                                                Height
+                                            </div>
+                                        </div>
+                                    )}
+                                    {user.weightKg && (
+                                        <div>
+                                            <div style={{
+                                                color: '#667eea',
+                                                fontSize: '20px',
+                                                fontWeight: '800',
+                                                marginBottom: '4px'
+                                            }}>
+                                                {user.weightKg}kg
+                                            </div>
+                                            <div style={{
+                                                color: '#718096',
+                                                fontSize: '12px',
+                                                fontWeight: '600',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px'
+                                            }}>
+                                                Weight
+                                            </div>
+                                        </div>
+                                    )}
+                                    {user.fitnessLevel && (
+                                        <div>
+                                            <div style={{
+                                                color: '#667eea',
+                                                fontSize: '16px',
+                                                fontWeight: '800',
+                                                marginBottom: '4px',
+                                                textTransform: 'capitalize'
+                                            }}>
+                                                {user.fitnessLevel.toLowerCase()}
+                                            </div>
+                                            <div style={{
+                                                color: '#718096',
+                                                fontSize: '12px',
+                                                fontWeight: '600',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px'
+                                            }}>
+                                                Fitness Level
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         <div style={{
                             display: 'grid',
@@ -388,11 +600,11 @@ const App = () => {
 
                 <style>
                     {`
-            @keyframes float {
-              0%, 100% { transform: translateY(0px); }
-              50% { transform: translateY(-20px); }
-            }
-          `}
+                        @keyframes float {
+                            0%, 100% { transform: translateY(0px); }
+                            50% { transform: translateY(-20px); }
+                        }
+                    `}
                 </style>
             </div>
         );
@@ -414,6 +626,7 @@ const App = () => {
             ) : (
                 <Register
                     onSwitchToLogin={handleSwitchToLogin}
+                    onRegistrationSuccess={handleRegistrationSuccess}
                 />
             )}
         </div>

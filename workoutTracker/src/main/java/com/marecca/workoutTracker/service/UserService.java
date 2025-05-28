@@ -38,7 +38,6 @@ public class UserService {
         validateUniqueEmail(user.getEmail());
 
         // Criptează parola
-        user.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
         //user.setActive(true);
@@ -131,7 +130,7 @@ public class UserService {
         log.info("Activating user with ID: {}", userId);
 
         User user = findUserById(userId);
-       // user.setActive(true);
+        // user.setActive(true);
         user.setUpdatedAt(LocalDateTime.now());
 
         userRepository.save(user);
@@ -193,11 +192,7 @@ public class UserService {
 
         User user = findUserById(userId);
 
-        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
-            throw new IllegalArgumentException("Parola actuală este incorectă");
-        }
 
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setUpdatedAt(LocalDateTime.now());
 
         userRepository.save(user);
@@ -213,7 +208,7 @@ public class UserService {
         log.info("Resetting password for user ID: {}", userId);
 
         User user = findUserById(userId);
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
+
         user.setUpdatedAt(LocalDateTime.now());
 
         userRepository.save(user);
