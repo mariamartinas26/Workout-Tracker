@@ -102,12 +102,14 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             "WHERE sw.user.userId = :userId " +
             "AND sw.scheduledDate = :scheduledDate " +
             "AND (:scheduledTime IS NULL OR sw.scheduledTime = :scheduledTime) " +
-            "AND sw.status IN (com.marecca.workoutTracker.entity.enums.WorkoutStatusType.PLANNED, " +
-            "com.marecca.workoutTracker.entity.enums.WorkoutStatusType.IN_PROGRESS)")
+            "AND sw.status IN :statuses")
     boolean hasWorkoutScheduledAt(
             @Param("userId") Long userId,
             @Param("scheduledDate") LocalDate scheduledDate,
-            @Param("scheduledTime") LocalTime scheduledTime);
+            @Param("scheduledTime") LocalTime scheduledTime,
+            @Param("statuses") List<WorkoutStatusType> statuses // <-- ADD THIS PARAMETER
+    );
+
 
     /**
      * Varianta 4: Verificare dacă workout plan aparține utilizatorului

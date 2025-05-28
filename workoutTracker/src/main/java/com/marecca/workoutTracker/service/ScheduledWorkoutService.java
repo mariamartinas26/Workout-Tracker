@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -91,7 +92,11 @@ public class ScheduledWorkoutService {
             throw new IllegalArgumentException("Planul de workout nu aparține utilizatorului specificat");
         }
 
-        if (scheduledWorkoutRepository.hasWorkoutScheduledAt(userId, scheduledDate, scheduledTime)) {
+        // Define the list of statuses you want to check against
+        List<WorkoutStatusType> activeStatuses = Arrays.asList(WorkoutStatusType.PLANNED, WorkoutStatusType.IN_PROGRESS);
+
+        // Pass the list to the repository method
+        if (scheduledWorkoutRepository.hasWorkoutScheduledAt(userId, scheduledDate, scheduledTime, activeStatuses)) {
             throw new IllegalStateException(
                     String.format("Utilizatorul are deja un workout programat pe %s la %s",
                             scheduledDate, scheduledTime != null ? scheduledTime : "orice oră"));
@@ -113,7 +118,11 @@ public class ScheduledWorkoutService {
      */
     @Transactional(readOnly = true)
     public boolean canScheduleWorkoutAt(Long userId, LocalDate scheduledDate, LocalTime scheduledTime) {
-        return !scheduledWorkoutRepository.hasWorkoutScheduledAt(userId, scheduledDate, scheduledTime);
+        // Define the list of statuses you want to check against
+        List<WorkoutStatusType> activeStatuses = Arrays.asList(WorkoutStatusType.PLANNED, WorkoutStatusType.IN_PROGRESS);
+
+        // Pass the list to the repository method
+        return !scheduledWorkoutRepository.hasWorkoutScheduledAt(userId, scheduledDate, scheduledTime, activeStatuses);
     }
 
     /**

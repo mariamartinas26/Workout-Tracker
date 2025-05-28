@@ -68,12 +68,12 @@ public class ScheduledWorkoutController {
 
     /**
      * Găsește toate workout-urile pentru un utilizator
-
+*/
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<ScheduledWorkout>> getUserWorkouts(@PathVariable Long userId) {
-        List<ScheduledWorkout> workouts = scheduledWorkoutService.findUserWorkouts(userId);
+        List<ScheduledWorkout> workouts = scheduledWorkoutService.findByUserId(userId);
         return ResponseEntity.ok(workouts);
-    }*/
+    }
 
     /**
      * Găsește workout-urile pentru o perioadă specificată

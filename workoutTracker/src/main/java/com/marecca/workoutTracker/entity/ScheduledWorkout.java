@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "scheduled_workouts")
@@ -42,8 +44,8 @@ public class ScheduledWorkout {
     @Column(name = "scheduled_time")
     private LocalTime scheduledTime;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM) // This tells Hibernate to treat it as a named DB enum type
+    @Column(name = "status", nullable = false) // Ensure this matches your DB schema (e.g., NOT NULL)
     private WorkoutStatusType status = WorkoutStatusType.PLANNED;
 
     @Column(name = "actual_start_time")

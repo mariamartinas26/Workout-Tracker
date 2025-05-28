@@ -297,7 +297,7 @@ END IF;
         SELECT 1 FROM scheduled_workouts
         WHERE user_id = p_user_id
           AND scheduled_date = p_scheduled_date
-          AND scheduled_time = p_scheduled_time
+          AND (p_scheduled_time IS NULL OR scheduled_time = p_scheduled_time)
           AND status IN ('PLANNED', 'IN_PROGRESS')
     ) THEN
         RAISE EXCEPTION 'User already has a workout scheduled at % %',
