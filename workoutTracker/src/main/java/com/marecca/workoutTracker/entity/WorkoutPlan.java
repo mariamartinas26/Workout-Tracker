@@ -14,9 +14,7 @@ import java.util.List;
 
 
 
-/**
- * Entitate WorkoutPlan corespunzătoare tabelului 'workout_plans' din baza de date
- */
+
 @Entity
 @Table(name = "workout_plans")
 @Getter
@@ -59,7 +57,7 @@ public class WorkoutPlan {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Relații
+
     @OneToMany(mappedBy = "workoutPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<WorkoutExerciseDetail> exerciseDetails = new ArrayList<>();
 
@@ -77,27 +75,18 @@ public class WorkoutPlan {
         this.updatedAt = LocalDateTime.now();
     }
 
-    /**
-     * Metodă helper pentru adăugarea unui exercițiu la plan
-     */
     public void addExerciseDetail(WorkoutExerciseDetail detail) {
         exerciseDetails.add(detail);
         detail.setWorkoutPlan(this);
     }
 
-    /**
-     * Metodă helper pentru eliminarea unui exercițiu din plan
-     */
     public void removeExerciseDetail(WorkoutExerciseDetail detail) {
         exerciseDetails.remove(detail);
         detail.setWorkoutPlan(null);
     }
 
-    /**
-     * Metodă helper pentru adăugarea unei programări de workout
-     */
     public void addScheduledWorkout(ScheduledWorkout scheduledWorkout) {
         scheduledWorkouts.add(scheduledWorkout);
-        scheduledWorkout.setWorkoutPlan(this);  // Folosește this (WorkoutPlan), nu (WorkoutPlanRepository) this
+        scheduledWorkout.setWorkoutPlan(this);
     }
 }

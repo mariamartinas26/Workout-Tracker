@@ -10,9 +10,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Entitate WorkoutExerciseLog corespunzătoare tabelului 'workout_exercise_logs' din baza de date
- */
+
 @Entity
 @Table(name = "workout_exercise_logs")
 @Getter

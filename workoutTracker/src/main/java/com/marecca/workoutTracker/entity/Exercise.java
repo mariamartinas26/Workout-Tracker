@@ -1,6 +1,5 @@
 package com.marecca.workoutTracker.entity;
 
-
 import com.marecca.workoutTracker.entity.enums.ExerciseCategoryType;
 import com.marecca.workoutTracker.entity.enums.MuscleGroupType;
 import lombok.Getter;
@@ -14,9 +13,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Entitate Exercise corespunzătoare tabelului 'exercises' din baza de date
- */
 @Entity
 @Table(name = "exercises")
 @Getter
@@ -45,10 +41,7 @@ public class Exercise {
     @Column(name = "primary_muscle_group", nullable = false)
     private MuscleGroupType primaryMuscleGroup;
 
-    /**
-     * Acest câmp necesită suport special pentru array-uri PostgreSQL
-     * Folosim @Convert cu un convertor personalizat sau o bibliotecă precum Hibernate Types
-     */
+    //one-to-many relationship bewtween exercises and muscle groups
     @ElementCollection(targetClass = MuscleGroupType.class)
     @CollectionTable(name = "exercise_secondary_muscles", joinColumns = @JoinColumn(name = "exercise_id"))
     @Enumerated(EnumType.STRING)
@@ -68,7 +61,6 @@ public class Exercise {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    // Relații
     @OneToMany(mappedBy = "exercise")
     private List<WorkoutExerciseDetail> workoutExerciseDetails = new ArrayList<>();
 

@@ -58,6 +58,7 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    //one user can have many workout plans
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<WorkoutPlan> workoutPlans = new ArrayList<>();
 

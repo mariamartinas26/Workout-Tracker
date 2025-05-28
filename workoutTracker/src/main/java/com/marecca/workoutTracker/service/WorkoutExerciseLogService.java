@@ -78,7 +78,7 @@ public class WorkoutExerciseLogService {
     public List<WorkoutExerciseLog> findByScheduledWorkoutId(Long scheduledWorkoutId) {
         log.debug("Finding exercise logs for scheduled workout ID: {}", scheduledWorkoutId);
         validateScheduledWorkoutExists(scheduledWorkoutId);
-        return workoutExerciseLogRepository.findByScheduledWorkoutScheduledWorkoutIdOrderByExerciseOrder(scheduledWorkoutId);
+        return workoutExerciseLogRepository.findByScheduledWorkoutIdOrderByExerciseOrder(scheduledWorkoutId);
     }
 
     /**

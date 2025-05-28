@@ -25,7 +25,7 @@ public class WorkoutExerciseDetail {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workout_plan_id", nullable = false)
-    private WorkoutPlan workoutPlan;  // Referință corectă la entitatea WorkoutPlan
+    private WorkoutPlan workoutPlan;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exercise_id", nullable = false)

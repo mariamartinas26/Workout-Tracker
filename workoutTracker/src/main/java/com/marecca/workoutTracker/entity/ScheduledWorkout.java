@@ -34,7 +34,7 @@ public class ScheduledWorkout {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workout_plan_id")
-    private WorkoutPlan workoutPlan;  // Referință corectă la entitatea WorkoutPlan
+    private WorkoutPlan workoutPlan;
 
     @Column(name = "scheduled_date", nullable = false)
     private LocalDate scheduledDate;
@@ -90,17 +90,11 @@ public class ScheduledWorkout {
         this.updatedAt = LocalDateTime.now();
     }
 
-    /**
-     * Metodă helper pentru adăugarea unui log de exercițiu
-     */
     public void addExerciseLog(WorkoutExerciseLog log) {
         exerciseLogs.add(log);
         log.setScheduledWorkout(this);
     }
 
-    /**
-     * Metodă helper pentru eliminarea unui log de exercițiu
-     */
     public void removeExerciseLog(WorkoutExerciseLog log) {
         exerciseLogs.remove(log);
         log.setScheduledWorkout(null);
