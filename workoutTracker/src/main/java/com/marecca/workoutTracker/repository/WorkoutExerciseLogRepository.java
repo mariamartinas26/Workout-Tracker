@@ -16,7 +16,8 @@ import java.util.List;
 public interface WorkoutExerciseLogRepository extends JpaRepository<WorkoutExerciseLog, Long> {
 
 
-    List<WorkoutExerciseLog> findByScheduledWorkoutIdOrderByExerciseOrder(Long scheduledWorkoutId);
+    @Query("SELECT wel FROM WorkoutExerciseLog wel WHERE wel.scheduledWorkout.scheduledWorkoutId = :scheduledWorkoutId ORDER BY wel.exerciseOrder")
+    List<WorkoutExerciseLog> findByScheduledWorkoutIdOrderByExerciseOrder(@Param("scheduledWorkoutId") Long scheduledWorkoutId);
     List<WorkoutExerciseLog> findByExerciseExerciseId(Long exerciseId);
 
 

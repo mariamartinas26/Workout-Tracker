@@ -9,10 +9,16 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Entitate Exercise corespunzătoare tabelului 'exercises' din baza de date
+ */
 @Entity
 @Table(name = "exercises")
 @Getter
@@ -41,18 +47,21 @@ public class Exercise {
     @Column(name = "primary_muscle_group", nullable = false)
     private MuscleGroupType primaryMuscleGroup;
 
-    //one-to-many relationship bewtween exercises and muscle groups
-    @ElementCollection(targetClass = MuscleGroupType.class)
-    @CollectionTable(name = "exercise_secondary_muscles", joinColumns = @JoinColumn(name = "exercise_id"))
-    @Enumerated(EnumType.STRING)
-    @Column(name = "muscle_group")
-    private List<MuscleGroupType> secondaryMuscleGroups;
+    /**
+     * Câmpul pentru array-uri PostgreSQL
+     * Folosim @JdbcTypeCode pentru a specifica că este un array SQL
+     */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "secondary_muscle_groups", columnDefinition = "muscle_group_type[]")
+    @Builder.Default
+    private List<MuscleGroupType> secondaryMuscleGroups = new ArrayList<>();
 
-
+    // Schimbat din equipmentNeeded în equipment pentru consistență cu repository
     @Column(name = "equipment_needed", length = 200)
-    private String equipmentNeeded;
+    private String equipment;
 
     @Column(name = "difficulty_level")
+    @Builder.Default
     private Integer difficultyLevel = 1;
 
     @Column(name = "instructions", columnDefinition = "TEXT")
@@ -61,14 +70,36 @@ public class Exercise {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "exercise")
+
+
+    // Relații
+    @OneToMany(mappedBy = "exercise", fetch = FetchType.LAZY)
     private List<WorkoutExerciseDetail> workoutExerciseDetails = new ArrayList<>();
 
-    @OneToMany(mappedBy = "exercise")
+    @OneToMany(mappedBy = "exercise", fetch = FetchType.LAZY)
     private List<WorkoutExerciseLog> workoutExerciseLogs = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.secondaryMuscleGroups == null) {
+            this.secondaryMuscleGroups = new ArrayList<>();
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        if (this.secondaryMuscleGroups == null) {
+            this.secondaryMuscleGroups = new ArrayList<>();
+        }
+    }
+
+    // Metodă helper pentru a obține numele echipamentului (backward compatibility)
+    public String getEquipmentNeeded() {
+        return this.equipment;
+    }
+
+    public void setEquipmentNeeded(String equipment) {
+        this.equipment = equipment;
     }
 }
