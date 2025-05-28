@@ -22,7 +22,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/**").permitAll()  // Permite toate cererile către API
+                        .requestMatchers("/api/auth/**").permitAll()  // Permite toate cererile către API
                         .anyRequest().authenticated()
                 );
         return http.build();
