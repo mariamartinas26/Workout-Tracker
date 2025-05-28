@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Repository
@@ -69,4 +70,54 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
 
     List<ScheduledWorkout> findTop5ByUserUserIdAndStatusOrderByActualEndTimeDesc(
             Long userId, WorkoutStatusType status);
+
+    /**
+     * Varianta 1: Apelare directă a funcției PostgreSQL
+     * Folosește funcția schedule_workout creată în PostgreSQL
+     */
+    @Query(value = "SELECT schedule_workout(:userId, :workoutPlanId, :scheduledDate, :scheduledTime)",
+            nativeQuery = true)
+    Long scheduleWorkoutWithFunction(
+            @Param("userId") Long userId,
+            @Param("workoutPlanId") Long workoutPlanId,
+            @Param("scheduledDate") LocalDate scheduledDate,
+            @Param("scheduledTime") LocalTime scheduledTime);
+
+    /**
+     * Varianta 2: Apelare funcție cu parametru opțional pentru timp
+     * Pentru cazurile când scheduled_time este null
+     */
+    @Query(value = "SELECT schedule_workout(:userId, :workoutPlanId, :scheduledDate)",
+            nativeQuery = true)
+    Long scheduleWorkoutWithoutTime(
+            @Param("userId") Long userId,
+            @Param("workoutPlanId") Long workoutPlanId,
+            @Param("scheduledDate") LocalDate scheduledDate);
+
+    /**
+     * Varianta 3: Verificare dacă utilizatorul are deja workout programat
+     * (replicând logica din funcția PostgreSQL pentru validare suplimentară)
+     */
+    @Query("SELECT COUNT(sw) > 0 FROM ScheduledWorkout sw " +
+            "WHERE sw.user.userId = :userId " +
+            "AND sw.scheduledDate = :scheduledDate " +
+            "AND (:scheduledTime IS NULL OR sw.scheduledTime = :scheduledTime) " +
+            "AND sw.status IN (com.marecca.workoutTracker.entity.enums.WorkoutStatusType.PLANNED, " +
+            "com.marecca.workoutTracker.entity.enums.WorkoutStatusType.IN_PROGRESS)")
+    boolean hasWorkoutScheduledAt(
+            @Param("userId") Long userId,
+            @Param("scheduledDate") LocalDate scheduledDate,
+            @Param("scheduledTime") LocalTime scheduledTime);
+
+    /**
+     * Varianta 4: Verificare dacă workout plan aparține utilizatorului
+     * (pentru validare suplimentară în Java)
+     */
+    @Query("SELECT COUNT(wp) > 0 FROM WorkoutPlan wp " +
+            "WHERE wp.workoutPlanId = :workoutPlanId AND wp.user.userId = :userId")
+    boolean isWorkoutPlanOwnedByUser(
+            @Param("workoutPlanId") Long workoutPlanId,
+            @Param("userId") Long userId);
+
+
 }

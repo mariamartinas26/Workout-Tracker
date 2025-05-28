@@ -9,18 +9,20 @@ import com.marecca.workoutTracker.repository.UserRepository;
 import com.marecca.workoutTracker.repository.WorkoutPlanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
 /**
  * Service pentru gestionarea workout-urilor programate
  * Conține logica de business pentru operațiile cu workout-uri programate
+ * Integrează funcția PostgreSQL schedule_workout cu metodele existente
  */
 @Service
 @RequiredArgsConstructor
@@ -32,8 +34,104 @@ public class ScheduledWorkoutService {
     private final UserRepository userRepository;
     private final WorkoutPlanRepository workoutPlanRepository;
 
+
     /**
-     * Programează un workout nou
+     * Programează un workout folosind funcția PostgreSQL optimizată
+     *
+     * @param userId ID-ul utilizatorului
+     * @param workoutPlanId ID-ul planului de workout
+     * @param scheduledDate Data programată
+     * @param scheduledTime Ora programată (opțională)
+     * @return ID-ul workout-ului programat
+     * @throws RuntimeException dacă apar erori de validare sau de bază de date
+     */
+    @Transactional
+    public Long scheduleWorkoutWithFunction(Long userId, Long workoutPlanId,
+                                            LocalDate scheduledDate, LocalTime scheduledTime) {
+        log.info("Scheduling workout with PostgreSQL function for user {} with plan {} on {} at {}",
+                userId, workoutPlanId, scheduledDate, scheduledTime);
+
+        validateScheduleWorkoutInput(userId, workoutPlanId, scheduledDate);
+
+        try {
+            Long scheduledWorkoutId;
+
+            if (scheduledTime != null) {
+                scheduledWorkoutId = scheduledWorkoutRepository.scheduleWorkoutWithFunction(
+                        userId, workoutPlanId, scheduledDate, scheduledTime);
+            } else {
+                scheduledWorkoutId = scheduledWorkoutRepository.scheduleWorkoutWithoutTime(
+                        userId, workoutPlanId, scheduledDate);
+            }
+
+            log.info("Workout scheduled successfully with ID: {}", scheduledWorkoutId);
+            return scheduledWorkoutId;
+
+        } catch (DataAccessException e) {
+            log.error("Database error while scheduling workout: {}", e.getMessage());
+            String errorMessage = extractUserFriendlyError(e.getMessage());
+            throw new RuntimeException(errorMessage, e);
+        }
+    }
+
+    /**
+     * Programează workout cu validare suplimentară în Java
+     */
+    @Transactional
+    public Long scheduleWorkoutWithValidation(Long userId, Long workoutPlanId,
+                                              LocalDate scheduledDate, LocalTime scheduledTime) {
+        log.info("Scheduling workout with additional Java validation");
+
+        // Validare suplimentară în Java
+        if (!workoutPlanRepository.existsById(workoutPlanId)) {
+            throw new IllegalArgumentException("Planul de workout nu există");
+        }
+
+        if (!scheduledWorkoutRepository.isWorkoutPlanOwnedByUser(workoutPlanId, userId)) {
+            throw new IllegalArgumentException("Planul de workout nu aparține utilizatorului specificat");
+        }
+
+        if (scheduledWorkoutRepository.hasWorkoutScheduledAt(userId, scheduledDate, scheduledTime)) {
+            throw new IllegalStateException(
+                    String.format("Utilizatorul are deja un workout programat pe %s la %s",
+                            scheduledDate, scheduledTime != null ? scheduledTime : "orice oră"));
+        }
+
+        return scheduleWorkoutWithFunction(userId, workoutPlanId, scheduledDate, scheduledTime);
+    }
+
+    /**
+     * Programează workout doar pentru o dată (fără oră specificată)
+     */
+    @Transactional
+    public Long scheduleWorkoutForDate(Long userId, Long workoutPlanId, LocalDate scheduledDate) {
+        return scheduleWorkoutWithFunction(userId, workoutPlanId, scheduledDate, null);
+    }
+
+    /**
+     * Verifică dacă un utilizator poate programa un workout la o anumită dată/oră
+     */
+    @Transactional(readOnly = true)
+    public boolean canScheduleWorkoutAt(Long userId, LocalDate scheduledDate, LocalTime scheduledTime) {
+        return !scheduledWorkoutRepository.hasWorkoutScheduledAt(userId, scheduledDate, scheduledTime);
+    }
+
+    /**
+     * Statistici workout-uri pentru utilizator (folosind metode optimizate)
+     */
+    @Transactional(readOnly = true)
+    public WorkoutStatistics getUserWorkoutStatistics(Long userId) {
+        Long completedCount = scheduledWorkoutRepository.countCompletedWorkoutsForUser(userId);
+        Double averageDuration = scheduledWorkoutRepository.getAverageWorkoutDurationForUser(userId);
+
+        return WorkoutStatistics.builder()
+                .completedWorkouts(completedCount != null ? completedCount : 0L)
+                .averageDurationMinutes(averageDuration != null ? averageDuration : 0.0)
+                .build();
+    }
+
+    /**
+     * Programează un workout nou (metoda originală îmbunătățită)
      * @param scheduledWorkout obiectul ScheduledWorkout cu datele de intrare
      * @return workout-ul programat creat
      * @throws IllegalArgumentException dacă utilizatorul sau planul nu există
@@ -382,7 +480,25 @@ public class ScheduledWorkoutService {
         return workout.isPresent() && workout.get().getUser().getUserId().equals(userId);
     }
 
-    // Metode private pentru validare și utilități
+    // =============== METODE PRIVATE PENTRU VALIDARE ===============
+
+    private void validateScheduleWorkoutInput(Long userId, Long workoutPlanId, LocalDate scheduledDate) {
+        if (userId == null || userId <= 0) {
+            throw new IllegalArgumentException("ID-ul utilizatorului trebuie să fie pozitiv");
+        }
+
+        if (workoutPlanId == null || workoutPlanId <= 0) {
+            throw new IllegalArgumentException("ID-ul planului de workout trebuie să fie pozitiv");
+        }
+
+        if (scheduledDate == null) {
+            throw new IllegalArgumentException("Data programată este obligatorie");
+        }
+
+        if (scheduledDate.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Nu se pot programa workout-uri în trecut");
+        }
+    }
 
     private void validateScheduledWorkoutData(ScheduledWorkout workout) {
         if (workout.getUser() == null || workout.getUser().getUserId() == null) {
@@ -418,6 +534,19 @@ public class ScheduledWorkoutService {
         }
     }
 
+    private String extractUserFriendlyError(String sqlError) {
+        if (sqlError.contains("User with ID") && sqlError.contains("does not exist")) {
+            return "Utilizatorul specificat nu există";
+        }
+        if (sqlError.contains("Workout plan with ID") && sqlError.contains("does not exist")) {
+            return "Planul de workout specificat nu există sau nu aparține utilizatorului";
+        }
+        if (sqlError.contains("already has a workout scheduled")) {
+            return "Utilizatorul are deja un workout programat la această dată și oră";
+        }
+        return "Eroare la programarea workout-ului";
+    }
+
     private User findUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Utilizatorul nu a fost găsit cu ID-ul: " + userId));
@@ -443,5 +572,14 @@ public class ScheduledWorkoutService {
     private ScheduledWorkout findScheduledWorkoutById(Long scheduledWorkoutId) {
         return scheduledWorkoutRepository.findById(scheduledWorkoutId)
                 .orElseThrow(() -> new IllegalArgumentException("Workout-ul programat nu a fost găsit cu ID-ul: " + scheduledWorkoutId));
+    }
+
+
+
+    @lombok.Builder
+    @lombok.Data
+    public static class WorkoutStatistics {
+        private Long completedWorkouts;
+        private Double averageDurationMinutes;
     }
 }
