@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import Homepage from './components/Homepage';
 import Login from './components/Login';
 import Register from './components/Register';
 
 const App = () => {
-  const [currentView, setCurrentView] = useState('login'); // 'login' or 'register'
+  const [currentView, setCurrentView] = useState('homepage'); // 'homepage', 'login' or 'register'
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
 
@@ -26,6 +27,10 @@ const App = () => {
     setCurrentView('register');
   };
 
+  const handleSwitchToHomepage = () => {
+    setCurrentView('homepage');
+  };
+
   const handleLoginSuccess = (data) => {
     setIsAuthenticated(true);
     setUser(data);
@@ -36,7 +41,7 @@ const App = () => {
     localStorage.removeItem('userData');
     setIsAuthenticated(false);
     setUser(null);
-    setCurrentView('login');
+    setCurrentView('homepage');
   };
 
   // If user is authenticated, show dashboard
@@ -393,10 +398,15 @@ const App = () => {
     );
   }
 
-  // If not authenticated, show login/register forms
+  // If not authenticated, show homepage/login/register forms
   return (
       <div>
-        {currentView === 'login' ? (
+        {currentView === 'homepage' ? (
+            <Homepage
+                onLogin={handleSwitchToLogin}
+                onRegister={handleSwitchToRegister}
+            />
+        ) : currentView === 'login' ? (
             <Login
                 onSwitchToRegister={handleSwitchToRegister}
                 onLoginSuccess={handleLoginSuccess}
