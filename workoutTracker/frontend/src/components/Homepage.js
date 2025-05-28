@@ -4,7 +4,9 @@ const Homepage = ({ onLogin, onRegister }) => {
     return (
         <div style={{
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+            backgroundImage: `url('/backgroundHomepage.jpg')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
             color: 'white',
             fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
             position: 'relative',
@@ -92,50 +94,6 @@ const Homepage = ({ onLogin, onRegister }) => {
                     alignItems: 'center',
                     gap: '32px'
                 }}>
-                    <button style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#e2e8f0',
-                        fontSize: '16px',
-                        fontWeight: '500',
-                        cursor: 'pointer',
-                        transition: 'color 0.3s ease',
-                        fontFamily: 'inherit'
-                    }}
-                            onMouseEnter={(e) => e.target.style.color = '#ffffff'}
-                            onMouseLeave={(e) => e.target.style.color = '#e2e8f0'}>
-                        Learn More
-                    </button>
-
-                    <button style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#e2e8f0',
-                        fontSize: '16px',
-                        fontWeight: '500',
-                        cursor: 'pointer',
-                        transition: 'color 0.3s ease',
-                        fontFamily: 'inherit'
-                    }}
-                            onMouseEnter={(e) => e.target.style.color = '#ffffff'}
-                            onMouseLeave={(e) => e.target.style.color = '#e2e8f0'}>
-                        App Store
-                    </button>
-
-                    <button style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#e2e8f0',
-                        fontSize: '16px',
-                        fontWeight: '500',
-                        cursor: 'pointer',
-                        transition: 'color 0.3s ease',
-                        fontFamily: 'inherit'
-                    }}
-                            onMouseEnter={(e) => e.target.style.color = '#ffffff'}
-                            onMouseLeave={(e) => e.target.style.color = '#e2e8f0'}>
-                        Google Play
-                    </button>
                 </div>
             </nav>
 
