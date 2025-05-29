@@ -12,7 +12,7 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
     return (
         <div style={{
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
             padding: '20px',
             fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
         }}>
@@ -122,7 +122,8 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                         <button
                             onClick={onEditProfile}
                             style={{
-                                background: 'linear-gradient(135deg, #38b2ac, #319795)',
+                                background: 'linear-gradient(135deg, #1e3a8a, #1d4ed8)',
+                                boxShadow: '0 4px 16px rgba(30, 58, 138, 0.3)',
                                 color: 'white',
                                 border: 'none',
                                 padding: '12px 20px',
@@ -131,7 +132,6 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                 fontSize: '14px',
                                 fontWeight: '600',
                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                boxShadow: '0 4px 16px rgba(56, 178, 172, 0.3)',
                                 letterSpacing: '0.025em'
                             }}
                             onMouseEnter={(e) => {
@@ -249,7 +249,7 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                 {user.dateOfBirth && (
                                     <div>
                                         <div style={{
-                                            color: '#667eea',
+                                            color: '#000000',
                                             fontSize: '20px',
                                             fontWeight: '800',
                                             marginBottom: '4px'
@@ -270,7 +270,7 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                 {user.heightCm && (
                                     <div>
                                         <div style={{
-                                            color: '#667eea',
+                                            color: '#000000',
                                             fontSize: '20px',
                                             fontWeight: '800',
                                             marginBottom: '4px'
@@ -291,7 +291,7 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                 {user.weightKg && (
                                     <div>
                                         <div style={{
-                                            color: '#667eea',
+                                            color: '#000000',
                                             fontSize: '20px',
                                             fontWeight: '800',
                                             marginBottom: '4px'
@@ -312,7 +312,7 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                 {user.fitnessLevel && (
                                     <div>
                                         <div style={{
-                                            color: '#667eea',
+                                            color: '#000000',
                                             fontSize: '16px',
                                             fontWeight: '800',
                                             marginBottom: '4px',

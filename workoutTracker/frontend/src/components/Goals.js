@@ -134,7 +134,16 @@ const Goals = ({ user, onBack, onGoalSet }) => {
             fetchUserGoals();
         }
     }, [user?.id]);
-
+    useEffect(() => {
+        return () => {
+            // Cleanup function - reset state when component unmounts
+            setCurrentStep(1);
+            setShowGoalsList(false);
+            setSelectedGoal('');
+            setError('');
+            setSuccess('');
+        };
+    }, []);
     const fetchUserGoals = async () => {
         try {
             setLoading(true);
@@ -168,6 +177,16 @@ const Goals = ({ user, onBack, onGoalSet }) => {
         setSelectedGoal('');
         setError('');
         setSuccess('');
+    };
+    const handleBackToDashboard = () => {
+        // Reset toate state-urile la valorile inițiale
+        setCurrentStep(1);
+        setShowGoalsList(false);
+        setSelectedGoal('');
+        setError('');
+        setSuccess('');
+        // Apoi cheamă callback-ul pentru a merge înapoi la dashboard
+        onBack();
     };
 
     const calculateCalorieDeficit = (currentWeight, targetLoss, timeframeMonths) => {
@@ -342,7 +361,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
         return (
             <div style={{
                 minHeight: '100vh',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -659,7 +678,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
     const renderGoalsList = () => (
         <div style={{
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -673,25 +692,26 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                 boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
                 padding: '48px',
                 width: '100%',
-                maxWidth: '1000px',
+                maxWidth: '800px',
                 border: '1px solid rgba(255,255,255,0.2)',
                 position: 'relative'
             }}>
-                {/* Back button */}
                 <button
-                    onClick={onBack}
+                    onClick={handleBackToDashboard}
                     style={{
                         position: 'absolute',
                         top: '24px',
                         left: '24px',
-                        background: 'rgba(102, 126, 234, 0.1)',
-                        border: '1px solid rgba(102, 126, 234, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        backdropFilter:'blur(10px)',
+                        boxShadow: 'rgba(30, 58, 138, 0.2)',
+                        border: '2px solid rgba(30, 58, 138, 0.5)',
                         borderRadius: '12px',
                         padding: '12px 16px',
                         cursor: 'pointer',
                         fontSize: '14px',
                         fontWeight: '600',
-                        color: '#667eea',
+                        color: 'rgba(30, 58, 138, 0.5)',
                         transition: 'all 0.2s'
                     }}
                 >
@@ -710,14 +730,16 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                         position: 'absolute',
                         top: '24px',
                         right: '24px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                        border: 'none',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        backdropFilter:'blur(10px)',
+                        boxShadow: 'rgba(30, 58, 138, 0.2)',
+                        border: '2px solid rgba(30, 58, 138, 0.5)',
                         borderRadius: '12px',
                         padding: '12px 20px',
                         cursor: 'pointer',
                         fontSize: '14px',
                         fontWeight: '600',
-                        color: 'white',
+                        color: 'rgba(30, 58, 138, 0.5)',
                         transition: 'all 0.2s'
                     }}
                 >
@@ -725,7 +747,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                 </button>
 
                 {/* Header */}
-                <div style={{ textAlign: 'center', marginBottom: '48px', marginTop: '40px' }}>
+                <div style={{textAlign: 'center', marginBottom: '48px', marginTop: '40px'}}>
                     <div>
                         <img
                             src="/target.png"
@@ -748,10 +770,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                         fontWeight: '800',
                         marginBottom: '16px',
                         letterSpacing: '-0.5px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
                         backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent'
                     }}>
                         Your Goals
                     </h1>
@@ -799,7 +818,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
 
                 {/* Loading state */}
                 {loading && (
-                    <div style={{ textAlign: 'center', padding: '40px' }}>
+                    <div style={{textAlign: 'center', padding: '40px'}}>
                         <div style={{
                             width: '40px',
                             height: '40px',
@@ -809,13 +828,13 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                             animation: 'spin 1s linear infinite',
                             margin: '0 auto 16px'
                         }}></div>
-                        <p style={{ color: '#718096', fontSize: '16px' }}>Loading your goals...</p>
+                        <p style={{color: '#718096', fontSize: '16px'}}>Loading your goals...</p>
                     </div>
                 )}
 
                 {/* Goals list */}
                 {!loading && userGoals.length > 0 && (
-                    <div style={{ display: 'grid', gap: '24px' }}>
+                    <div style={{display: 'grid', gap: '24px'}}>
                         {userGoals.map((goal) => (
                             <div
                                 key={goal.goalId}
@@ -827,7 +846,12 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                                 }}
                             >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'flex-start',
+                                    marginBottom: '20px'
+                                }}>
                                     <div>
                                         <h3 style={{
                                             color: '#1a202c',
@@ -852,7 +876,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                             Goal ID: {goal.goalId}
                                         </p>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                    <div style={{display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap'}}>
                                         <span style={{
                                             background: goal.status === 'ACTIVE' ? 'linear-gradient(135deg, #43e97b, #38f9d7)' :
                                                 goal.status === 'COMPLETED' ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#cbd5e0',
@@ -903,43 +927,68 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                 </div>
 
                                 {/* Goal details */}
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                                    gap: '16px',
+                                    marginBottom: '20px'
+                                }}>
                                     {goal.targetWeightLoss && (
-                                        <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(240, 147, 251, 0.1)', borderRadius: '12px' }}>
-                                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#1a202c' }}>
+                                        <div style={{
+                                            textAlign: 'center',
+                                            padding: '16px',
+                                            background: 'rgba(240, 147, 251, 0.1)',
+                                            borderRadius: '12px'
+                                        }}>
+                                            <div style={{fontSize: '24px', fontWeight: '700', color: '#1a202c'}}>
                                                 {goal.targetWeightLoss} kg
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#718096', fontWeight: '500' }}>
+                                            <div style={{fontSize: '12px', color: '#718096', fontWeight: '500'}}>
                                                 Target Loss
                                             </div>
                                         </div>
                                     )}
                                     {goal.targetWeightGain && (
-                                        <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(79, 172, 254, 0.1)', borderRadius: '12px' }}>
-                                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#1a202c' }}>
+                                        <div style={{
+                                            textAlign: 'center',
+                                            padding: '16px',
+                                            background: 'rgba(79, 172, 254, 0.1)',
+                                            borderRadius: '12px'
+                                        }}>
+                                            <div style={{fontSize: '24px', fontWeight: '700', color: '#1a202c'}}>
                                                 {goal.targetWeightGain} kg
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#718096', fontWeight: '500' }}>
+                                            <div style={{fontSize: '12px', color: '#718096', fontWeight: '500'}}>
                                                 Target Gain
                                             </div>
                                         </div>
                                     )}
                                     {goal.currentWeight && (
-                                        <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(102, 126, 234, 0.1)', borderRadius: '12px' }}>
-                                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#1a202c' }}>
+                                        <div style={{
+                                            textAlign: 'center',
+                                            padding: '16px',
+                                            background: 'rgba(102, 126, 234, 0.1)',
+                                            borderRadius: '12px'
+                                        }}>
+                                            <div style={{fontSize: '24px', fontWeight: '700', color: '#1a202c'}}>
                                                 {goal.currentWeight} kg
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#718096', fontWeight: '500' }}>
+                                            <div style={{fontSize: '12px', color: '#718096', fontWeight: '500'}}>
                                                 Current Weight
                                             </div>
                                         </div>
                                     )}
                                     {goal.timeframeMonths && (
-                                        <div style={{ textAlign: 'center', padding: '16px', background: 'rgba(67, 233, 123, 0.1)', borderRadius: '12px' }}>
-                                            <div style={{ fontSize: '24px', fontWeight: '700', color: '#1a202c' }}>
+                                        <div style={{
+                                            textAlign: 'center',
+                                            padding: '16px',
+                                            background: 'rgba(67, 233, 123, 0.1)',
+                                            borderRadius: '12px'
+                                        }}>
+                                            <div style={{fontSize: '24px', fontWeight: '700', color: '#1a202c'}}>
                                                 {goal.timeframeMonths} months
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#718096', fontWeight: '500' }}>
+                                            <div style={{fontSize: '12px', color: '#718096', fontWeight: '500'}}>
                                                 Timeframe
                                             </div>
                                         </div>
@@ -962,43 +1011,75 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                         }}>
                                             📊 Calculated Plan
                                         </h4>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                                            gap: '16px'
+                                        }}>
                                             {goal.dailyCalorieDeficit && (
-                                                <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(245, 87, 108, 0.1)', borderRadius: '12px' }}>
-                                                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#e53e3e' }}>
+                                                <div style={{
+                                                    textAlign: 'center',
+                                                    padding: '12px',
+                                                    background: 'rgba(245, 87, 108, 0.1)',
+                                                    borderRadius: '12px'
+                                                }}>
+                                                    <div
+                                                        style={{fontSize: '20px', fontWeight: '700', color: '#e53e3e'}}>
                                                         -{goal.dailyCalorieDeficit}
                                                     </div>
-                                                    <div style={{ fontSize: '12px', color: '#718096', fontWeight: '500' }}>
+                                                    <div
+                                                        style={{fontSize: '12px', color: '#718096', fontWeight: '500'}}>
                                                         Daily Deficit (cal)
                                                     </div>
                                                 </div>
                                             )}
                                             {goal.dailyCalorieSurplus && (
-                                                <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(67, 233, 123, 0.1)', borderRadius: '12px' }}>
-                                                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#38a169' }}>
+                                                <div style={{
+                                                    textAlign: 'center',
+                                                    padding: '12px',
+                                                    background: 'rgba(67, 233, 123, 0.1)',
+                                                    borderRadius: '12px'
+                                                }}>
+                                                    <div
+                                                        style={{fontSize: '20px', fontWeight: '700', color: '#38a169'}}>
                                                         +{goal.dailyCalorieSurplus}
                                                     </div>
-                                                    <div style={{ fontSize: '12px', color: '#718096', fontWeight: '500' }}>
+                                                    <div
+                                                        style={{fontSize: '12px', color: '#718096', fontWeight: '500'}}>
                                                         Daily Surplus (cal)
                                                     </div>
                                                 </div>
                                             )}
                                             {goal.weeklyWeightChange && (
-                                                <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(102, 126, 234, 0.1)', borderRadius: '12px' }}>
-                                                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#667eea' }}>
+                                                <div style={{
+                                                    textAlign: 'center',
+                                                    padding: '12px',
+                                                    background: 'rgba(102, 126, 234, 0.1)',
+                                                    borderRadius: '12px'
+                                                }}>
+                                                    <div
+                                                        style={{fontSize: '20px', fontWeight: '700', color: '#667eea'}}>
                                                         {goal.weeklyWeightChange > 0 ? '+' : ''}{goal.weeklyWeightChange} kg
                                                     </div>
-                                                    <div style={{ fontSize: '12px', color: '#718096', fontWeight: '500' }}>
+                                                    <div
+                                                        style={{fontSize: '12px', color: '#718096', fontWeight: '500'}}>
                                                         Weekly Change
                                                     </div>
                                                 </div>
                                             )}
                                             {goal.targetWeight && (
-                                                <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(240, 147, 251, 0.1)', borderRadius: '12px' }}>
-                                                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#1a202c' }}>
+                                                <div style={{
+                                                    textAlign: 'center',
+                                                    padding: '12px',
+                                                    background: 'rgba(240, 147, 251, 0.1)',
+                                                    borderRadius: '12px'
+                                                }}>
+                                                    <div
+                                                        style={{fontSize: '20px', fontWeight: '700', color: '#1a202c'}}>
                                                         {goal.targetWeight} kg
                                                     </div>
-                                                    <div style={{ fontSize: '12px', color: '#718096', fontWeight: '500' }}>
+                                                    <div
+                                                        style={{fontSize: '12px', color: '#718096', fontWeight: '500'}}>
                                                         Target Weight
                                                     </div>
                                                 </div>
@@ -1013,7 +1094,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
 
                 {/* Empty state */}
                 {!loading && userGoals.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                    <div style={{textAlign: 'center', padding: '60px 20px'}}>
                         <div style={{
                             fontSize: '64px',
                             marginBottom: '24px',
@@ -1067,7 +1148,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
     const renderGoalSelection = () => (
         <div style={{
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1087,30 +1168,25 @@ const Goals = ({ user, onBack, onGoalSet }) => {
             }}>
                 {/* Back button */}
                 <button
-                    onClick={() => {
-                        if (userGoals.length > 0) {
-                            setShowGoalsList(true);
-                            setCurrentStep(3);
-                        } else {
-                            onBack();
-                        }
-                    }}
+                    onClick={handleBackToDashboard}
                     style={{
                         position: 'absolute',
                         top: '24px',
                         left: '24px',
-                        background: 'rgba(102, 126, 234, 0.1)',
-                        border: '1px solid rgba(102, 126, 234, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        backdropFilter:'blur(10px)',
+                        boxShadow: 'rgba(30, 58, 138, 0.2)',
+                        border: '2px solid rgba(30, 58, 138, 0.5)',
                         borderRadius: '12px',
                         padding: '12px 16px',
                         cursor: 'pointer',
                         fontSize: '14px',
                         fontWeight: '600',
-                        color: '#667eea',
+                        color: 'rgba(30, 58, 138, 0.5)',
                         transition: 'all 0.2s'
                     }}
                 >
-                    ← {userGoals.length > 0 ? 'Back to Goals' : 'Back to Dashboard'}
+                    ← Back to Dashboard
                 </button>
 
                 {/* View Goals button */}
@@ -1124,14 +1200,16 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                             position: 'absolute',
                             top: '24px',
                             right: '24px',
-                            background: 'rgba(102, 126, 234, 0.1)',
-                            border: '1px solid rgba(102, 126, 234, 0.2)',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            backdropFilter:'blur(10px)',
+                            boxShadow: 'rgba(30, 58, 138, 0.2)',
+                            border: '2px solid rgba(30, 58, 138, 0.5)',
                             borderRadius: '12px',
-                            padding: '12px 16px',
+                            padding: '12px 20px',
                             cursor: 'pointer',
                             fontSize: '14px',
                             fontWeight: '600',
-                            color: '#667eea',
+                            color: 'rgba(30, 58, 138, 0.5)',
                             transition: 'all 0.2s'
                         }}
                     >
@@ -1140,7 +1218,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                 )}
 
                 {/* Header */}
-                <div style={{ textAlign: 'center', marginBottom: '48px', marginTop: '40px' }}>
+                <div style={{textAlign: 'center', marginBottom: '48px', marginTop: '40px'}}>
                     <div>
                         <img
                             src="/target.png"
@@ -1158,15 +1236,12 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                         />
                     </div>
                     <h1 style={{
-                        color: '#1a202c',
+                        color: '#000000',
                         fontSize: '36px',
                         fontWeight: '800',
                         marginBottom: '16px',
                         letterSpacing: '-0.5px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
                         backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent'
                     }}>
                         What's Your Main Goal?
                     </h1>
@@ -1178,7 +1253,8 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                         maxWidth: '600px',
                         margin: '0 auto'
                     }}>
-                        Choose your primary fitness objective and we'll create a personalized plan to help you achieve it.
+                        Choose your primary fitness objective and we'll create a personalized plan to help you achieve
+                        it.
                     </p>
                 </div>
 
@@ -1226,7 +1302,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                 margin: '0 auto 20px auto',
                                 boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
                             }}>
-                                <span style={{ fontSize: '32px' }}>{goal.icon}</span>
+                                <span style={{fontSize: '32px'}}>{goal.icon}</span>
                             </div>
                             <h3 style={{
                                 color: '#1a202c',

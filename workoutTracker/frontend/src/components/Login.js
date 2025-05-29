@@ -88,7 +88,7 @@ const Login = ({ onSwitchToRegister, onLoginSuccess }) => {
     return (
         <div style={{
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -351,29 +351,6 @@ const Login = ({ onSwitchToRegister, onLoginSuccess }) => {
                         textAlign: 'center',
                         marginBottom: '24px'
                     }}>
-                        <button
-                            type="button"
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#667eea',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                textDecoration: 'none',
-                                transition: 'color 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.target.style.color = '#5a67d8';
-                                e.target.style.textDecoration = 'underline';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.color = '#667eea';
-                                e.target.style.textDecoration = 'none';
-                            }}
-                        >
-                            Forgot your password?
-                        </button>
                     </div>
                 </div>
 
