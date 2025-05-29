@@ -1,5 +1,6 @@
 package com.marecca.workoutTracker.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -60,9 +61,11 @@ public class User {
 
     //one user can have many workout plans
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<WorkoutPlan> workoutPlans = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<ScheduledWorkout> scheduledWorkouts = new ArrayList<>();
 
     @PrePersist
