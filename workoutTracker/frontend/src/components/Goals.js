@@ -231,6 +231,12 @@ const Goals = ({ user, onBack, onGoalSet }) => {
 
             const response = await GoalsApi.createGoal(goalData);
             console.log('Goal created successfully:', response);
+            console.log('Backend calculated values:', {
+                dailyCalorieDeficit: response.dailyCalorieDeficit,
+                dailyCalorieSurplus: response.dailyCalorieSurplus,
+                weeklyWeightChange: response.weeklyWeightChange,
+                targetWeight: response.targetWeight
+            });
 
             // Refresh goals list
             await fetchUserGoals();
@@ -240,8 +246,15 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                 onGoalSet(response);
             }
 
-            // Show success message and redirect to goals list
-            setSuccess('Goal set successfully! Your personalized plan is ready.');
+            // Show success message with backend calculations
+            let calculationsMessage = '';
+            if (response.dailyCalorieDeficit) {
+                calculationsMessage = ` You need a ${response.dailyCalorieDeficit} calorie deficit daily.`;
+            } else if (response.dailyCalorieSurplus) {
+                calculationsMessage = ` You need a ${response.dailyCalorieSurplus} calorie surplus daily.`;
+            }
+
+            setSuccess(`Goal set successfully! Your personalized plan is ready.${calculationsMessage}`);
             setShowGoalsList(true);
             setCurrentStep(3);
 
@@ -573,7 +586,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                             </select>
                         </div>
 
-                        {/* Goal Summary */}
+                        {/* Goal Summary - Will be populated after saving */}
                         {((selectedGoal === 'lose_weight' && goalDetails.targetWeightLoss && goalDetails.currentWeight) ||
                             (selectedGoal === 'gain_muscle' && goalDetails.targetWeightGain)) && (
                             <div style={{
@@ -589,49 +602,29 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                     fontWeight: '700',
                                     marginBottom: '12px'
                                 }}>
-                                    Goal Summary (Frontend Calculation)
+                                    📋 Goal Preview
                                 </h4>
-                                {selectedGoal === 'lose_weight' && (
-                                    <div>
-                                        {(() => {
-                                            const calc = calculateCalorieDeficit(
-                                                goalDetails.currentWeight,
-                                                goalDetails.targetWeightLoss,
-                                                parseInt(goalDetails.timeframe)
-                                            );
-                                            return (
-                                                <div>
-                                                    <p style={{ color: '#718096', fontSize: '14px', margin: '4px 0' }}>
-                                                        Daily calorie deficit needed: <strong>{calc.dailyDeficit} calories</strong>
-                                                    </p>
-                                                    <p style={{ color: '#718096', fontSize: '14px', margin: '4px 0' }}>
-                                                        Weekly weight loss: <strong>{calc.weeklyWeightLoss} kg</strong>
-                                                    </p>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
-                                )}
-                                {selectedGoal === 'gain_muscle' && (
-                                    <div>
-                                        {(() => {
-                                            const calc = calculateCalorieSurplus(
-                                                goalDetails.targetWeightGain,
-                                                parseInt(goalDetails.timeframe)
-                                            );
-                                            return (
-                                                <div>
-                                                    <p style={{ color: '#718096', fontSize: '14px', margin: '4px 0' }}>
-                                                        Daily calorie surplus needed: <strong>{calc.dailySurplus} calories</strong>
-                                                    </p>
-                                                    <p style={{ color: '#718096', fontSize: '14px', margin: '4px 0' }}>
-                                                        Weekly weight gain: <strong>{calc.weeklyWeightGain} kg</strong>
-                                                    </p>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
-                                )}
+                                <div>
+                                    <p style={{ color: '#718096', fontSize: '14px', margin: '4px 0' }}>
+                                        <strong>Goal Type:</strong> {goals.find(g => g.id === selectedGoal)?.title}
+                                    </p>
+                                    <p style={{ color: '#718096', fontSize: '14px', margin: '4px 0' }}>
+                                        <strong>Current Weight:</strong> {goalDetails.currentWeight} kg
+                                    </p>
+                                    {selectedGoal === 'lose_weight' && (
+                                        <p style={{ color: '#718096', fontSize: '14px', margin: '4px 0' }}>
+                                            <strong>Target Loss:</strong> {goalDetails.targetWeightLoss} kg
+                                        </p>
+                                    )}
+                                    {selectedGoal === 'gain_muscle' && (
+                                        <p style={{ color: '#718096', fontSize: '14px', margin: '4px 0' }}>
+                                            <strong>Target Gain:</strong> {goalDetails.targetWeightGain} kg
+                                        </p>
+                                    )}
+                                    <p style={{ color: '#718096', fontSize: '14px', margin: '4px 0' }}>
+                                        <strong>Timeframe:</strong> {goalDetails.timeframe} months
+                                    </p>
+                                </div>
                             </div>
                         )}
                     </div>

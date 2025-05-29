@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS scheduled_workouts CASCADE;
 DROP TABLE IF EXISTS workout_plans CASCADE;
 DROP TABLE IF EXISTS exercises CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS goals;
 
 DROP VIEW IF EXISTS workout_plan_details CASCADE;
 DROP VIEW IF EXISTS user_workout_history CASCADE;
@@ -53,6 +54,26 @@ CREATE TYPE workout_status_type AS ENUM (
     'COMPLETED',
     'CANCELLED',
     'MISSED'
+);
+
+
+CREATE TABLE goals (
+                       goal_id BIGSERIAL PRIMARY KEY,
+                       user_id BIGINT NOT NULL,
+                       goal_type VARCHAR(50) NOT NULL,
+                       target_weight_loss DECIMAL(5,2),
+                       target_weight_gain DECIMAL(5,2),
+                       current_weight DECIMAL(5,2),
+                       timeframe_months INT,
+                       daily_calorie_deficit INT,
+                       daily_calorie_surplus INT,
+                       weekly_weight_change DECIMAL(4,2),
+                       target_weight DECIMAL(5,2),
+                       status VARCHAR(20) DEFAULT 'ACTIVE',
+                       notes TEXT,
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                       completed_at TIMESTAMP NULL
 );
 
 CREATE TABLE users (
