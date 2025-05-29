@@ -94,7 +94,7 @@ public class ScheduledWorkoutService {
         } catch (Exception e) {
             log.error("Database error while scheduling workout: {}", e.getMessage());
 
-            // Convertește erorile PostgreSQL în excepții Java corespunzătoare
+
             String errorMessage = e.getMessage();
             if (errorMessage.contains("does not exist or does not belong to user")) {
                 throw new IllegalArgumentException("Planul de workout nu aparține utilizatorului specificat");

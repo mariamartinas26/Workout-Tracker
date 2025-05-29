@@ -3,45 +3,26 @@ import React, { useState } from 'react';
 
 const API_BASE_URL = 'http://localhost:8082/api';
 
-// Service pentru workout plans - folosește endpoint-urile existente
+// Service pentru workout plans - folosește endpoint-ul corect
 const WorkoutPlanService = {
     createWorkoutPlan: async (planData) => {
-        // Folosim endpoint-ul de scheduled workouts deoarece nu există endpoint pentru crearea planurilor
-        // Simulăm că planul are ID-ul 1 (în viitorul apropiat va trebui creat un endpoint pentru planuri)
-        const mockPlanId = Math.floor(Math.random() * 1000) + 1;
+        console.log('Creez plan de workout cu datele:', planData);
 
-        // Creăm un workout programat pentru astăzi
-        const scheduleData = {
-            userId: planData.userId,
-            workoutPlanId: mockPlanId, // ID simulat pentru plan
-            scheduledDate: new Date().toISOString().split('T')[0], // Data de astăzi
-            scheduledTime: "10:00:00" // Ora default 10:00
-        };
-
-        console.log('Programez workout cu datele:', scheduleData);
-
-        const response = await fetch(`${API_BASE_URL}/scheduled-workouts/schedule`, {
+        const response = await fetch(`${API_BASE_URL}/workout-plans`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(scheduleData)
+            body: JSON.stringify(planData)
         });
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to schedule workout');
+            throw new Error(error.message || 'Failed to create workout plan');
         }
 
         const result = await response.json();
-
-        // Returnez datele în formatul așteptat
-        return {
-            planId: mockPlanId,
-            scheduledWorkoutId: result.scheduledWorkoutId,
-            message: result.message || "Workout programat cu succes",
-            planData: planData // Salvez datele planului pentru referință
-        };
+        return result;
     }
 };
 
@@ -52,6 +33,7 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
         estimated_duration_minutes: '',
         difficulty_level: 1,
         goals: '',
+        notes: '',
         exercises: []
     });
 
@@ -120,7 +102,7 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
         setError('');
 
         try {
-            // Formatează datele pentru backend
+            // Formatează datele pentru backend conform cu CreateWorkoutPlanRequest
             const backendData = {
                 userId: currentUserId,
                 planName: workoutData.plan_name,
@@ -128,6 +110,7 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
                 estimatedDurationMinutes: workoutData.estimated_duration_minutes ? parseInt(workoutData.estimated_duration_minutes) : null,
                 difficultyLevel: workoutData.difficulty_level,
                 goals: workoutData.goals || null,
+                notes: workoutData.notes || null,
                 exercises: workoutData.exercises.map((exercise, index) => ({
                     exerciseId: exercise.exercise_id,
                     exerciseOrder: index + 1,
@@ -143,15 +126,15 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
 
             console.log('Trimit către backend:', backendData);
 
-            // Trimite către backend
+            // Trimite către backend folosind endpoint-ul corect
             const response = await WorkoutPlanService.createWorkoutPlan(backendData);
 
             console.log('Răspuns de la backend:', response);
 
-            // Success - afișează mesaj de succes
-            alert(`Workout-ul "${workoutData.plan_name}" a fost programat cu succes pentru astăzi!`);
+            // Success message în română conform cu răspunsul backend-ului
+            alert(`${response.message}\nPlan: "${response.planName}"\nID: ${response.workoutPlanId}\nExercitii: ${response.totalExercises}`);
 
-            console.log('Workout programat cu ID:', response.scheduledWorkoutId);
+            console.log('Plan de workout creat cu ID:', response.workoutPlanId);
 
             // Închide popup-ul și resetează formularul
             handleClosePopup();
@@ -172,6 +155,7 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
             estimated_duration_minutes: '',
             difficulty_level: 1,
             goals: '',
+            notes: '',
             exercises: []
         });
         setSelectedExercise('');
@@ -296,7 +280,7 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
                                 marginBottom: '16px',
                                 animation: 'spin 1s linear infinite'
                             }}>⚡</div>
-                            <div style={{ fontWeight: '600' }}>Se programează workout-ul...</div>
+                            <div style={{ fontWeight: '600' }}>Se creează planul de workout...</div>
                         </div>
                     </div>
                 )}
@@ -450,7 +434,36 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
                                 value={workoutData.goals}
                                 onChange={(e) => setWorkoutData(prev => ({ ...prev, goals: e.target.value }))}
                                 placeholder="What do you want to achieve with this workout?"
-                                rows={3}
+                                rows={2}
+                                disabled={loading}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    border: '2px solid #e2e8f0',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    resize: 'vertical',
+                                    boxSizing: 'border-box',
+                                    opacity: loading ? 0.6 : 1
+                                }}
+                            />
+                        </div>
+
+                        <div>
+                            <label style={{
+                                display: 'block',
+                                marginBottom: '8px',
+                                color: '#4a5568',
+                                fontWeight: '600',
+                                fontSize: '14px'
+                            }}>
+                                Notes
+                            </label>
+                            <textarea
+                                value={workoutData.notes}
+                                onChange={(e) => setWorkoutData(prev => ({ ...prev, notes: e.target.value }))}
+                                placeholder="Additional notes about this workout plan..."
+                                rows={2}
                                 disabled={loading}
                                 style={{
                                     width: '100%',
@@ -839,7 +852,7 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
                             fontWeight: '600'
                         }}
                     >
-                        {loading ? 'Se programează...' : 'Schedule Workout'}
+                        {loading ? 'Se creează...' : 'Create Workout Plan'}
                     </button>
                 </div>
 
