@@ -62,7 +62,7 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
 
         try {
             // Simulate API call to update user profile
-            console.log("User object:", user); // Adaugă asta pentru debug
+            console.log("Complete User object:", JSON.stringify(user, null, 2));
             const response =  await fetch('http://localhost:8082/api/users/complete-profile', {
                 method: 'PUT',
                 headers: {
@@ -70,7 +70,7 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
                 },
 
                 body: JSON.stringify({
-                    userId: user.id, // folosește user.id în loc de user.userId
+                    userId: user.userId, // folosește user.id în loc de user.userId
                     dateOfBirth: formData.dateOfBirth || null,
                     heightCm: formData.heightCm ? parseInt(formData.heightCm) : null,
                     weightKg: formData.weightKg ? parseFloat(formData.weightKg) : null,
