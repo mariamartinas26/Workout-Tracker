@@ -51,7 +51,10 @@ public class WorkoutPlanController {
                     .notes(request.getNotes())
                     .build();
 
-            WorkoutPlan savedPlan = workoutPlanService.createWorkoutPlan(workoutPlan);
+            WorkoutPlan savedPlan = workoutPlanService.createWorkoutPlanWithExercises(
+                    workoutPlan,
+                    request.getExercises() // Trimite exercițiile la service
+            );
 
             CreateWorkoutPlanResponse response = CreateWorkoutPlanResponse.builder()
                     .workoutPlanId(savedPlan.getWorkoutPlanId())
@@ -215,6 +218,8 @@ public class WorkoutPlanController {
 
     @lombok.Data
     @lombok.Builder
+    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
+    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
     public static class CreateWorkoutPlanRequest {
         @NotNull(message = "ID-ul utilizatorului este obligatoriu")
         private Long userId;
@@ -238,6 +243,8 @@ public class WorkoutPlanController {
 
     @lombok.Data
     @lombok.Builder
+    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
+    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
     public static class UpdateWorkoutPlanRequest {
         private String planName;
         private String description;
@@ -249,6 +256,8 @@ public class WorkoutPlanController {
 
     @lombok.Data
     @lombok.Builder
+    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
+    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
     public static class ExerciseDetailRequest {
         @NotNull(message = "ID-ul exercițiului este obligatoriu")
         private Long exerciseId;
@@ -275,6 +284,8 @@ public class WorkoutPlanController {
 
     @lombok.Data
     @lombok.Builder
+    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
+    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
     public static class CreateWorkoutPlanResponse {
         private Long workoutPlanId;
         private String planName;
@@ -284,6 +295,8 @@ public class WorkoutPlanController {
 
     @lombok.Data
     @lombok.Builder
+    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
+    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
     public static class WorkoutPlanDetailsResponse {
         private WorkoutPlan workoutPlan;
         private Integer totalExercises;
@@ -291,12 +304,16 @@ public class WorkoutPlanController {
 
     @lombok.Data
     @lombok.Builder
+    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
+    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
     public static class SuccessResponse {
         private String message;
     }
 
     @lombok.Data
     @lombok.Builder
+    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
+    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
     public static class ErrorResponse {
         private String error;
         private String message;

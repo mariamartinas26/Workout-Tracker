@@ -17,7 +17,12 @@ import java.util.List;
 public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorkout, Long> {
 
 
-    List<ScheduledWorkout> findByUserUserIdOrderByScheduledDateDesc(Long userId);
+    @Query("SELECT sw FROM ScheduledWorkout sw " +
+            "JOIN FETCH sw.user u " +
+            "LEFT JOIN FETCH sw.workoutPlan wp " +
+            "WHERE u.userId = :userId " +
+            "ORDER BY sw.scheduledDate DESC")
+    List<ScheduledWorkout> findByUserUserIdOrderByScheduledDateDesc(@Param("userId") Long userId);
     List<ScheduledWorkout> findByUserUserIdAndScheduledDateBetweenOrderByScheduledDate(
             Long userId, LocalDate startDate, LocalDate endDate);
     List<ScheduledWorkout> findByUserUserIdAndStatus(Long userId, WorkoutStatusType status);

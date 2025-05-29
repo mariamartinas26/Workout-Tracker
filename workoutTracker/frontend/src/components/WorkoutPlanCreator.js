@@ -104,8 +104,8 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
         try {
             // Formatează datele pentru backend conform cu CreateWorkoutPlanRequest
             const backendData = {
-                userId: currentUserId,
-                planName: workoutData.plan_name,
+                userId: currentUserId,                    // ✅ User ID
+                planName: workoutData.plan_name,          // ✅ Numele planului
                 description: workoutData.description || null,
                 estimatedDurationMinutes: workoutData.estimated_duration_minutes ? parseInt(workoutData.estimated_duration_minutes) : null,
                 difficultyLevel: workoutData.difficulty_level,
@@ -122,6 +122,7 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
                     restTimeSeconds: exercise.rest_time_seconds ? parseInt(exercise.rest_time_seconds) : 60,
                     notes: exercise.notes || null
                 }))
+
             };
 
             console.log('Trimit către backend:', backendData);

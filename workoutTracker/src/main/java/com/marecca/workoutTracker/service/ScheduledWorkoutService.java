@@ -79,33 +79,54 @@ public class ScheduledWorkoutService {
      * Programează workout cu validare suplimentară în Java
      */
     @Transactional
-    public Long scheduleWorkoutWithValidation(Long userId, Long workoutPlanId,
-                                              LocalDate scheduledDate, LocalTime scheduledTime) {
-        log.info("Scheduling workout using PostgreSQL function for userId: {}, planId: {}", userId, workoutPlanId);
+    public Long scheduleWorkoutWithValidation(Long userId, Long workoutPlanId, LocalDate scheduledDate, LocalTime scheduledTime) {
+        log.debug("Scheduling workout for user ID: {}, plan ID: {}, date: {}, time: {}",
+                userId, workoutPlanId, scheduledDate, scheduledTime);
 
-        try {
-            if (scheduledTime != null) {
-                return scheduledWorkoutRepository.scheduleWorkoutWithFunction(
-                        userId, workoutPlanId, scheduledDate, scheduledTime);
-            } else {
-                return scheduledWorkoutRepository.scheduleWorkoutWithoutTime(
-                        userId, workoutPlanId, scheduledDate);
-            }
-        } catch (Exception e) {
-            log.error("Database error while scheduling workout: {}", e.getMessage());
+        // Validează utilizatorul
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Utilizatorul nu a fost găsit"));
 
+        // ✅ VALIDEAZĂ ȘI ÎNCARCĂ WORKOUT PLAN-UL
+        WorkoutPlan workoutPlan = null;
+        if (workoutPlanId != null) {
+            workoutPlan = workoutPlanRepository.findById(workoutPlanId)
+                    .orElseThrow(() -> new IllegalArgumentException("Planul de workout nu a fost găsit cu ID: " + workoutPlanId));
 
-            String errorMessage = e.getMessage();
-            if (errorMessage.contains("does not exist or does not belong to user")) {
-                throw new IllegalArgumentException("Planul de workout nu aparține utilizatorului specificat");
-            } else if (errorMessage.contains("User with ID") && errorMessage.contains("does not exist")) {
-                throw new IllegalArgumentException("Utilizatorul nu există");
-            } else if (errorMessage.contains("already has a workout scheduled")) {
-                throw new IllegalStateException("Utilizatorul are deja un workout programat pentru această dată/oră");
-            } else {
-                throw new RuntimeException("Eroare la programarea workout-ului: " + errorMessage);
+            // Verifică că planul aparține utilizatorului
+            if (!workoutPlan.getUser().getUserId().equals(userId)) {
+                throw new IllegalArgumentException("Planul de workout nu aparține acestui utilizator");
             }
         }
+
+        // Validează data
+        if (scheduledDate.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Nu poți programa un workout în trecut");
+        }
+
+        // Verifică disponibilitatea slotului (opțional)
+        if (!canScheduleWorkoutAt(userId, scheduledDate, scheduledTime)) {
+            throw new IllegalStateException("Slotul selectat nu este disponibil");
+        }
+
+        // Creează workout-ul programat
+        ScheduledWorkout scheduledWorkout = ScheduledWorkout.builder()
+                .user(user)
+                .workoutPlan(workoutPlan)  // ✅ SETEAZĂ WORKOUT PLAN-UL
+                .scheduledDate(scheduledDate)
+                .scheduledTime(scheduledTime)
+                .status(WorkoutStatusType.PLANNED)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        ScheduledWorkout saved = scheduledWorkoutRepository.save(scheduledWorkout);
+
+        log.info("Workout scheduled successfully with ID: {} for plan: {}",
+                saved.getScheduledWorkoutId(),
+                workoutPlan != null ? workoutPlan.getPlanName() : "No plan");
+
+        return saved.getScheduledWorkoutId();
     }
 
     /**

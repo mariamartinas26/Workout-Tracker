@@ -1,7 +1,11 @@
 package com.marecca.workoutTracker.service;
 
+import com.marecca.workoutTracker.controller.WorkoutPlanController;
+import com.marecca.workoutTracker.entity.Exercise;
 import com.marecca.workoutTracker.entity.User;
+import com.marecca.workoutTracker.entity.WorkoutExerciseDetail;
 import com.marecca.workoutTracker.entity.WorkoutPlan;
+import com.marecca.workoutTracker.repository.ExerciseRepository;
 import com.marecca.workoutTracker.repository.WorkoutPlanRepository;
 import com.marecca.workoutTracker.repository.UserRepository;
 import com.marecca.workoutTracker.repository.WorkoutExerciseDetailRepository;
@@ -29,6 +33,7 @@ public class WorkoutPlanService {
 
     private final WorkoutPlanRepository workoutPlanRepository;
     private final UserRepository userRepository;
+    private final ExerciseRepository exerciseRepository;
     private final WorkoutExerciseDetailRepository workoutExerciseDetailRepository;
 
     /**
@@ -58,7 +63,55 @@ public class WorkoutPlanService {
 
         return savedPlan;
     }
+    /**
+     * Creează un plan de workout cu exercițiile sale
+     */
+    @Transactional
+    public WorkoutPlan createWorkoutPlanWithExercises(WorkoutPlan workoutPlan, List<WorkoutPlanController.ExerciseDetailRequest> exerciseRequests) {
+        log.debug("Creating workout plan with exercises: {}", workoutPlan.getPlanName());
 
+        // Validează utilizatorul
+        User user = userRepository.findById(workoutPlan.getUser().getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("Utilizatorul nu a fost găsit"));
+
+        workoutPlan.setUser(user);
+
+        // Salvează planul de workout
+        WorkoutPlan savedPlan = workoutPlanRepository.save(workoutPlan);
+
+        // Adaugă exercițiile dacă există
+        if (exerciseRequests != null && !exerciseRequests.isEmpty()) {
+            for (WorkoutPlanController.ExerciseDetailRequest exerciseRequest : exerciseRequests) {
+                // Verifică că exercițiul există
+                Exercise exercise = exerciseRepository.findById(exerciseRequest.getExerciseId())
+                        .orElseThrow(() -> new IllegalArgumentException("Exercițiul cu ID " + exerciseRequest.getExerciseId() + " nu a fost găsit"));
+
+                // Creează detaliile exercițiului
+                WorkoutExerciseDetail exerciseDetail = WorkoutExerciseDetail.builder()
+                        .workoutPlan(savedPlan)
+                        .exercise(exercise)
+                        .exerciseOrder(exerciseRequest.getExerciseOrder())
+                        .targetSets(exerciseRequest.getTargetSets())
+                        .targetRepsMin(exerciseRequest.getTargetRepsMin())
+                        .targetRepsMax(exerciseRequest.getTargetRepsMax())
+                        .targetWeightKg(exerciseRequest.getTargetWeightKg())
+                        .targetDurationSeconds(exerciseRequest.getTargetDurationSeconds())
+                        .targetDistanceMeters(exerciseRequest.getTargetDistanceMeters())
+                        .restTimeSeconds(exerciseRequest.getRestTimeSeconds())
+                        .notes(exerciseRequest.getNotes())
+                        .build();
+
+                // Salvează detaliile exercițiului
+                workoutExerciseDetailRepository.save(exerciseDetail);
+            }
+
+            log.info("Workout plan '{}' created with {} exercises", savedPlan.getPlanName(), exerciseRequests.size());
+        } else {
+            log.info("Workout plan '{}' created without exercises", savedPlan.getPlanName());
+        }
+
+        return savedPlan;
+    }
     /**
      * Găsește un plan de workout după ID
      * @param workoutPlanId ID-ul planului de workout
@@ -296,7 +349,7 @@ public class WorkoutPlanService {
     public long countByUserId(Long userId) {
         log.debug("Counting workout plans for user ID: {}", userId);
         validateUserExists(userId);
-        return workoutPlanRepository.findByUserUserId(userId).size();
+        return workoutPlanRepository.countByUserUserId(userId);
     }
 
     /**

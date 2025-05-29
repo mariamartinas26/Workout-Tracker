@@ -21,6 +21,8 @@ public interface WorkoutPlanRepository extends JpaRepository<WorkoutPlan, Long> 
     Page<WorkoutPlan> findByUserUserId(Long userId, Pageable pageable);
     Optional<WorkoutPlan> findByUserUserIdAndPlanName(Long userId, String planName);
 
+    long countByUserUserId(Long userId);
+
     boolean existsByUserUserIdAndPlanName(Long userId, String planName);
 
     List<WorkoutPlan> findByDifficultyLevel(Integer difficultyLevel);
