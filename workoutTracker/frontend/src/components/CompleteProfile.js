@@ -74,7 +74,7 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
 
         try {
             // Simulate API call to update user profile
-            const response = await fetch('/api/complete-profile', {
+            const response = await fetch('http://localhost:8082/api/auth/complete-profile', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
