@@ -145,22 +145,21 @@ const Login = ({ onSwitchToRegister, onLoginSuccess }) => {
                     textAlign: 'center',
                     marginBottom: '40px'
                 }}>
-                    <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '80px',
-                        height: '80px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                        borderRadius: '20px',
-                        marginBottom: '24px',
-                        boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)'
-                    }}>
-                        <div style={{
-                            fontSize: '32px',
-                            color: 'white',
-                            fontWeight: 'bold'
-                        }}>💪</div>
+                    <div>
+                        <img
+                            src="/icon.png"
+                            alt="WorkoutTracker Logo"
+                            style={{
+                                width: '48px',
+                                height: '48px',
+                                objectFit: 'contain'
+                            }}
+                            onError={(e) => {
+                                // Fallback în caz că imaginea nu se poate încărca
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                            }}
+                        />
                     </div>
                     <h1 style={{
                         color: '#1a202c',
@@ -178,7 +177,7 @@ const Login = ({ onSwitchToRegister, onLoginSuccess }) => {
                 </div>
 
                 <div>
-                    {errors.general && (
+                {errors.general && (
                         <div style={{
                             background: 'linear-gradient(135deg, #fed7d7, #feb2b2)',
                             color: '#c53030',
@@ -409,7 +408,7 @@ const Login = ({ onSwitchToRegister, onLoginSuccess }) => {
                                 e.target.style.textDecoration = 'none';
                             }}
                         >
-                            Sign up for free
+                            Sign up
                         </button>
                     </p>
                 </div>

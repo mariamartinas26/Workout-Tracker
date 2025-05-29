@@ -60,21 +60,21 @@ const Homepage = ({ onLogin, onRegister }) => {
                     alignItems: 'center',
                     gap: '12px'
                 }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '40px',
-                        height: '40px',
-                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                        borderRadius: '10px',
-                        boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
-                    }}>
-            <span style={{
-                fontSize: '20px',
-                fontWeight: 'bold',
-                color: 'white'
-            }}>💪</span>
+                    <div>
+                        <img
+                            src="/icon.png"
+                            alt="WorkoutTracker Logo"
+                            style={{
+                                width: '48px',
+                                height: '48px',
+                                objectFit: 'contain'
+                            }}
+                            onError={(e) => {
+                                // Fallback în caz că imaginea nu se poate încărca
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                            }}
+                        />
                     </div>
                     <h1 style={{
                         fontSize: '28px',
@@ -146,15 +146,6 @@ const Homepage = ({ onLogin, onRegister }) => {
                     }}>
                         Strong is the simplest, most intuitive workout tracking experience.
                     </p>
-
-                    <p style={{
-                        fontSize: 'clamp(16px, 2.5vw, 20px)',
-                        fontWeight: '500',
-                        color: '#94a3b8',
-                        margin: 0
-                    }}>
-                        Trusted by over 3 million users worldwide.
-                    </p>
                 </div>
 
                 {/* CTA Buttons */}
@@ -192,7 +183,7 @@ const Homepage = ({ onLogin, onRegister }) => {
                             e.target.style.boxShadow = '0 12px 40px rgba(59, 130, 246, 0.3)';
                         }}
                     >
-                        Get Started Free
+                        Get Started
                     </button>
 
                     <button
