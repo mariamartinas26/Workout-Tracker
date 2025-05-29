@@ -964,7 +964,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                             fontWeight: '700',
                                             marginBottom: '16px'
                                         }}>
-                                            📊 Backend Calculated Plan
+                                            📊 Calculated Plan
                                         </h4>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
                                             {goal.dailyCalorieDeficit && (
