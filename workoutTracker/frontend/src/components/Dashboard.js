@@ -197,33 +197,6 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                         borderRadius: '20px 20px 0 0'
                     }}></div>
 
-                    <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '100px',
-                        height: '100px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                        borderRadius: '25px',
-                        marginBottom: '32px',
-                        boxShadow: '0 12px 40px rgba(102, 126, 234, 0.3)'
-                    }}>
-                        <img
-                            src="/target.png"
-                            alt="Target Logo"
-                            style={{
-                                width: '48px',
-                                height: '48px',
-                                objectFit: 'contain'
-                            }}
-                            onError={(e) => {
-                                // Fallback în caz că imaginea nu se poate încărca
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                            }}
-                        />
-                    </div>
-
                     <h2 style={{
                         color: '#000000',
                         fontSize: '40px',
