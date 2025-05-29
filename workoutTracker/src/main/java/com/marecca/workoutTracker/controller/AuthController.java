@@ -203,7 +203,8 @@ public class AuthController {
     // Metode helper
     private Map<String, Object> createUserResponse(User user) {
         Map<String, Object> response = new HashMap<>();
-        response.put("userId", user.getUserId());
+        response.put("userId", user.getUserId()); // Asigură-te că este userId, nu id
+        response.put("id", user.getUserId()); // Adaugă și id pentru compatibilitate
         response.put("username", user.getUsername());
         response.put("email", user.getEmail());
         response.put("firstName", user.getFirstName());
