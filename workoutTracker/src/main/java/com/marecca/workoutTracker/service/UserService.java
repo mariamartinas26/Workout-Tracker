@@ -48,15 +48,10 @@ public class UserService {
         return savedUser;
     }
 
-    /**
-     * Găsește un utilizator după ID
-     * @param userId ID-ul utilizatorului
-     * @return Optional cu utilizatorul găsit
-     */
+
     @Transactional(readOnly = true)
-    public Optional<User> findById(Long userId) {
-        log.debug("Finding user by ID: {}", userId);
-        return userRepository.findById(userId);
+    public Optional<User> findById(Long id) {
+        return userRepository.findById(id);
     }
 
     /**
@@ -89,22 +84,25 @@ public class UserService {
      * @throws IllegalArgumentException dacă utilizatorul nu există sau datele nu sunt valide
      */
     public User updateUser(Long userId, User updatedUser) {
-        log.info("Updating user with ID: {}", userId);
+        User existingUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        User existingUser = findUserById(userId);
+        // Copiază doar câmpurile care nu sunt null
+        if (updatedUser.getDateOfBirth() != null) {
+            existingUser.setDateOfBirth(updatedUser.getDateOfBirth());
+        }
+        if (updatedUser.getHeightCm() != null) {
+            existingUser.setHeightCm(updatedUser.getHeightCm());
+        }
+        if (updatedUser.getWeightKg() != null) {
+            existingUser.setWeightKg(updatedUser.getWeightKg());
+        }
+        if (updatedUser.getFitnessLevel() != null) {
+            existingUser.setFitnessLevel(updatedUser.getFitnessLevel());
+        }
 
-        // Verifică unicitatea username și email doar dacă au fost schimbate
-        validateUsernameChange(existingUser, updatedUser);
-        validateEmailChange(existingUser, updatedUser);
-
-        // Actualizează câmpurile
-        updateUserFields(existingUser, updatedUser);
         existingUser.setUpdatedAt(LocalDateTime.now());
-
-        User savedUser = userRepository.save(existingUser);
-        log.info("User updated successfully: {}", savedUser.getUsername());
-
-        return savedUser;
+        return userRepository.save(existingUser);
     }
 
     /**
@@ -198,12 +196,57 @@ public class UserService {
         userRepository.save(user);
         log.info("Password changed successfully for user ID: {}", userId);
     }
+    // Adaugă aceste metode în UserService-ul tău existent
 
     /**
-     * Resetează parola utilizatorului (pentru admin)
-     * @param userId ID-ul utilizatorului
-     * @param newPassword noua parolă
+     * Verifică dacă există un utilizator cu email-ul dat
      */
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email.toLowerCase());
+    }
+
+    /**
+     * Verifică dacă există un utilizator cu username-ul dat
+     */
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    /**
+     * Înregistrează un utilizator nou cu parola criptată
+     */
+    @Transactional
+    public User registerUser(User user, String plainPassword) {
+        // Criptează parola
+        user.setPasswordHash(passwordEncoder.encode(plainPassword));
+        user.setIsActive(true);
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+
+        return userRepository.save(user);
+    }
+
+    /**
+     * Autentifică un utilizator pe baza email-ului și parolei
+     */
+    public Optional<User> authenticateUser(String email, String plainPassword) {
+        Optional<User> userOptional = userRepository.findByEmail(email.toLowerCase());
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            // Verifică parola
+            if (passwordEncoder.matches(plainPassword, user.getPasswordHash())) {
+                return Optional.of(user);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+
+
+
     public void resetPassword(Long userId, String newPassword) {
         log.info("Resetting password for user ID: {}", userId);
 

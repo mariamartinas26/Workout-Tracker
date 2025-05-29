@@ -169,7 +169,90 @@ public class UserController {
         public Integer getScheduledWorkoutsCount() { return scheduledWorkoutsCount; }
         public void setScheduledWorkoutsCount(Integer scheduledWorkoutsCount) { this.scheduledWorkoutsCount = scheduledWorkoutsCount; }
     }
+    @PutMapping("/{userId}/profile")
+    public ResponseEntity<?> updateCompleteProfile(@PathVariable Long userId, @RequestBody UpdateProfileRequest request) {
+        try {
+            log.info("Updating complete profile for user ID: {}", userId);
 
+            // Verifică dacă utilizatorul există
+            Optional<User> existingUserOptional = userService.findById(userId);
+            if (existingUserOptional.isEmpty()) {
+                return createErrorResponse("User not found", HttpStatus.NOT_FOUND);
+            }
+
+            User existingUser = existingUserOptional.get();
+
+            // Validare input doar pentru câmpurile obligatorii
+            if (request.getFirstName() != null && !request.getFirstName().trim().isEmpty()) {
+                existingUser.setFirstName(request.getFirstName().trim());
+            }
+
+            if (request.getLastName() != null && !request.getLastName().trim().isEmpty()) {
+                existingUser.setLastName(request.getLastName().trim());
+            }
+
+            if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+                // Verifică dacă email-ul nu este deja folosit de alt utilizator
+                Optional<User> userWithEmail = userService.findByEmail(request.getEmail().trim());
+                if (userWithEmail.isPresent() && !userWithEmail.get().getUserId().equals(userId)) {
+                    return createErrorResponse("Email already exists", HttpStatus.BAD_REQUEST);
+                }
+                existingUser.setEmail(request.getEmail().trim().toLowerCase());
+            }
+
+            // Actualizează câmpurile opționale
+            if (request.getDateOfBirth() != null) {
+                existingUser.setDateOfBirth(request.getDateOfBirth());
+            }
+
+            if (request.getHeightCm() != null) {
+                if (request.getHeightCm() < 50 || request.getHeightCm() > 300) {
+                    return createErrorResponse("Height must be between 50 and 300 cm", HttpStatus.BAD_REQUEST);
+                }
+                existingUser.setHeightCm(request.getHeightCm());
+            }
+
+            if (request.getWeightKg() != null) {
+                if (request.getWeightKg().compareTo(BigDecimal.valueOf(20)) < 0 ||
+                        request.getWeightKg().compareTo(BigDecimal.valueOf(1000)) > 0) {
+                    return createErrorResponse("Weight must be between 20 and 1000 kg", HttpStatus.BAD_REQUEST);
+                }
+                existingUser.setWeightKg(request.getWeightKg());
+            }
+
+            if (request.getFitnessLevel() != null) {
+                if (!List.of("BEGINNER", "INTERMEDIATE", "ADVANCED").contains(request.getFitnessLevel())) {
+                    return createErrorResponse("Invalid fitness level. Must be BEGINNER, INTERMEDIATE, or ADVANCED", HttpStatus.BAD_REQUEST);
+                }
+                existingUser.setFitnessLevel(request.getFitnessLevel());
+            }
+
+            // Actualizează utilizatorul
+            User savedUser = userService.updateUser(userId, existingUser);
+
+            log.info("Complete profile updated successfully for user ID: {}", userId);
+
+            // Returnează răspuns compatibil cu frontend (ca AuthController)
+            Map<String, Object> response = new HashMap<>();
+            response.put("userId", savedUser.getUserId());
+            response.put("username", savedUser.getUsername());
+            response.put("email", savedUser.getEmail());
+            response.put("firstName", savedUser.getFirstName());
+            response.put("lastName", savedUser.getLastName());
+            response.put("dateOfBirth", savedUser.getDateOfBirth());
+            response.put("heightCm", savedUser.getHeightCm());
+            response.put("weightKg", savedUser.getWeightKg());
+            response.put("fitnessLevel", savedUser.getFitnessLevel());
+            response.put("isActive", savedUser.getIsActive());
+            response.put("createdAt", savedUser.getCreatedAt());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error updating complete profile for user ID: {}", userId, e);
+            return createErrorResponse("Error updating profile", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
     /**
      * Obține profilul utilizatorului după ID
      * GET /api/users/{userId}
@@ -194,70 +277,110 @@ public class UserController {
         }
     }
 
-    /**
-     * Actualizează profilul utilizatorului
-     * PUT /api/users/{userId}
-     */
-    @PutMapping("/{userId}")
-    public ResponseEntity<?> updateUserProfile(@PathVariable Long userId, @RequestBody UpdateProfileRequest request) {
+    @PutMapping("/complete-profile")
+    public ResponseEntity<?> completeProfileUser(@RequestBody Map<String, Object> request) {
         try {
-            log.info("Updating user profile for ID: {}", userId);
+            log.info("Complete profile request: {}", request);
 
-            // Verifică dacă utilizatorul există
-            Optional<User> existingUserOptional = userService.findById(userId);
-            if (existingUserOptional.isEmpty()) {
+            // Verifică și extrage userId cu validare
+            Object userIdObj = request.get("userId");
+            if (userIdObj == null) {
+                return createErrorResponse("User ID is required", HttpStatus.BAD_REQUEST);
+            }
+
+            Long userId;
+            try {
+                if (userIdObj instanceof Number) {
+                    userId = ((Number) userIdObj).longValue();
+                } else {
+                    userId = Long.valueOf(userIdObj.toString());
+                }
+            } catch (NumberFormatException e) {
+                return createErrorResponse("Invalid user ID format", HttpStatus.BAD_REQUEST);
+            }
+
+            Optional<User> userOptional = userService.findById(userId);
+            if (userOptional.isEmpty()) {
                 return createErrorResponse("User not found", HttpStatus.NOT_FOUND);
             }
 
-            User existingUser = existingUserOptional.get();
+            User user = userOptional.get();
 
-            // Validare input
-            if (request.getFirstName() == null || request.getFirstName().trim().isEmpty()) {
-                return createErrorResponse("First name is required", HttpStatus.BAD_REQUEST);
+            // Actualizează câmpurile dacă sunt prezente și nu sunt null
+            Object dateOfBirthObj = request.get("dateOfBirth");
+            if (dateOfBirthObj != null && !dateOfBirthObj.toString().trim().isEmpty()) {
+                try {
+                    user.setDateOfBirth(LocalDate.parse(dateOfBirthObj.toString()));
+                } catch (Exception e) {
+                    return createErrorResponse("Invalid date format for dateOfBirth", HttpStatus.BAD_REQUEST);
+                }
             }
 
-            if (request.getLastName() == null || request.getLastName().trim().isEmpty()) {
-                return createErrorResponse("Last name is required", HttpStatus.BAD_REQUEST);
+            Object heightCmObj = request.get("heightCm");
+            if (heightCmObj != null) {
+                try {
+                    Integer height = heightCmObj instanceof Number ?
+                            ((Number) heightCmObj).intValue() :
+                            Integer.valueOf(heightCmObj.toString());
+
+                    if (height < 50 || height > 300) {
+                        return createErrorResponse("Height must be between 50 and 300 cm", HttpStatus.BAD_REQUEST);
+                    }
+                    user.setHeightCm(height);
+                } catch (NumberFormatException e) {
+                    return createErrorResponse("Invalid height format", HttpStatus.BAD_REQUEST);
+                }
             }
 
-            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-                return createErrorResponse("Email is required", HttpStatus.BAD_REQUEST);
+            Object weightKgObj = request.get("weightKg");
+            if (weightKgObj != null) {
+                try {
+                    BigDecimal weight = weightKgObj instanceof Number ?
+                            BigDecimal.valueOf(((Number) weightKgObj).doubleValue()) :
+                            new BigDecimal(weightKgObj.toString());
+
+                    if (weight.compareTo(BigDecimal.valueOf(20)) < 0 ||
+                            weight.compareTo(BigDecimal.valueOf(1000)) > 0) {
+                        return createErrorResponse("Weight must be between 20 and 1000 kg", HttpStatus.BAD_REQUEST);
+                    }
+                    user.setWeightKg(weight);
+                } catch (NumberFormatException e) {
+                    return createErrorResponse("Invalid weight format", HttpStatus.BAD_REQUEST);
+                }
             }
 
-            // Validare fitness level
-            if (request.getFitnessLevel() != null &&
-                    !List.of("BEGINNER", "INTERMEDIATE", "ADVANCED").contains(request.getFitnessLevel())) {
-                return createErrorResponse("Invalid fitness level. Must be BEGINNER, INTERMEDIATE, or ADVANCED", HttpStatus.BAD_REQUEST);
+            Object fitnessLevelObj = request.get("fitnessLevel");
+            if (fitnessLevelObj != null && !fitnessLevelObj.toString().trim().isEmpty()) {
+                String fitnessLevel = fitnessLevelObj.toString().toUpperCase();
+                if (!List.of("BEGINNER", "INTERMEDIATE", "ADVANCED").contains(fitnessLevel)) {
+                    return createErrorResponse("Invalid fitness level. Must be BEGINNER, INTERMEDIATE, or ADVANCED", HttpStatus.BAD_REQUEST);
+                }
+                user.setFitnessLevel(fitnessLevel);
             }
 
-            // Creează user object pentru update
-            User updatedUser = new User();
-            updatedUser.setFirstName(request.getFirstName().trim());
-            updatedUser.setLastName(request.getLastName().trim());
-            updatedUser.setEmail(request.getEmail().trim().toLowerCase());
-            updatedUser.setDateOfBirth(request.getDateOfBirth());
-            updatedUser.setHeightCm(request.getHeightCm());
-            updatedUser.setWeightKg(request.getWeightKg());
-            updatedUser.setFitnessLevel(request.getFitnessLevel() != null ? request.getFitnessLevel() : "BEGINNER");
-            updatedUser.setUsername(existingUser.getUsername()); // Păstrează username-ul existent
+            User savedUser = userService.updateUser(userId, user);
 
-            // Actualizează utilizatorul
-            User savedUser = userService.updateUser(userId, updatedUser);
+            // Returnează răspuns compatibil cu frontend
+            Map<String, Object> response = new HashMap<>();
+            response.put("userId", savedUser.getUserId());
+            response.put("username", savedUser.getUsername());
+            response.put("email", savedUser.getEmail());
+            response.put("firstName", savedUser.getFirstName());
+            response.put("lastName", savedUser.getLastName());
+            response.put("dateOfBirth", savedUser.getDateOfBirth());
+            response.put("heightCm", savedUser.getHeightCm());
+            response.put("weightKg", savedUser.getWeightKg());
+            response.put("fitnessLevel", savedUser.getFitnessLevel());
+            response.put("isActive", savedUser.getIsActive());
 
-            log.info("User profile updated successfully for ID: {}", userId);
+            log.info("Profile completed successfully for user ID: {}", userId);
+            return ResponseEntity.ok(response);
 
-            DetailedUserResponse userResponse = new DetailedUserResponse(savedUser);
-            return ResponseEntity.ok(userResponse);
-
-        } catch (IllegalArgumentException e) {
-            log.error("Update validation error for user ID {}: {}", userId, e.getMessage());
-            return createErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            log.error("Error updating user profile for ID: {}", userId, e);
-            return createErrorResponse("Error updating user profile", HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("Error completing profile", e);
+            return createErrorResponse("Error completing profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
     /**
      * Schimbă parola utilizatorului
      * POST /api/users/{userId}/change-password

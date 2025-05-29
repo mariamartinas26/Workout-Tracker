@@ -6,17 +6,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Controller pentru autentificare și înregistrare utilizatori
- */
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "http://localhost:3000")
@@ -25,304 +23,205 @@ import java.util.Optional;
 public class AuthController {
 
     private final UserService userService;
-    private final PasswordEncoder passwordEncoder;
 
-    /**
-     * DTO pentru cererea de înregistrare
-     */
+    // DTOs
     public static class RegisterRequest {
-        private String firstName;
-        private String lastName;
+        private String username;
         private String email;
         private String password;
-
-        // Constructors
-        public RegisterRequest() {}
+        private String firstName;
+        private String lastName;
 
         // Getters și setters
-        public String getFirstName() { return firstName; }
-        public void setFirstName(String firstName) { this.firstName = firstName; }
-
-        public String getLastName() { return lastName; }
-        public void setLastName(String lastName) { this.lastName = lastName; }
-
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
-
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
+        public String getFirstName() { return firstName; }
+        public void setFirstName(String firstName) { this.firstName = firstName; }
+        public String getLastName() { return lastName; }
+        public void setLastName(String lastName) { this.lastName = lastName; }
     }
 
-    /**
-     * DTO pentru cererea de login
-     */
     public static class LoginRequest {
         private String email;
         private String password;
 
-        // Constructors
-        public LoginRequest() {}
-
-        // Getters și setters
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
-
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
     }
 
-    /**
-     * DTO pentru răspunsul utilizatorului (fără parolă)
-     */
-    public static class UserResponse {
-        private Long id;
-        private String firstName;
-        private String lastName;
-        private String email;
-        private String username;
+    public static class CompleteProfileRequest {
+        private Long userId;
+        private LocalDate dateOfBirth;
+        private Integer heightCm;
+        private BigDecimal weightKg;
         private String fitnessLevel;
-        private LocalDateTime createdAt;
 
-        // Constructor din User entity
-        public UserResponse(User user) {
-            this.id = user.getUserId();
-            this.firstName = user.getFirstName();
-            this.lastName = user.getLastName();
-            this.email = user.getEmail();
-            this.username = user.getUsername();
-            this.fitnessLevel = user.getFitnessLevel();
-            this.createdAt = user.getCreatedAt();
-        }
-
-        // Getters și setters
-        public Long getId() { return id; }
-        public void setId(Long id) { this.id = id; }
-
-        public String getFirstName() { return firstName; }
-        public void setFirstName(String firstName) { this.firstName = firstName; }
-
-        public String getLastName() { return lastName; }
-        public void setLastName(String lastName) { this.lastName = lastName; }
-
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-
-        public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
-
+        public Long getUserId() { return userId; }
+        public void setUserId(Long userId) { this.userId = userId; }
+        public LocalDate getDateOfBirth() { return dateOfBirth; }
+        public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+        public Integer getHeightCm() { return heightCm; }
+        public void setHeightCm(Integer heightCm) { this.heightCm = heightCm; }
+        public BigDecimal getWeightKg() { return weightKg; }
+        public void setWeightKg(BigDecimal weightKg) { this.weightKg = weightKg; }
         public String getFitnessLevel() { return fitnessLevel; }
         public void setFitnessLevel(String fitnessLevel) { this.fitnessLevel = fitnessLevel; }
-
-        public LocalDateTime getCreatedAt() { return createdAt; }
-        public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     }
 
     /**
-     * Endpoint pentru înregistrarea unui utilizator nou
-     * POST /api/auth/register
+     * Test endpoint
+     */
+    @GetMapping("/test")
+    public ResponseEntity<?> test() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Auth controller is working!");
+        response.put("timestamp", LocalDateTime.now());
+        response.put("service", "WorkoutTracker Authentication API");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Înregistrare utilizator
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
-            log.info("Registration attempt for email: {}", request.getEmail());
+            log.info("Register attempt for email: {}", request.getEmail());
 
-            // Validare input
-            if (request.getFirstName() == null || request.getFirstName().trim().isEmpty()) {
-                return createErrorResponse("First name is required", HttpStatus.BAD_REQUEST);
-            }
-
-            if (request.getLastName() == null || request.getLastName().trim().isEmpty()) {
-                return createErrorResponse("Last name is required", HttpStatus.BAD_REQUEST);
-            }
-
+            // Validare
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 return createErrorResponse("Email is required", HttpStatus.BAD_REQUEST);
             }
-
             if (request.getPassword() == null || request.getPassword().length() < 6) {
                 return createErrorResponse("Password must be at least 6 characters", HttpStatus.BAD_REQUEST);
             }
 
-            // Verifică dacă email-ul este disponibil
-            if (!userService.isEmailAvailable(request.getEmail())) {
+            // Verifică dacă utilizatorul există
+            if (userService.existsByEmail(request.getEmail())) {
                 return createErrorResponse("Email already exists", HttpStatus.BAD_REQUEST);
             }
+            if (userService.existsByUsername(request.getUsername())) {
+                return createErrorResponse("Username already exists", HttpStatus.BAD_REQUEST);
+            }
 
-            // Creează User entity
-            User user = new User();
-            user.setFirstName(request.getFirstName().trim());
-            user.setLastName(request.getLastName().trim());
-            user.setEmail(request.getEmail().trim().toLowerCase());
-            user.setPasswordHash(request.getPassword()); // Va fi criptat în service
+            // Creează utilizatorul
+            User newUser = new User();
+            newUser.setUsername(request.getUsername());
+            newUser.setEmail(request.getEmail());
+            newUser.setFirstName(request.getFirstName());
+            newUser.setLastName(request.getLastName());
 
-            // Generează username din first name + last name
-            String username = generateUsername(request.getFirstName(), request.getLastName());
-            user.setUsername(username);
+            User savedUser = userService.registerUser(newUser, request.getPassword());
 
-            // Setează valori default
-            user.setFitnessLevel("BEGINNER");
-            user.setIsActive(true);
+            Map<String, Object> response = createUserResponse(savedUser);
+            return ResponseEntity.ok(response);
 
-            // Salvează utilizatorul
-            User savedUser = userService.createUser(user);
-
-            log.info("User registered successfully with ID: {}", savedUser.getUserId());
-
-            // Returnează răspunsul fără parolă
-            UserResponse userResponse = new UserResponse(savedUser);
-            return ResponseEntity.ok(userResponse);
-
-        } catch (IllegalArgumentException e) {
-            log.error("Registration validation error: {}", e.getMessage());
-            return createErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            log.error("Registration error for email: {}", request.getEmail(), e);
-            return createErrorResponse("Registration failed. Please try again.", HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("Error during registration", e);
+            return createErrorResponse("Registration failed: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     /**
-     * Endpoint pentru autentificarea utilizatorului
-     * POST /api/auth/login
+     * Login utilizator
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
             log.info("Login attempt for email: {}", request.getEmail());
 
-            // Validare input
-            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-                return createErrorResponse("Email is required", HttpStatus.BAD_REQUEST);
-            }
-
-            if (request.getPassword() == null || request.getPassword().isEmpty()) {
-                return createErrorResponse("Password is required", HttpStatus.BAD_REQUEST);
-            }
-
-            // Găsește utilizatorul după email
-            Optional<User> userOptional = userService.findByEmail(request.getEmail().trim().toLowerCase());
+            Optional<User> userOptional = userService.authenticateUser(request.getEmail(), request.getPassword());
 
             if (userOptional.isEmpty()) {
-                log.warn("Login failed - user not found: {}", request.getEmail());
                 return createErrorResponse("Invalid email or password", HttpStatus.UNAUTHORIZED);
             }
 
             User user = userOptional.get();
-
-            // Verifică dacă utilizatorul este activ
             if (!user.getIsActive()) {
-                log.warn("Login failed - user is inactive: {}", request.getEmail());
-                return createErrorResponse("Account is inactive", HttpStatus.UNAUTHORIZED);
+                return createErrorResponse("Account is deactivated", HttpStatus.UNAUTHORIZED);
             }
 
-            // Verifică parola
-            if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-                log.warn("Login failed - invalid password for: {}", request.getEmail());
-                return createErrorResponse("Invalid email or password", HttpStatus.UNAUTHORIZED);
-            }
-
-            log.info("User logged in successfully: {}", user.getEmail());
-
-            // Returnează răspunsul fără parolă
-            UserResponse userResponse = new UserResponse(user);
-            return ResponseEntity.ok(userResponse);
-
-        } catch (Exception e) {
-            log.error("Login error for email: {}", request.getEmail(), e);
-            return createErrorResponse("Login failed. Please try again.", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Endpoint pentru verificarea disponibilității email-ului
-     * GET /api/auth/check-email?email=test@example.com
-     */
-    @GetMapping("/check-email")
-    public ResponseEntity<?> checkEmailAvailability(@RequestParam String email) {
-        try {
-            boolean available = userService.isEmailAvailable(email.trim().toLowerCase());
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("email", email);
-            response.put("available", available);
-
+            Map<String, Object> response = createUserResponse(user);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error checking email availability: {}", email, e);
-            return createErrorResponse("Error checking email availability", HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("Error during login", e);
+            return createErrorResponse("Login failed: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     /**
-     * Endpoint pentru verificarea disponibilității username-ului
-     * GET /api/auth/check-username?username=john_doe
+     * Completează profilul utilizatorului
      */
-    @GetMapping("/check-username")
-    public ResponseEntity<?> checkUsernameAvailability(@RequestParam String username) {
+    @PutMapping("/complete-profile")
+    public ResponseEntity<?> completeProfile(@RequestBody CompleteProfileRequest request) {
         try {
-            boolean available = userService.isUsernameAvailable(username.trim());
+            log.info("Complete profile request for user ID: {}", request.getUserId());
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("username", username);
-            response.put("available", available);
+            if (request.getUserId() == null) {
+                return createErrorResponse("User ID is required", HttpStatus.BAD_REQUEST);
+            }
 
+            Optional<User> userOptional = userService.findById(request.getUserId());
+            if (userOptional.isEmpty()) {
+                return createErrorResponse("User not found", HttpStatus.NOT_FOUND);
+            }
+
+            User user = userOptional.get();
+
+            // Actualizează profilul
+            if (request.getDateOfBirth() != null) {
+                user.setDateOfBirth(request.getDateOfBirth());
+            }
+            if (request.getHeightCm() != null) {
+                user.setHeightCm(request.getHeightCm());
+            }
+            if (request.getWeightKg() != null) {
+                user.setWeightKg(request.getWeightKg());
+            }
+            if (request.getFitnessLevel() != null) {
+                user.setFitnessLevel(request.getFitnessLevel());
+            }
+
+            User savedUser = userService.updateUser(request.getUserId(), user);
+
+            Map<String, Object> response = createUserResponse(savedUser);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error checking username availability: {}", username, e);
-            return createErrorResponse("Error checking username availability", HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("Error completing profile for user ID: {}", request.getUserId(), e);
+            return createErrorResponse("Error completing profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    /**
-     * Endpoint de test pentru verificarea funcționării
-     * GET /api/auth/test
-     */
-    @GetMapping("/test")
-    public ResponseEntity<?> test() {
+    // Metode helper
+    private Map<String, Object> createUserResponse(User user) {
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Auth endpoints are working!");
-        response.put("timestamp", LocalDateTime.now());
-        response.put("service", "WorkoutTracker Authentication API");
-        response.put("version", "1.0.0");
-
-        return ResponseEntity.ok(response);
+        response.put("userId", user.getUserId());
+        response.put("username", user.getUsername());
+        response.put("email", user.getEmail());
+        response.put("firstName", user.getFirstName());
+        response.put("lastName", user.getLastName());
+        response.put("dateOfBirth", user.getDateOfBirth());
+        response.put("heightCm", user.getHeightCm());
+        response.put("weightKg", user.getWeightKg());
+        response.put("fitnessLevel", user.getFitnessLevel());
+        response.put("isActive", user.getIsActive());
+        return response;
     }
 
-    // Metode utilitare private
-
-    /**
-     * Generează un username unic din numele și prenumele utilizatorului
-     */
-    private String generateUsername(String firstName, String lastName) {
-        String baseUsername = (firstName + "_" + lastName)
-                .toLowerCase()
-                .replaceAll("[^a-z0-9_]", "")
-                .replaceAll("_+", "_");
-
-        String username = baseUsername;
-        int counter = 1;
-
-        // Dacă username-ul există, adaugă un număr la sfârșit
-        while (!userService.isUsernameAvailable(username)) {
-            username = baseUsername + counter;
-            counter++;
-        }
-
-        return username;
-    }
-
-    /**
-     * Creează un răspuns de eroare standardizat
-     */
     private ResponseEntity<?> createErrorResponse(String message, HttpStatus status) {
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("error", true);
         errorResponse.put("message", message);
         errorResponse.put("timestamp", LocalDateTime.now());
         errorResponse.put("status", status.value());
-
         return ResponseEntity.status(status).body(errorResponse);
     }
 }

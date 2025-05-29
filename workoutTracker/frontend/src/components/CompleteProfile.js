@@ -62,14 +62,19 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
 
         try {
             // Simulate API call to update user profile
-            const response = await fetch('/api/complete-profile', {
+            console.log("User object:", user); // Adaugă asta pentru debug
+            const response =  await fetch('http://localhost:8082/api/users/complete-profile', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+
                 body: JSON.stringify({
-                    userId: user.userId,
-                    ...formData
+                    userId: user.id, // folosește user.id în loc de user.userId
+                    dateOfBirth: formData.dateOfBirth || null,
+                    heightCm: formData.heightCm ? parseInt(formData.heightCm) : null,
+                    weightKg: formData.weightKg ? parseFloat(formData.weightKg) : null,
+                    fitnessLevel: formData.fitnessLevel || "BEGINNER"
                 })
             });
 
