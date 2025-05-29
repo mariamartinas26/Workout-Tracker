@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public class UpdateProfileRequest {
-    private Long userId; // Opțional, pentru identificare
     private String firstName;
     private String lastName;
     private String email;
@@ -14,10 +13,10 @@ public class UpdateProfileRequest {
     private BigDecimal weightKg;
     private String fitnessLevel;
 
-    // Getters și setters pentru toate câmpurile
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    // Constructors
+    public UpdateProfileRequest() {}
 
+    // Getters și setters
     public String getFirstName() { return firstName; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
 
@@ -33,8 +32,8 @@ public class UpdateProfileRequest {
     public Integer getHeightCm() { return heightCm; }
     public void setHeightCm(Integer heightCm) { this.heightCm = heightCm; }
 
-    public BigDecimal  getWeightKg() { return weightKg; }
-    public void setWeightKg(BigDecimal  weightKg) { this.weightKg = weightKg; }
+    public BigDecimal getWeightKg() { return weightKg; }
+    public void setWeightKg(BigDecimal weightKg) { this.weightKg = weightKg; }
 
     public String getFitnessLevel() { return fitnessLevel; }
     public void setFitnessLevel(String fitnessLevel) { this.fitnessLevel = fitnessLevel; }
