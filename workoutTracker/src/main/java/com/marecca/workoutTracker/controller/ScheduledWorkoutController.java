@@ -1,5 +1,6 @@
 package com.marecca.workoutTracker.controller;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.marecca.workoutTracker.entity.ScheduledWorkout;
 import com.marecca.workoutTracker.service.ScheduledWorkoutService;
 import lombok.RequiredArgsConstructor;
@@ -211,6 +212,8 @@ public class ScheduledWorkoutController {
 
     @lombok.Data
     @lombok.Builder
+    @lombok.NoArgsConstructor  // Add this line
+    @lombok.AllArgsConstructor // Add this line
     public static class ScheduleWorkoutRequest {
         @NotNull(message = "ID-ul utilizatorului este obligatoriu")
         @Positive(message = "ID-ul utilizatorului trebuie să fie pozitiv")
@@ -221,8 +224,10 @@ public class ScheduledWorkoutController {
         private Long workoutPlanId;
 
         @NotNull(message = "Data programată este obligatorie")
+        @JsonFormat(pattern = "yyyy-MM-dd") // Add this to help with date parsing
         private LocalDate scheduledDate;
 
+        @JsonFormat(pattern = "HH:mm") // Add this to help with time parsing
         private LocalTime scheduledTime;
     }
 
