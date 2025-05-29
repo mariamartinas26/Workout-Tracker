@@ -68,8 +68,7 @@ CREATE TABLE users (
                        fitness_level VARCHAR(20) DEFAULT 'BEGINNER' CHECK (fitness_level IN ('BEGINNER', 'INTERMEDIATE', 'ADVANCED')),
                        is_active BOOLEAN DEFAULT TRUE,
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+                       updated_at TIMESTAMP DEFAULT CURRE
 
 CREATE TABLE exercises (
                            exercise_id BIGSERIAL PRIMARY KEY,
