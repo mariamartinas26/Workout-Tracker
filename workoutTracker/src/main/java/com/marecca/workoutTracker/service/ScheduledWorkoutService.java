@@ -81,28 +81,31 @@ public class ScheduledWorkoutService {
     @Transactional
     public Long scheduleWorkoutWithValidation(Long userId, Long workoutPlanId,
                                               LocalDate scheduledDate, LocalTime scheduledTime) {
-        log.info("Scheduling workout with additional Java validation");
+        log.info("Scheduling workout using PostgreSQL function for userId: {}, planId: {}", userId, workoutPlanId);
 
-        // Validare suplimentară în Java
-        if (!workoutPlanRepository.existsById(workoutPlanId)) {
-            throw new IllegalArgumentException("Planul de workout nu există");
+        try {
+            if (scheduledTime != null) {
+                return scheduledWorkoutRepository.scheduleWorkoutWithFunction(
+                        userId, workoutPlanId, scheduledDate, scheduledTime);
+            } else {
+                return scheduledWorkoutRepository.scheduleWorkoutWithoutTime(
+                        userId, workoutPlanId, scheduledDate);
+            }
+        } catch (Exception e) {
+            log.error("Database error while scheduling workout: {}", e.getMessage());
+
+            // Convertește erorile PostgreSQL în excepții Java corespunzătoare
+            String errorMessage = e.getMessage();
+            if (errorMessage.contains("does not exist or does not belong to user")) {
+                throw new IllegalArgumentException("Planul de workout nu aparține utilizatorului specificat");
+            } else if (errorMessage.contains("User with ID") && errorMessage.contains("does not exist")) {
+                throw new IllegalArgumentException("Utilizatorul nu există");
+            } else if (errorMessage.contains("already has a workout scheduled")) {
+                throw new IllegalStateException("Utilizatorul are deja un workout programat pentru această dată/oră");
+            } else {
+                throw new RuntimeException("Eroare la programarea workout-ului: " + errorMessage);
+            }
         }
-
-        if (!scheduledWorkoutRepository.isWorkoutPlanOwnedByUser(workoutPlanId, userId)) {
-            throw new IllegalArgumentException("Planul de workout nu aparține utilizatorului specificat");
-        }
-
-        // Define the list of statuses you want to check against
-        List<WorkoutStatusType> activeStatuses = Arrays.asList(WorkoutStatusType.PLANNED, WorkoutStatusType.IN_PROGRESS);
-
-        // Pass the list to the repository method
-        if (scheduledWorkoutRepository.hasWorkoutScheduledAt(userId, scheduledDate, scheduledTime, activeStatuses)) {
-            throw new IllegalStateException(
-                    String.format("Utilizatorul are deja un workout programat pe %s la %s",
-                            scheduledDate, scheduledTime != null ? scheduledTime : "orice oră"));
-        }
-
-        return scheduleWorkoutWithFunction(userId, workoutPlanId, scheduledDate, scheduledTime);
     }
 
     /**
@@ -118,11 +121,24 @@ public class ScheduledWorkoutService {
      */
     @Transactional(readOnly = true)
     public boolean canScheduleWorkoutAt(Long userId, LocalDate scheduledDate, LocalTime scheduledTime) {
-        // Define the list of statuses you want to check against
-        List<WorkoutStatusType> activeStatuses = Arrays.asList(WorkoutStatusType.PLANNED, WorkoutStatusType.IN_PROGRESS);
+        try {
+            // Încearcă să programezi (dry-run)
+            // Dacă funcția PostgreSQL nu aruncă excepție, înseamnă că se poate programa
+            // ATENȚIE: aceasta este doar pentru verificare, nu face inserarea efectivă
 
-        // Pass the list to the repository method
-        return !scheduledWorkoutRepository.hasWorkoutScheduledAt(userId, scheduledDate, scheduledTime, activeStatuses);
+            // Alternativ, folosește o verificare mai simplă:
+            List<WorkoutStatusType> activeStatuses = Arrays.asList(WorkoutStatusType.PLANNED, WorkoutStatusType.IN_PROGRESS);
+
+            if (scheduledTime != null) {
+                return !scheduledWorkoutRepository.hasWorkoutScheduledAtSpecificTime(
+                        userId, scheduledDate, scheduledTime, activeStatuses);
+            } else {
+                return !scheduledWorkoutRepository.hasWorkoutScheduledOnDate(
+                        userId, scheduledDate, activeStatuses);
+            }
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**

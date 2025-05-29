@@ -95,19 +95,31 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             @Param("scheduledDate") LocalDate scheduledDate);
 
     /**
-     * Varianta 3: Verificare dacă utilizatorul are deja workout programat
-     * (replicând logica din funcția PostgreSQL pentru validare suplimentară)
+     * Verificare pentru cazul când scheduled_time este specificat
      */
     @Query("SELECT COUNT(sw) > 0 FROM ScheduledWorkout sw " +
             "WHERE sw.user.userId = :userId " +
             "AND sw.scheduledDate = :scheduledDate " +
-            "AND (:scheduledTime IS NULL OR sw.scheduledTime = :scheduledTime) " +
+            "AND sw.scheduledTime = :scheduledTime " +
             "AND sw.status IN :statuses")
-    boolean hasWorkoutScheduledAt(
+    boolean hasWorkoutScheduledAtSpecificTime(
             @Param("userId") Long userId,
             @Param("scheduledDate") LocalDate scheduledDate,
             @Param("scheduledTime") LocalTime scheduledTime,
-            @Param("statuses") List<WorkoutStatusType> statuses // <-- ADD THIS PARAMETER
+            @Param("statuses") List<WorkoutStatusType> statuses
+    );
+
+    /**
+     * Verificare pentru cazul când scheduled_time este null (oricând în ziua respectivă)
+     */
+    @Query("SELECT COUNT(sw) > 0 FROM ScheduledWorkout sw " +
+            "WHERE sw.user.userId = :userId " +
+            "AND sw.scheduledDate = :scheduledDate " +
+            "AND sw.status IN :statuses")
+    boolean hasWorkoutScheduledOnDate(
+            @Param("userId") Long userId,
+            @Param("scheduledDate") LocalDate scheduledDate,
+            @Param("statuses") List<WorkoutStatusType> statuses
     );
 
 
