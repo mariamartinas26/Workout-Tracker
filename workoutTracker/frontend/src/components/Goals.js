@@ -109,19 +109,22 @@ const Goals = ({ user, onBack, onGoalSet }) => {
             id: 'lose_weight',
             title: 'Lose Weight',
             description: 'Burn fat and achieve your ideal weight',
-            icon: '⚖️'
+            icon: '⚖️',
+            color: 'linear-gradient(135deg, #f093fb, #f5576c)'
         },
         {
             id: 'gain_muscle',
             title: 'Gain Muscle',
             description: 'Build strength and muscle mass',
-            icon: '💪'
+            icon: '💪',
+            color: 'linear-gradient(135deg, #4facfe, #00f2fe)'
         },
         {
             id: 'maintain_health',
             title: 'Maintain Healthy Life',
             description: 'Stay fit and maintain overall wellness',
-            icon: '🌱'
+            icon: '🌱',
+            color: 'linear-gradient(135deg, #43e97b, #38f9d7)'
         }
     ];
 
@@ -723,17 +726,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
 
                 {/* Header */}
                 <div style={{ textAlign: 'center', marginBottom: '48px', marginTop: '40px' }}>
-                    <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '100px',
-                        height: '100px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                        borderRadius: '25px',
-                        marginBottom: '24px',
-                        boxShadow: '0 12px 40px rgba(102, 126, 234, 0.3)'
-                    }}>
+                    <div>
                         <img
                             src="/target.png"
                             alt="Target Logo"
@@ -750,7 +743,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                         />
                     </div>
                     <h1 style={{
-                        color: '#1a202c',
+                        color: '#000000',
                         fontSize: '36px',
                         fontWeight: '800',
                         marginBottom: '16px',
@@ -850,6 +843,13 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                             margin: '0 0 8px 0'
                                         }}>
                                             Created: {formatDate(goal.createdAt)}
+                                        </p>
+                                        <p style={{
+                                            color: '#718096',
+                                            fontSize: '12px',
+                                            margin: '0'
+                                        }}>
+                                            Goal ID: {goal.goalId}
                                         </p>
                                     </div>
                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1141,7 +1141,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
 
                 {/* Header */}
                 <div style={{ textAlign: 'center', marginBottom: '48px', marginTop: '40px' }}>
-                    <div >
+                    <div>
                         <img
                             src="/target.png"
                             alt="Target Logo"
@@ -1158,12 +1158,12 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                         />
                     </div>
                     <h1 style={{
-                        color: '#000000',
+                        color: '#1a202c',
                         fontSize: '36px',
                         fontWeight: '800',
                         marginBottom: '16px',
                         letterSpacing: '-0.5px',
-                        background: '#000000',
+                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent'
