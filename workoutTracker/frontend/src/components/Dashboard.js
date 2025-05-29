@@ -225,12 +225,12 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                     </div>
 
                     <h2 style={{
-                        color: '#1a202c',
+                        color: '#000000',
                         fontSize: '40px',
                         fontWeight: '800',
                         marginBottom: '16px',
                         letterSpacing: '-1px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                        background: '#000000',
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent'
@@ -388,18 +388,21 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                  e.target.style.transform = 'translateY(0)';
                                  e.target.style.boxShadow = 'none';
                              }}>
-                            <div style={{
-                                width: '56px',
-                                height: '56px',
-                                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                                borderRadius: '14px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginBottom: '20px',
-                                boxShadow: '0 8px 24px rgba(102, 126, 234, 0.3)'
-                            }}>
-                                <span style={{ fontSize: '24px', color: 'white' }}>🏋️</span>
+                            <div>
+                                <img
+                                    src="/weight-lifting.png"
+                                    alt="WeightLift Logo"
+                                    style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        objectFit: 'contain'
+                                    }}
+                                    onError={(e) => {
+                                        // Fallback în caz că imaginea nu se poate încărca
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                />
                             </div>
                             <h3 style={{
                                 color: '#1a202c',
@@ -447,18 +450,21 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                 e.target.style.transform = 'translateY(0)';
                                 e.target.style.boxShadow = 'none';
                             }}>
-                            <div style={{
-                                width: '56px',
-                                height: '56px',
-                                background: 'linear-gradient(135deg, #38b2ac, #319795)',
-                                borderRadius: '14px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginBottom: '20px',
-                                boxShadow: '0 8px 24px rgba(56, 178, 172, 0.3)'
-                            }}>
-                                <span style={{ fontSize: '24px', color: 'white' }}>📅</span>
+                            <div>
+                                <img
+                                    src="/calendar.png"
+                                    alt="Calendar Logo"
+                                    style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        objectFit: 'contain'
+                                    }}
+                                    onError={(e) => {
+                                        // Fallback în caz că imaginea nu se poate încărca
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                />
                             </div>
                             <h3 style={{
                                 color: '#1a202c',
@@ -499,18 +505,21 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                  e.target.style.transform = 'translateY(0)';
                                  e.target.style.boxShadow = 'none';
                              }}>
-                            <div style={{
-                                width: '56px',
-                                height: '56px',
-                                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                                borderRadius: '14px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginBottom: '20px',
-                                boxShadow: '0 8px 24px rgba(102, 126, 234, 0.3)'
-                            }}>
-                                <span style={{ fontSize: '24px', color: 'white' }}>📈</span>
+                            <div>
+                                <img
+                                    src="/rising.png"
+                                    alt="Progress Logo"
+                                    style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        objectFit: 'contain'
+                                    }}
+                                    onError={(e) => {
+                                        // Fallback în caz că imaginea nu se poate încărca
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                />
                             </div>
                             <h3 style={{
                                 color: '#1a202c',
@@ -552,18 +561,21 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                  e.target.style.transform = 'translateY(0)';
                                  e.target.style.boxShadow = 'none';
                              }}>
-                            <div style={{
-                                width: '56px',
-                                height: '56px',
-                                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                                borderRadius: '14px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginBottom: '20px',
-                                boxShadow: '0 8px 24px rgba(102, 126, 234, 0.3)'
-                            }}>
-                                <span style={{ fontSize: '24px', color: 'white' }}>🎯</span>
+                            <div>
+                                <img
+                                    src="/target.png"
+                                    alt="Target Logo"
+                                    style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        objectFit: 'contain'
+                                    }}
+                                    onError={(e) => {
+                                        // Fallback în caz că imaginea nu se poate încărca
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                    }}
+                                />
                             </div>
                             <h3 style={{
                                 color: '#1a202c',

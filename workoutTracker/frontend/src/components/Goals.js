@@ -737,7 +737,20 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                         marginBottom: '24px',
                         boxShadow: '0 12px 40px rgba(102, 126, 234, 0.3)'
                     }}>
-                        <span style={{ fontSize: '40px', color: 'white' }}>🎯</span>
+                        <img
+                            src="/target.png"
+                            alt="Target Logo"
+                            style={{
+                                width: '48px',
+                                height: '48px',
+                                objectFit: 'contain'
+                            }}
+                            onError={(e) => {
+                                // Fallback în caz că imaginea nu se poate încărca
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                            }}
+                        />
                     </div>
                     <h1 style={{
                         color: '#1a202c',
@@ -840,13 +853,6 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                             margin: '0 0 8px 0'
                                         }}>
                                             Created: {formatDate(goal.createdAt)}
-                                        </p>
-                                        <p style={{
-                                            color: '#718096',
-                                            fontSize: '12px',
-                                            margin: '0'
-                                        }}>
-                                            Goal ID: {goal.goalId}
                                         </p>
                                     </div>
                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
