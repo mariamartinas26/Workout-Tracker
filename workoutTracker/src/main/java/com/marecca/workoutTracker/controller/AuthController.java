@@ -86,9 +86,6 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Înregistrare utilizator
-     */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
@@ -101,21 +98,45 @@ public class AuthController {
             if (request.getPassword() == null || request.getPassword().length() < 6) {
                 return createErrorResponse("Password must be at least 6 characters", HttpStatus.BAD_REQUEST);
             }
+            if (request.getFirstName() == null || request.getFirstName().trim().isEmpty()) {
+                return createErrorResponse("First name is required", HttpStatus.BAD_REQUEST);
+            }
+            if (request.getLastName() == null || request.getLastName().trim().isEmpty()) {
+                return createErrorResponse("Last name is required", HttpStatus.BAD_REQUEST);
+            }
 
-            // Verifică dacă utilizatorul există
+            // Verifică dacă utilizatorul există deja
             if (userService.existsByEmail(request.getEmail())) {
                 return createErrorResponse("Email already exists", HttpStatus.BAD_REQUEST);
             }
-            if (userService.existsByUsername(request.getUsername())) {
-                return createErrorResponse("Username already exists", HttpStatus.BAD_REQUEST);
+
+            // Generează username dacă nu este furnizat
+            String username = request.getUsername();
+            if (username == null || username.trim().isEmpty()) {
+                // Generează username din email (partea dinaintea @)
+                username = request.getEmail().split("@")[0];
+
+                // Dacă username-ul generat există deja, adaugă un număr
+                String baseUsername = username;
+                int counter = 1;
+                while (userService.existsByUsername(username)) {
+                    username = baseUsername + counter;
+                    counter++;
+                }
+                log.info("Generated username: {}", username);
+            } else {
+                // Verifică dacă username-ul furnizat există
+                if (userService.existsByUsername(username)) {
+                    return createErrorResponse("Username already exists", HttpStatus.BAD_REQUEST);
+                }
             }
 
             // Creează utilizatorul
             User newUser = new User();
-            newUser.setUsername(request.getUsername());
-            newUser.setEmail(request.getEmail());
-            newUser.setFirstName(request.getFirstName());
-            newUser.setLastName(request.getLastName());
+            newUser.setUsername(username.trim());
+            newUser.setEmail(request.getEmail().trim());
+            newUser.setFirstName(request.getFirstName().trim());
+            newUser.setLastName(request.getLastName().trim());
 
             User savedUser = userService.registerUser(newUser, request.getPassword());
 
