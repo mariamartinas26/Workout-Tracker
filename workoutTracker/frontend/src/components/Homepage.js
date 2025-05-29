@@ -245,24 +245,26 @@ const Homepage = ({ onLogin, onRegister }) => {
                              e.target.style.transform = 'translateY(0)';
                              e.target.style.background = 'rgba(255, 255, 255, 0.05)';
                          }}>
-                        <div style={{
-                            width: '60px',
-                            height: '60px',
-                            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                            borderRadius: '16px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            margin: '0 auto 20px auto',
-                            boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
-                        }}>
-                            <span style={{ fontSize: '24px', color: 'white' }}>⚡</span>
+                        <div>
+                            <img
+                                src="/thunder.png"
+                                alt="Thunder Logo"
+                                style={{
+                                    width: '48px',
+                                    height: '48px',
+                                    objectFit: 'contain'
+                                }}
+                                onError={(e) => {
+                                    // Fallback în caz că imaginea nu se poate încărca
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
+                            />
                         </div>
                         <h3 style={{
                             fontSize: '20px',
                             fontWeight: '700',
                             marginBottom: '12px',
-                            color: 'white'
                         }}>Lightning Fast</h3>
                         <p style={{
                             fontSize: '15px',
@@ -293,24 +295,26 @@ const Homepage = ({ onLogin, onRegister }) => {
                              e.target.style.transform = 'translateY(0)';
                              e.target.style.background = 'rgba(255, 255, 255, 0.05)';
                          }}>
-                        <div style={{
-                            width: '60px',
-                            height: '60px',
-                            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                            borderRadius: '16px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            margin: '0 auto 20px auto',
-                            boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
-                        }}>
-                            <span style={{ fontSize: '24px', color: 'white' }}>📊</span>
+                        <div>
+                            <img
+                                src="/rising.png"
+                                alt="Progress Logo"
+                                style={{
+                                    width: '48px',
+                                    height: '48px',
+                                    objectFit: 'contain'
+                                }}
+                                onError={(e) => {
+                                    // Fallback în caz că imaginea nu se poate încărca
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
+                            />
                         </div>
                         <h3 style={{
                             fontSize: '20px',
                             fontWeight: '700',
                             marginBottom: '12px',
-                            color: 'white'
                         }}>Smart Analytics</h3>
                         <p style={{
                             fontSize: '15px',
@@ -341,24 +345,26 @@ const Homepage = ({ onLogin, onRegister }) => {
                              e.target.style.transform = 'translateY(0)';
                              e.target.style.background = 'rgba(255, 255, 255, 0.05)';
                          }}>
-                        <div style={{
-                            width: '60px',
-                            height: '60px',
-                            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                            borderRadius: '16px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            margin: '0 auto 20px auto',
-                            boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
-                        }}>
-                            <span style={{ fontSize: '24px', color: 'white' }}>🎯</span>
+                        <div>
+                            <img
+                                src="/target.png"
+                                alt="Target Logo"
+                                style={{
+                                    width: '48px',
+                                    height: '48px',
+                                    objectFit: 'contain'
+                                }}
+                                onError={(e) => {
+                                    // Fallback în caz că imaginea nu se poate încărca
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
+                            />
                         </div>
                         <h3 style={{
                             fontSize: '20px',
                             fontWeight: '700',
                             marginBottom: '12px',
-                            color: 'white'
                         }}>Goal Focused</h3>
                         <p style={{
                             fontSize: '15px',

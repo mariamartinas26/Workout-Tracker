@@ -192,32 +192,22 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
                     textAlign: 'center',
                     marginBottom: '40px'
                 }}>
-                    <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '90px',
-                        height: '90px',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        borderRadius: '22px',
-                        marginBottom: '24px',
-                        boxShadow: '0 12px 40px rgba(102, 126, 234, 0.35)',
-                        position: 'relative'
-                    }}>
-                        <div style={{
-                            position: 'absolute',
-                            inset: '2px',
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            borderRadius: '20px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
-              <span style={{
-                  fontSize: '36px',
-                  color: 'white',
-                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
-              }}>🚀</span>
+                    <div>
+                        <div>
+                            <img
+                                src="/icon.png"
+                                alt="WorkoutTracker Logo"
+                                style={{
+                                    width: '48px',
+                                    height: '48px',
+                                    objectFit: 'contain'
+                                }}
+                                onError={(e) => {
+                                    // Fallback în caz că imaginea nu se poate încărca
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
+                            />
                         </div>
                     </div>
 
