@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
     const [formData, setFormData] = useState({
@@ -7,6 +7,18 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
         weightKg: '',
         fitnessLevel: 'BEGINNER'
     });
+
+    // Pre-populează câmpurile cu datele existente ale utilizatorului
+    useEffect(() => {
+        if (user) {
+            setFormData({
+                dateOfBirth: user.dateOfBirth || '',
+                heightCm: user.heightCm || '',
+                weightKg: user.weightKg || '',
+                fitnessLevel: user.fitnessLevel || 'BEGINNER'
+            });
+        }
+    }, [user]);
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
 
@@ -62,19 +74,14 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
 
         try {
             // Simulate API call to update user profile
-            console.log("Complete User object:", JSON.stringify(user, null, 2));
-            const response =  await fetch('http://localhost:8082/api/users/complete-profile', {
+            const response = await fetch('/api/complete-profile', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-
                 body: JSON.stringify({
-                    userId: user.userId, // folosește user.id în loc de user.userId
-                    dateOfBirth: formData.dateOfBirth || null,
-                    heightCm: formData.heightCm ? parseInt(formData.heightCm) : null,
-                    weightKg: formData.weightKg ? parseFloat(formData.weightKg) : null,
-                    fitnessLevel: formData.fitnessLevel || "BEGINNER"
+                    userId: user.userId,
+                    ...formData
                 })
             });
 
@@ -166,7 +173,7 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
                         marginBottom: '12px',
                         letterSpacing: '-0.5px'
                     }}>
-                        Complete Your Profile
+                        {user?.dateOfBirth || user?.heightCm || user?.weightKg ? 'Edit Your Profile' : 'Complete Your Profile'}
                     </h1>
                     <p style={{
                         color: '#718096',
@@ -175,7 +182,7 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
                         lineHeight: '1.5',
                         fontWeight: '500'
                     }}>
-                        Help us personalize your fitness experience
+                        {user?.dateOfBirth || user?.heightCm || user?.weightKg ? 'Update your fitness information' : 'Help us personalize your fitness experience'}
                     </p>
                 </div>
 
@@ -457,7 +464,7 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
                                     Updating Profile...
                                 </>
                             ) : (
-                                'Complete Profile'
+                                user?.dateOfBirth || user?.heightCm || user?.weightKg ? 'Update Profile' : 'Complete Profile'
                             )}
                         </button>
 
