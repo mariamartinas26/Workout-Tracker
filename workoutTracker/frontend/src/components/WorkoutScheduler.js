@@ -1,5 +1,6 @@
 // components/WorkoutScheduler.js
 import React, { useState, useEffect } from 'react';
+import WorkoutScheduleModal from './WorkoutScheduleModal'; // Only one import needed
 
 const API_BASE_URL = 'http://localhost:8082/api';
 
@@ -233,6 +234,10 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('plans'); // 'plans' sau 'scheduled'
 
+    // NEW STATE FOR SCHEDULE MODAL
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
+    const [selectedPlanForScheduling, setSelectedPlanForScheduling] = useState(null);
+
     // Încarcă datele când se deschide popup-ul
     useEffect(() => {
         if (isOpen) {
@@ -274,6 +279,21 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
         } finally {
             setLoadingWorkouts(false);
         }
+    };
+
+    // NEW FUNCTION TO HANDLE SCHEDULING
+    const handleScheduleWorkout = (plan) => {
+        setSelectedPlanForScheduling(plan);
+        setShowScheduleModal(true);
+    };
+
+    // NEW CALLBACK FOR WHEN WORKOUT IS SCHEDULED
+    const handleWorkoutScheduled = (result) => {
+        console.log('Workout scheduled successfully:', result);
+        // Refresh the scheduled workouts list
+        loadScheduledWorkouts();
+        // Show success message (optional)
+        setError(''); // Clear any existing errors
     };
 
     const handleRescheduleWorkout = async () => {
@@ -368,317 +388,176 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
     if (!isOpen) return null;
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px'
-        }}>
+        <>
             <div style={{
-                backgroundColor: 'white',
-                borderRadius: '20px',
-                padding: '32px',
-                maxWidth: '900px',
-                width: '100%',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-                position: 'relative'
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '20px'
             }}>
-                {/* Close button */}
-                <button
-                    onClick={handleClosePopup}
-                    disabled={loading}
-                    style={{
-                        position: 'absolute',
-                        top: '20px',
-                        right: '20px',
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '24px',
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        color: '#718096',
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all 0.2s',
-                        opacity: loading ? 0.5 : 1
-                    }}
-                >
-                    ×
-                </button>
-
-                <h2 style={{
-                    color: '#1a202c',
-                    fontSize: '28px',
-                    fontWeight: '800',
-                    marginBottom: '24px',
-                    textAlign: 'center',
-                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent'
-                }}>
-                    Workout Manager
-                </h2>
-
-                {/* Tab Navigation */}
                 <div style={{
-                    display: 'flex',
-                    marginBottom: '24px',
-                    borderBottom: '2px solid #e2e8f0'
+                    backgroundColor: 'white',
+                    borderRadius: '20px',
+                    padding: '32px',
+                    maxWidth: '900px',
+                    width: '100%',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                    position: 'relative'
                 }}>
+                    {/* Close button */}
                     <button
-                        onClick={() => setActiveTab('plans')}
+                        onClick={handleClosePopup}
+                        disabled={loading}
                         style={{
-                            padding: '12px 24px',
+                            position: 'absolute',
+                            top: '20px',
+                            right: '20px',
                             background: 'none',
                             border: 'none',
-                            borderBottom: activeTab === 'plans' ? '3px solid #667eea' : '3px solid transparent',
-                            color: activeTab === 'plans' ? '#667eea' : '#718096',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            fontSize: '16px'
+                            fontSize: '24px',
+                            cursor: loading ? 'not-allowed' : 'pointer',
+                            color: '#718096',
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            opacity: loading ? 0.5 : 1
                         }}
                     >
-                        📋 Workout Plans ({workoutPlans.length})
+                        ×
                     </button>
-                    <button
-                        onClick={() => setActiveTab('scheduled')}
-                        style={{
-                            padding: '12px 24px',
-                            background: 'none',
-                            border: 'none',
-                            borderBottom: activeTab === 'scheduled' ? '3px solid #667eea' : '3px solid transparent',
-                            color: activeTab === 'scheduled' ? '#667eea' : '#718096',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            fontSize: '16px'
-                        }}
-                    >
-                        📅 Scheduled Workouts ({scheduledWorkouts.length})
-                    </button>
-                </div>
 
-                {/* Error message */}
-                {error && (
-                    <div style={{
-                        backgroundColor: '#fed7d7',
-                        color: '#c53030',
-                        padding: '12px 16px',
-                        borderRadius: '8px',
+                    <h2 style={{
+                        color: '#1a202c',
+                        fontSize: '28px',
+                        fontWeight: '800',
                         marginBottom: '24px',
-                        border: '1px solid #feb2b2',
-                        fontSize: '14px',
-                        fontWeight: '600'
+                        textAlign: 'center',
+                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent'
                     }}>
-                        ⚠️ {error}
-                    </div>
-                )}
+                        Workout Manager
+                    </h2>
 
-                {/* Workout Plans Tab */}
-                {activeTab === 'plans' && (
+                    {/* Tab Navigation */}
                     <div style={{
-                        backgroundColor: '#f7fafc',
-                        padding: '24px',
-                        borderRadius: '16px',
-                        marginBottom: '24px'
+                        display: 'flex',
+                        marginBottom: '24px',
+                        borderBottom: '2px solid #e2e8f0'
                     }}>
-                        <h3 style={{
-                            color: '#2d3748',
-                            fontSize: '18px',
-                            fontWeight: '700',
-                            marginBottom: '16px'
-                        }}>
-                            Your Workout Plans (Templates)
-                        </h3>
-
-                        {loadingPlans ? (
-                            <div style={{
-                                textAlign: 'center',
-                                padding: '40px',
-                                color: '#718096'
-                            }}>
-                                <div style={{ fontSize: '20px', marginBottom: '8px' }}>⏳</div>
-                                <div>Loading your workout plans...</div>
-                            </div>
-                        ) : workoutPlans.length === 0 ? (
-                            <div style={{
-                                textAlign: 'center',
-                                padding: '40px',
-                                color: '#718096',
-                                backgroundColor: '#f9fafb',
-                                borderRadius: '8px',
-                                border: '2px dashed #e2e8f0'
-                            }}>
-                                <div style={{ fontSize: '24px', marginBottom: '8px' }}>📝</div>
-                                <div style={{ fontWeight: '600', marginBottom: '4px' }}>No Workout Plans Found</div>
-                                <div style={{ fontSize: '14px' }}>Create your first workout plan template</div>
-                            </div>
-                        ) : (
-                            <div style={{
-                                display: 'grid',
-                                gap: '12px'
-                            }}>
-                                {workoutPlans.map((plan) => (
-                                    <div
-                                        key={plan.workoutPlanId}
-                                        onClick={() => setSelectedPlan(plan)}
-                                        style={{
-                                            backgroundColor: selectedPlan?.workoutPlanId === plan.workoutPlanId ? '#e6fffa' : 'white',
-                                            border: selectedPlan?.workoutPlanId === plan.workoutPlanId ? '2px solid #38b2ac' : '2px solid #e2e8f0',
-                                            borderRadius: '12px',
-                                            padding: '20px',
-                                            cursor: loading ? 'not-allowed' : 'pointer',
-                                            transition: 'all 0.2s',
-                                            opacity: loading ? 0.6 : 1
-                                        }}
-                                    >
-                                        <div style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'flex-start',
-                                            marginBottom: '12px'
-                                        }}>
-                                            <div style={{ flex: 1 }}>
-                                                <h4 style={{
-                                                    color: '#2d3748',
-                                                    fontSize: '16px',
-                                                    fontWeight: '700',
-                                                    marginBottom: '4px'
-                                                }}>
-                                                    {plan.planName}
-                                                </h4>
-
-                                                <div style={{
-                                                    color: '#4a5568',
-                                                    fontSize: '14px',
-                                                    marginBottom: '8px'
-                                                }}>
-                                                    📅 Created: {formatDate(plan.createdAt)}
-                                                    {plan.updatedAt && plan.updatedAt !== plan.createdAt &&
-                                                        ` • Updated: ${formatDate(plan.updatedAt)}`
-                                                    }
-                                                </div>
-
-                                                {plan.description && (
-                                                    <p style={{
-                                                        color: '#718096',
-                                                        fontSize: '13px',
-                                                        lineHeight: '1.4',
-                                                        marginBottom: '8px'
-                                                    }}>
-                                                        {plan.description.length > 60
-                                                            ? plan.description.substring(0, 60) + '...'
-                                                            : plan.description}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            {selectedPlan?.workoutPlanId === plan.workoutPlanId && (
-                                                <div style={{
-                                                    backgroundColor: '#38b2ac',
-                                                    color: 'white',
-                                                    borderRadius: '50%',
-                                                    width: '24px',
-                                                    height: '24px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '14px',
-                                                    fontWeight: 'bold'
-                                                }}>
-                                                    ✓
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div style={{
-                                            display: 'flex',
-                                            gap: '16px',
-                                            flexWrap: 'wrap',
-                                            color: '#718096',
-                                            fontSize: '13px'
-                                        }}>
-                                            {plan.estimatedDurationMinutes && (
-                                                <span>⏱️ {plan.estimatedDurationMinutes} min</span>
-                                            )}
-                                            {plan.difficultyLevel && (
-                                                <span>💪 Level {plan.difficultyLevel}/5</span>
-                                            )}
-                                            {plan.goals && (
-                                                <span>🎯 {plan.goals}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        <button
+                            onClick={() => setActiveTab('plans')}
+                            style={{
+                                padding: '12px 24px',
+                                background: 'none',
+                                border: 'none',
+                                borderBottom: activeTab === 'plans' ? '3px solid #667eea' : '3px solid transparent',
+                                color: activeTab === 'plans' ? '#667eea' : '#718096',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                fontSize: '16px'
+                            }}
+                        >
+                            📋 Workout Plans ({workoutPlans.length})
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('scheduled')}
+                            style={{
+                                padding: '12px 24px',
+                                background: 'none',
+                                border: 'none',
+                                borderBottom: activeTab === 'scheduled' ? '3px solid #667eea' : '3px solid transparent',
+                                color: activeTab === 'scheduled' ? '#667eea' : '#718096',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                fontSize: '16px'
+                            }}
+                        >
+                            📅 Scheduled Workouts ({scheduledWorkouts.length})
+                        </button>
                     </div>
-                )}
 
-                {/* Scheduled Workouts Tab - codul existent rămâne la fel */}
-                {activeTab === 'scheduled' && (
-                    <div style={{
-                        backgroundColor: '#f7fafc',
-                        padding: '24px',
-                        borderRadius: '16px',
-                        marginBottom: '24px'
-                    }}>
-                        <h3 style={{
-                            color: '#2d3748',
-                            fontSize: '18px',
-                            fontWeight: '700',
-                            marginBottom: '16px'
+                    {/* Error message */}
+                    {error && (
+                        <div style={{
+                            backgroundColor: '#fed7d7',
+                            color: '#c53030',
+                            padding: '12px 16px',
+                            borderRadius: '8px',
+                            marginBottom: '24px',
+                            border: '1px solid #feb2b2',
+                            fontSize: '14px',
+                            fontWeight: '600'
                         }}>
-                            Your Scheduled Workouts
-                        </h3>
+                            ⚠️ {error}
+                        </div>
+                    )}
 
-                        {loadingWorkouts ? (
-                            <div style={{
-                                textAlign: 'center',
-                                padding: '40px',
-                                color: '#718096'
+                    {/* Workout Plans Tab */}
+                    {activeTab === 'plans' && (
+                        <div style={{
+                            backgroundColor: '#f7fafc',
+                            padding: '24px',
+                            borderRadius: '16px',
+                            marginBottom: '24px'
+                        }}>
+                            <h3 style={{
+                                color: '#2d3748',
+                                fontSize: '18px',
+                                fontWeight: '700',
+                                marginBottom: '16px'
                             }}>
-                                <div style={{ fontSize: '20px', marginBottom: '8px' }}>⏳</div>
-                                <div>Loading your scheduled workouts...</div>
-                            </div>
-                        ) : scheduledWorkouts.length === 0 ? (
-                            <div style={{
-                                textAlign: 'center',
-                                padding: '40px',
-                                color: '#718096',
-                                backgroundColor: '#f9fafb',
-                                borderRadius: '8px',
-                                border: '2px dashed #e2e8f0'
-                            }}>
-                                <div style={{ fontSize: '24px', marginBottom: '8px' }}>📅</div>
-                                <div style={{ fontWeight: '600', marginBottom: '4px' }}>No Scheduled Workouts Found</div>
-                                <div style={{ fontSize: '14px' }}>You don't have any scheduled workouts yet</div>
-                            </div>
-                        ) : (
-                            <div style={{
-                                display: 'grid',
-                                gap: '12px'
-                            }}>
-                                {scheduledWorkouts.map((workout) => {
-                                    const statusStyle = getStatusColor(workout.status);
-                                    return (
+                                Your Workout Plans (Templates)
+                            </h3>
+
+                            {loadingPlans ? (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '40px',
+                                    color: '#718096'
+                                }}>
+                                    <div style={{ fontSize: '20px', marginBottom: '8px' }}>⏳</div>
+                                    <div>Loading your workout plans...</div>
+                                </div>
+                            ) : workoutPlans.length === 0 ? (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '40px',
+                                    color: '#718096',
+                                    backgroundColor: '#f9fafb',
+                                    borderRadius: '8px',
+                                    border: '2px dashed #e2e8f0'
+                                }}>
+                                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>📝</div>
+                                    <div style={{ fontWeight: '600', marginBottom: '4px' }}>No Workout Plans Found</div>
+                                    <div style={{ fontSize: '14px' }}>Create your first workout plan template</div>
+                                </div>
+                            ) : (
+                                <div style={{
+                                    display: 'grid',
+                                    gap: '12px'
+                                }}>
+                                    {workoutPlans.map((plan) => (
                                         <div
-                                            key={workout.scheduledWorkoutId}
-                                            onClick={() => setSelectedWorkout(workout)}
+                                            key={plan.workoutPlanId}
+                                            onClick={() => setSelectedPlan(plan)}
                                             style={{
-                                                backgroundColor: selectedWorkout?.scheduledWorkoutId === workout.scheduledWorkoutId ? '#e6fffa' : 'white',
-                                                border: selectedWorkout?.scheduledWorkoutId === workout.scheduledWorkoutId ? '2px solid #38b2ac' : '2px solid #e2e8f0',
+                                                backgroundColor: selectedPlan?.workoutPlanId === plan.workoutPlanId ? '#e6fffa' : 'white',
+                                                border: selectedPlan?.workoutPlanId === plan.workoutPlanId ? '2px solid #38b2ac' : '2px solid #e2e8f0',
                                                 borderRadius: '12px',
                                                 padding: '20px',
                                                 cursor: loading ? 'not-allowed' : 'pointer',
@@ -686,7 +565,6 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                 opacity: loading ? 0.6 : 1
                                             }}
                                         >
-                                            {/* Conținutul pentru scheduled workouts rămâne la fel */}
                                             <div style={{
                                                 display: 'flex',
                                                 justifyContent: 'space-between',
@@ -700,51 +578,34 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                         fontWeight: '700',
                                                         marginBottom: '4px'
                                                     }}>
-                                                        {workout.workoutPlan?.planName || `Workout #${workout.scheduledWorkoutId}`}
+                                                        {plan.planName}
                                                     </h4>
-
-                                                    <div style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '8px',
-                                                        marginBottom: '8px'
-                                                    }}>
-                                                        <span style={{
-                                                            backgroundColor: statusStyle.bg,
-                                                            color: statusStyle.text,
-                                                            border: `1px solid ${statusStyle.border}`,
-                                                            padding: '2px 8px',
-                                                            borderRadius: '6px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600'
-                                                        }}>
-                                                            {workout.status || 'Programat'}
-                                                        </span>
-                                                    </div>
 
                                                     <div style={{
                                                         color: '#4a5568',
                                                         fontSize: '14px',
                                                         marginBottom: '8px'
                                                     }}>
-                                                        📅 {formatDate(workout.scheduledDate)}
-                                                        {workout.scheduledTime && ` • 🕒 ${formatTime(workout.scheduledTime)}`}
+                                                        📅 Created: {formatDate(plan.createdAt)}
+                                                        {plan.updatedAt && plan.updatedAt !== plan.createdAt &&
+                                                            ` • Updated: ${formatDate(plan.updatedAt)}`
+                                                        }
                                                     </div>
 
-                                                    {workout.workoutPlan?.description && (
+                                                    {plan.description && (
                                                         <p style={{
                                                             color: '#718096',
                                                             fontSize: '13px',
                                                             lineHeight: '1.4',
                                                             marginBottom: '8px'
                                                         }}>
-                                                            {workout.workoutPlan.description.length > 60
-                                                                ? workout.workoutPlan.description.substring(0, 60) + '...'
-                                                                : workout.workoutPlan.description}
+                                                            {plan.description.length > 60
+                                                                ? plan.description.substring(0, 60) + '...'
+                                                                : plan.description}
                                                         </p>
                                                     )}
                                                 </div>
-                                                {selectedWorkout?.scheduledWorkoutId === workout.scheduledWorkoutId && (
+                                                {selectedPlan?.workoutPlanId === plan.workoutPlanId && (
                                                     <div style={{
                                                         backgroundColor: '#38b2ac',
                                                         color: 'white',
@@ -769,474 +630,647 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                 color: '#718096',
                                                 fontSize: '13px'
                                             }}>
-                                                {workout.workoutPlan?.estimatedDurationMinutes && (
-                                                    <span>⏱️ {workout.workoutPlan.estimatedDurationMinutes} min</span>
+                                                {plan.estimatedDurationMinutes && (
+                                                    <span>⏱️ {plan.estimatedDurationMinutes} min</span>
                                                 )}
-                                                {workout.workoutPlan?.difficultyLevel && (
-                                                    <span>💪 Level {workout.workoutPlan.difficultyLevel}</span>
+                                                {plan.difficultyLevel && (
+                                                    <span>💪 Level {plan.difficultyLevel}/5</span>
                                                 )}
-                                                {workout.caloriesBurned && (
-                                                    <span>🔥 {workout.caloriesBurned} cal</span>
-                                                )}
-                                                {workout.rating && (
-                                                    <span>⭐ {workout.rating}/5</span>
+                                                {plan.goals && (
+                                                    <span>🎯 {plan.goals}</span>
                                                 )}
                                             </div>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Reschedule section - doar pentru scheduled workouts */}
-                {activeTab === 'scheduled' && selectedWorkout && (
-                    <div style={{
-                        backgroundColor: '#f0fff4',
-                        padding: '24px',
-                        borderRadius: '16px',
-                        marginBottom: '24px',
-                        border: '1px solid #c6f6d5',
-                        opacity: loading ? 0.6 : 1
-                    }}>
-                        <h3 style={{
-                            color: '#2d3748',
-                            fontSize: '18px',
-                            fontWeight: '700',
-                            marginBottom: '16px'
-                        }}>
-                            Reschedule Details
-                        </h3>
-
-                        <div style={{
-                            backgroundColor: '#e6fffa',
-                            padding: '16px',
-                            borderRadius: '8px',
-                            marginBottom: '20px',
-                            border: '1px solid #b2f5ea'
-                        }}>
-                            <div style={{
-                                color: '#2d3748',
-                                fontWeight: '600',
-                                marginBottom: '8px'
-                            }}>
-                                Selected Workout: {selectedWorkout.workoutPlan?.planName || `Workout #${selectedWorkout.scheduledWorkoutId}`}
-                            </div>
-                            <div style={{
-                                color: '#718096',
-                                fontSize: '14px',
-                                marginBottom: '4px'
-                            }}>
-                                Current Schedule: {formatDate(selectedWorkout.scheduledDate)}
-                                {selectedWorkout.scheduledTime && ` at ${formatTime(selectedWorkout.scheduledTime)}`}
-                            </div>
-                            <div style={{
-                                color: '#718096',
-                                fontSize: '14px'
-                            }}>
-                                {selectedWorkout.workoutPlan?.estimatedDurationMinutes && `Duration: ${selectedWorkout.workoutPlan.estimatedDurationMinutes} minutes`}
-                                {selectedWorkout.workoutPlan?.difficultyLevel && ` • Difficulty: Level ${selectedWorkout.workoutPlan.difficultyLevel}`}
-                            </div>
-                        </div>
-
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
-                            gap: '16px',
-                            marginBottom: '16px'
-                        }}>
-                            <div>
-                                <label style={{
-                                    display: 'block',
-                                    marginBottom: '8px',
-                                    color: '#4a5568',
-                                    fontWeight: '600',
-                                    fontSize: '14px'
-                                }}>
-                                    New Date *
-                                </label>
-                                <input
-                                    type="date"
-                                    value={scheduleData.scheduledDate}
-                                    onChange={(e) => setScheduleData(prev => ({ ...prev, scheduledDate: e.target.value }))}
-                                    min={new Date().toISOString().split('T')[0]}
-                                    disabled={loading}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: '2px solid #e2e8f0',
-                                        borderRadius: '8px',
-                                        fontSize: '14px',
-                                        boxSizing: 'border-box'
-                                    }}
-                                />
-                            </div>
-                            <div>
-                                <label style={{
-                                    display: 'block',
-                                    marginBottom: '8px',
-                                    color: '#4a5568',
-                                    fontWeight: '600',
-                                    fontSize: '14px'
-                                }}>
-                                    New Time *
-                                </label>
-                                <input
-                                    type="time"
-                                    value={scheduleData.scheduledTime}
-                                    onChange={(e) => setScheduleData(prev => ({ ...prev, scheduledTime: e.target.value }))}
-                                    disabled={loading}
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px 16px',
-                                        border: '2px solid #e2e8f0',
-                                        borderRadius: '8px',
-                                        fontSize: '14px',
-                                        boxSizing: 'border-box'
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Quick Date Options */}
-                        <div style={{
-                            marginTop: '16px',
-                            display: 'flex',
-                            gap: '8px',
-                            flexWrap: 'wrap'
-                        }}>
-                            <button
-                                onClick={() => setScheduleData(prev => ({
-                                    ...prev,
-                                    scheduledDate: new Date().toISOString().split('T')[0]
-                                }))}
-                                disabled={loading}
-                                style={{
-                                    background: '#e2e8f0',
-                                    color: '#4a5568',
-                                    border: 'none',
-                                    padding: '8px 12px',
-                                    borderRadius: '6px',
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px',
-                                    fontWeight: '600'
-                                }}
-                            >
-                                Today
-                            </button>
-                            <button
-                                onClick={() => {
-                                    const tomorrow = new Date();
-                                    tomorrow.setDate(tomorrow.getDate() + 1);
-                                    setScheduleData(prev => ({
-                                        ...prev,
-                                        scheduledDate: tomorrow.toISOString().split('T')[0]
-                                    }));
-                                }}
-                                disabled={loading}
-                                style={{
-                                    background: '#e2e8f0',
-                                    color: '#4a5568',
-                                    border: 'none',
-                                    padding: '8px 12px',
-                                    borderRadius: '6px',
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px',
-                                    fontWeight: '600'
-                                }}
-                            >
-                                Tomorrow
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Plan Details section - pentru workout plans */}
-                {activeTab === 'plans' && selectedPlan && (
-                    <div style={{
-                        backgroundColor: '#f0f9ff',
-                        padding: '24px',
-                        borderRadius: '16px',
-                        marginBottom: '24px',
-                        border: '1px solid #bfdbfe'
-                    }}>
-                        <h3 style={{
-                            color: '#2d3748',
-                            fontSize: '18px',
-                            fontWeight: '700',
-                            marginBottom: '16px'
-                        }}>
-                            Plan Details
-                        </h3>
-
-                        <div style={{
-                            backgroundColor: '#e0f2fe',
-                            padding: '16px',
-                            borderRadius: '8px',
-                            marginBottom: '20px',
-                            border: '1px solid #7dd3fc'
-                        }}>
-                            <div style={{
-                                color: '#2d3748',
-                                fontWeight: '700',
-                                fontSize: '18px',
-                                marginBottom: '8px'
-                            }}>
-                                {selectedPlan.planName}
-                            </div>
-
-                            {selectedPlan.description && (
-                                <div style={{
-                                    color: '#4a5568',
-                                    fontSize: '14px',
-                                    marginBottom: '12px',
-                                    lineHeight: '1.5'
-                                }}>
-                                    {selectedPlan.description}
+                                    ))}
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* Scheduled Workouts Tab - codul existent rămâne la fel */}
+                    {activeTab === 'scheduled' && (
+                        <div style={{
+                            backgroundColor: '#f7fafc',
+                            padding: '24px',
+                            borderRadius: '16px',
+                            marginBottom: '24px'
+                        }}>
+                            <h3 style={{
+                                color: '#2d3748',
+                                fontSize: '18px',
+                                fontWeight: '700',
+                                marginBottom: '16px'
+                            }}>
+                                Your Scheduled Workouts
+                            </h3>
+
+                            {loadingWorkouts ? (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '40px',
+                                    color: '#718096'
+                                }}>
+                                    <div style={{ fontSize: '20px', marginBottom: '8px' }}>⏳</div>
+                                    <div>Loading your scheduled workouts...</div>
+                                </div>
+                            ) : scheduledWorkouts.length === 0 ? (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '40px',
+                                    color: '#718096',
+                                    backgroundColor: '#f9fafb',
+                                    borderRadius: '8px',
+                                    border: '2px dashed #e2e8f0'
+                                }}>
+                                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>📅</div>
+                                    <div style={{ fontWeight: '600', marginBottom: '4px' }}>No Scheduled Workouts Found</div>
+                                    <div style={{ fontSize: '14px' }}>You don't have any scheduled workouts yet</div>
+                                </div>
+                            ) : (
+                                <div style={{
+                                    display: 'grid',
+                                    gap: '12px'
+                                }}>
+                                    {scheduledWorkouts.map((workout) => {
+                                        const statusStyle = getStatusColor(workout.status);
+                                        return (
+                                            <div
+                                                key={workout.scheduledWorkoutId}
+                                                onClick={() => setSelectedWorkout(workout)}
+                                                style={{
+                                                    backgroundColor: selectedWorkout?.scheduledWorkoutId === workout.scheduledWorkoutId ? '#e6fffa' : 'white',
+                                                    border: selectedWorkout?.scheduledWorkoutId === workout.scheduledWorkoutId ? '2px solid #38b2ac' : '2px solid #e2e8f0',
+                                                    borderRadius: '12px',
+                                                    padding: '20px',
+                                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    opacity: loading ? 0.6 : 1
+                                                }}
+                                            >
+                                                {/* Conținutul pentru scheduled workouts rămâne la fel */}
+                                                <div style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'flex-start',
+                                                    marginBottom: '12px'
+                                                }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <h4 style={{
+                                                            color: '#2d3748',
+                                                            fontSize: '16px',
+                                                            fontWeight: '700',
+                                                            marginBottom: '4px'
+                                                        }}>
+                                                            {workout.workoutPlan?.planName || `Workout #${workout.scheduledWorkoutId}`}
+                                                        </h4>
+
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '8px',
+                                                            marginBottom: '8px'
+                                                        }}>
+                                                            <span style={{
+                                                                backgroundColor: statusStyle.bg,
+                                                                color: statusStyle.text,
+                                                                border: `1px solid ${statusStyle.border}`,
+                                                                padding: '2px 8px',
+                                                                borderRadius: '6px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600'
+                                                            }}>
+                                                                {workout.status || 'Programat'}
+                                                            </span>
+                                                        </div>
+
+                                                        <div style={{
+                                                            color: '#4a5568',
+                                                            fontSize: '14px',
+                                                            marginBottom: '8px'
+                                                        }}>
+                                                            📅 {formatDate(workout.scheduledDate)}
+                                                            {workout.scheduledTime && ` • 🕒 ${formatTime(workout.scheduledTime)}`}
+                                                        </div>
+
+                                                        {workout.workoutPlan?.description && (
+                                                            <p style={{
+                                                                color: '#718096',
+                                                                fontSize: '13px',
+                                                                lineHeight: '1.4',
+                                                                marginBottom: '8px'
+                                                            }}>
+                                                                {workout.workoutPlan.description.length > 60
+                                                                    ? workout.workoutPlan.description.substring(0, 60) + '...'
+                                                                    : workout.workoutPlan.description}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    {selectedWorkout?.scheduledWorkoutId === workout.scheduledWorkoutId && (
+                                                        <div style={{
+                                                            backgroundColor: '#38b2ac',
+                                                            color: 'white',
+                                                            borderRadius: '50%',
+                                                            width: '24px',
+                                                            height: '24px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: '14px',
+                                                            fontWeight: 'bold'
+                                                        }}>
+                                                            ✓
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div style={{
+                                                    display: 'flex',
+                                                    gap: '16px',
+                                                    flexWrap: 'wrap',
+                                                    color: '#718096',
+                                                    fontSize: '13px'
+                                                }}>
+                                                    {workout.workoutPlan?.estimatedDurationMinutes && (
+                                                        <span>⏱️ {workout.workoutPlan.estimatedDurationMinutes} min</span>
+                                                    )}
+                                                    {workout.workoutPlan?.difficultyLevel && (
+                                                        <span>💪 Level {workout.workoutPlan.difficultyLevel}</span>
+                                                    )}
+                                                    {workout.caloriesBurned && (
+                                                        <span>🔥 {workout.caloriesBurned} cal</span>
+                                                    )}
+                                                    {workout.rating && (
+                                                        <span>⭐ {workout.rating}/5</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Reschedule section - doar pentru scheduled workouts */}
+                    {activeTab === 'scheduled' && selectedWorkout && (
+                        <div style={{
+                            backgroundColor: '#f0fff4',
+                            padding: '24px',
+                            borderRadius: '16px',
+                            marginBottom: '24px',
+                            border: '1px solid #c6f6d5',
+                            opacity: loading ? 0.6 : 1
+                        }}>
+                            <h3 style={{
+                                color: '#2d3748',
+                                fontSize: '18px',
+                                fontWeight: '700',
+                                marginBottom: '16px'
+                            }}>
+                                Reschedule Details
+                            </h3>
+
+                            <div style={{
+                                backgroundColor: '#e6fffa',
+                                padding: '16px',
+                                borderRadius: '8px',
+                                marginBottom: '20px',
+                                border: '1px solid #b2f5ea'
+                            }}>
+                                <div style={{
+                                    color: '#2d3748',
+                                    fontWeight: '600',
+                                    marginBottom: '8px'
+                                }}>
+                                    Selected Workout: {selectedWorkout.workoutPlan?.planName || `Workout #${selectedWorkout.scheduledWorkoutId}`}
+                                </div>
+                                <div style={{
+                                    color: '#718096',
+                                    fontSize: '14px',
+                                    marginBottom: '4px'
+                                }}>
+                                    Current Schedule: {formatDate(selectedWorkout.scheduledDate)}
+                                    {selectedWorkout.scheduledTime && ` at ${formatTime(selectedWorkout.scheduledTime)}`}
+                                </div>
+                                <div style={{
+                                    color: '#718096',
+                                    fontSize: '14px'
+                                }}>
+                                    {selectedWorkout.workoutPlan?.estimatedDurationMinutes && `Duration: ${selectedWorkout.workoutPlan.estimatedDurationMinutes} minutes`}
+                                    {selectedWorkout.workoutPlan?.difficultyLevel && ` • Difficulty: Level ${selectedWorkout.workoutPlan.difficultyLevel}`}
+                                </div>
+                            </div>
 
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                                gap: '12px',
-                                color: '#718096',
-                                fontSize: '14px'
+                                gridTemplateColumns: '1fr 1fr',
+                                gap: '16px',
+                                marginBottom: '16px'
                             }}>
-                                {selectedPlan.estimatedDurationMinutes && (
-                                    <div>
-                                        <strong>Duration:</strong> {selectedPlan.estimatedDurationMinutes} minutes
-                                    </div>
-                                )}
-                                {selectedPlan.difficultyLevel && (
-                                    <div>
-                                        <strong>Difficulty:</strong> Level {selectedPlan.difficultyLevel}/5
-                                    </div>
-                                )}
-                                {selectedPlan.goals && (
-                                    <div>
-                                        <strong>Goals:</strong> {selectedPlan.goals}
-                                    </div>
-                                )}
                                 <div>
-                                    <strong>Created:</strong> {formatDate(selectedPlan.createdAt)}
+                                    <label style={{
+                                        display: 'block',
+                                        marginBottom: '8px',
+                                        color: '#4a5568',
+                                        fontWeight: '600',
+                                        fontSize: '14px'
+                                    }}>
+                                        New Date *
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={scheduleData.scheduledDate}
+                                        onChange={(e) => setScheduleData(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                                        min={new Date().toISOString().split('T')[0]}
+                                        disabled={loading}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 16px',
+                                            border: '2px solid #e2e8f0',
+                                            borderRadius: '8px',
+                                            fontSize: '14px',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
                                 </div>
-                                {selectedPlan.updatedAt && selectedPlan.updatedAt !== selectedPlan.createdAt && (
+                                <div>
+                                    <label style={{
+                                        display: 'block',
+                                        marginBottom: '8px',
+                                        color: '#4a5568',
+                                        fontWeight: '600',
+                                        fontSize: '14px'
+                                    }}>
+                                        New Time *
+                                    </label>
+                                    <input
+                                        type="time"
+                                        value={scheduleData.scheduledTime}
+                                        onChange={(e) => setScheduleData(prev => ({ ...prev, scheduledTime: e.target.value }))}
+                                        disabled={loading}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 16px',
+                                            border: '2px solid #e2e8f0',
+                                            borderRadius: '8px',
+                                            fontSize: '14px',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Quick Date Options */}
+                            <div style={{
+                                marginTop: '16px',
+                                display: 'flex',
+                                gap: '8px',
+                                flexWrap: 'wrap'
+                            }}>
+                                <button
+                                    onClick={() => setScheduleData(prev => ({
+                                        ...prev,
+                                        scheduledDate: new Date().toISOString().split('T')[0]
+                                    }))}
+                                    disabled={loading}
+                                    style={{
+                                        background: '#e2e8f0',
+                                        color: '#4a5568',
+                                        border: 'none',
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        cursor: loading ? 'not-allowed' : 'pointer',
+                                        fontSize: '12px',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    Today
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const tomorrow = new Date();
+                                        tomorrow.setDate(tomorrow.getDate() + 1);
+                                        setScheduleData(prev => ({
+                                            ...prev,
+                                            scheduledDate: tomorrow.toISOString().split('T')[0]
+                                        }));
+                                    }}
+                                    disabled={loading}
+                                    style={{
+                                        background: '#e2e8f0',
+                                        color: '#4a5568',
+                                        border: 'none',
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        cursor: loading ? 'not-allowed' : 'pointer',
+                                        fontSize: '12px',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    Tomorrow
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Plan Details section - pentru workout plans */}
+                    {activeTab === 'plans' && selectedPlan && (
+                        <div style={{
+                            backgroundColor: '#f0f9ff',
+                            padding: '24px',
+                            borderRadius: '16px',
+                            marginBottom: '24px',
+                            border: '1px solid #bfdbfe'
+                        }}>
+                            <h3 style={{
+                                color: '#2d3748',
+                                fontSize: '18px',
+                                fontWeight: '700',
+                                marginBottom: '16px'
+                            }}>
+                                Plan Details
+                            </h3>
+
+                            <div style={{
+                                backgroundColor: '#e0f2fe',
+                                padding: '16px',
+                                borderRadius: '8px',
+                                marginBottom: '20px',
+                                border: '1px solid #7dd3fc'
+                            }}>
+                                <div style={{
+                                    color: '#2d3748',
+                                    fontWeight: '700',
+                                    fontSize: '18px',
+                                    marginBottom: '8px'
+                                }}>
+                                    {selectedPlan.planName}
+                                </div>
+
+                                {selectedPlan.description && (
+                                    <div style={{
+                                        color: '#4a5568',
+                                        fontSize: '14px',
+                                        marginBottom: '12px',
+                                        lineHeight: '1.5'
+                                    }}>
+                                        {selectedPlan.description}
+                                    </div>
+                                )}
+
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                    gap: '12px',
+                                    color: '#718096',
+                                    fontSize: '14px'
+                                }}>
+                                    {selectedPlan.estimatedDurationMinutes && (
+                                        <div>
+                                            <strong>Duration:</strong> {selectedPlan.estimatedDurationMinutes} minutes
+                                        </div>
+                                    )}
+                                    {selectedPlan.difficultyLevel && (
+                                        <div>
+                                            <strong>Difficulty:</strong> Level {selectedPlan.difficultyLevel}/5
+                                        </div>
+                                    )}
+                                    {selectedPlan.goals && (
+                                        <div>
+                                            <strong>Goals:</strong> {selectedPlan.goals}
+                                        </div>
+                                    )}
                                     <div>
-                                        <strong>Updated:</strong> {formatDate(selectedPlan.updatedAt)}
+                                        <strong>Created:</strong> {formatDate(selectedPlan.createdAt)}
+                                    </div>
+                                    {selectedPlan.updatedAt && selectedPlan.updatedAt !== selectedPlan.createdAt && (
+                                        <div>
+                                            <strong>Updated:</strong> {formatDate(selectedPlan.updatedAt)}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {selectedPlan.notes && (
+                                    <div style={{
+                                        marginTop: '12px',
+                                        padding: '12px',
+                                        backgroundColor: '#f8fafc',
+                                        borderRadius: '6px',
+                                        border: '1px solid #e2e8f0'
+                                    }}>
+                                        <strong style={{ color: '#4a5568' }}>Notes:</strong>
+                                        <div style={{ color: '#718096', marginTop: '4px' }}>
+                                            {selectedPlan.notes}
+                                        </div>
                                     </div>
                                 )}
                             </div>
 
-                            {selectedPlan.notes && (
-                                <div style={{
-                                    marginTop: '12px',
-                                    padding: '12px',
-                                    backgroundColor: '#f8fafc',
-                                    borderRadius: '6px',
-                                    border: '1px solid #e2e8f0'
-                                }}>
-                                    <strong style={{ color: '#4a5568' }}>Notes:</strong>
-                                    <div style={{ color: '#718096', marginTop: '4px' }}>
-                                        {selectedPlan.notes}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Action buttons pentru workout plans */}
-                        <div style={{
-                            display: 'flex',
-                            gap: '12px',
-                            flexWrap: 'wrap'
-                        }}>
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        const planDetails = await WorkoutPlanService.getWorkoutPlanById(selectedPlan.workoutPlanId);
-                                        console.log('Plan details with exercises:', planDetails);
-                                        // Aici poți afișa exercițiile într-un modal sau expandat
-                                        alert(`Plan "${planDetails.planName}" loaded! Check console for details.`);
-                                    } catch (error) {
-                                        console.error('Error loading plan details:', error);
-                                        alert('Error loading plan details: ' + error.message);
-                                    }
-                                }}
-                                style={{
-                                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '10px 16px',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '600'
-                                }}
-                            >
-                                👁️ View Exercises
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    // Redirect to edit page or open edit modal
-                                    console.log('Edit plan:', selectedPlan.workoutPlanId);
-                                    alert('Edit functionality - implement redirect to edit page');
-                                }}
-                                style={{
-                                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '10px 16px',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '600'
-                                }}
-                            >
-                                ✏️ Edit Plan
-                            </button>
-
-                            <button
-                                onClick={async () => {
-                                    if (confirm(`Are you sure you want to delete "${selectedPlan.planName}"?`)) {
+                            {/* Action buttons pentru workout plans */}
+                            <div style={{
+                                display: 'flex',
+                                gap: '12px',
+                                flexWrap: 'wrap'
+                            }}>
+                                <button
+                                    onClick={async () => {
                                         try {
-                                            await WorkoutPlanService.deleteWorkoutPlan(selectedPlan.workoutPlanId);
-                                            alert('Plan deleted successfully!');
-                                            await loadWorkoutPlans(); // Reload the list
-                                            setSelectedPlan(null); // Clear selection
+                                            const planDetails = await WorkoutPlanService.getWorkoutPlanById(selectedPlan.workoutPlanId);
+                                            console.log('Plan details with exercises:', planDetails);
+                                            // Aici poți afișa exercițiile într-un modal sau expandat
+                                            alert(`Plan "${planDetails.planName}" loaded! Check console for details.`);
                                         } catch (error) {
-                                            console.error('Error deleting plan:', error);
-                                            alert('Error deleting plan: ' + error.message);
+                                            console.error('Error loading plan details:', error);
+                                            alert('Error loading plan details: ' + error.message);
                                         }
-                                    }
-                                }}
-                                style={{
-                                    background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '10px 16px',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '600'
-                                }}
-                            >
-                                🗑️ Delete Plan
-                            </button>
+                                    }}
+                                    style={{
+                                        background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '10px 16px',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    👁️ View Exercises
+                                </button>
 
-                            <button
-                                onClick={() => {
-                                    // Implement schedule workout functionality
-                                    console.log('Schedule workout from plan:', selectedPlan.workoutPlanId);
-                                    alert('Schedule workout functionality - implement schedule creation');
-                                }}
-                                style={{
-                                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '10px 16px',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '600'
-                                }}
-                            >
-                                📅 Schedule Workout
-                            </button>
+                                <button
+                                    onClick={() => {
+                                        // Redirect to edit page or open edit modal
+                                        console.log('Edit plan:', selectedPlan.workoutPlanId);
+                                        alert('Edit functionality - implement redirect to edit page');
+                                    }}
+                                    style={{
+                                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '10px 16px',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    ✏️ Edit Plan
+                                </button>
+
+                                <button
+                                    onClick={async () => {
+                                        if (confirm(`Are you sure you want to delete "${selectedPlan.planName}"?`)) {
+                                            try {
+                                                await WorkoutPlanService.deleteWorkoutPlan(selectedPlan.workoutPlanId);
+                                                alert('Plan deleted successfully!');
+                                                await loadWorkoutPlans(); // Reload the list
+                                                setSelectedPlan(null); // Clear selection
+                                            } catch (error) {
+                                                console.error('Error deleting plan:', error);
+                                                alert('Error deleting plan: ' + error.message);
+                                            }
+                                        }
+                                    }}
+                                    style={{
+                                        background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '10px 16px',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    🗑️ Delete Plan
+                                </button>
+
+                                {/* UPDATED SCHEDULE WORKOUT BUTTON */}
+                                <button
+                                    onClick={() => handleScheduleWorkout(selectedPlan)}
+                                    disabled={!selectedPlan}
+                                    style={{
+                                        background: !selectedPlan
+                                            ? '#cbd5e0'
+                                            : 'linear-gradient(135deg, #10b981, #059669)',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '10px 16px',
+                                        borderRadius: '8px',
+                                        cursor: !selectedPlan ? 'not-allowed' : 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    📅 Schedule Workout
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* Loading overlay */}
-                {loading && (
-                    <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '20px',
-                        zIndex: 10
-                    }}>
+                    {/* Loading overlay */}
+                    {loading && (
                         <div style={{
-                            textAlign: 'center',
-                            color: '#4a5568'
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '20px',
+                            zIndex: 10
                         }}>
                             <div style={{
-                                fontSize: '24px',
-                                marginBottom: '16px',
-                                animation: 'spin 1s linear infinite'
-                            }}>⚡</div>
-                            <div style={{ fontWeight: '600' }}>
-                                {activeTab === 'scheduled' ? 'Se reprogramează workout-ul...' : 'Processing...'}
+                                textAlign: 'center',
+                                color: '#4a5568'
+                            }}>
+                                <div style={{
+                                    fontSize: '24px',
+                                    marginBottom: '16px',
+                                    animation: 'spin 1s linear infinite'
+                                }}>⚡</div>
+                                <div style={{ fontWeight: '600' }}>
+                                    {activeTab === 'scheduled' ? 'Se reprogramează workout-ul...' : 'Processing...'}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* Action Buttons */}
-                <div style={{
-                    display: 'flex',
-                    gap: '12px',
-                    justifyContent: 'flex-end'
-                }}>
-                    <button
-                        onClick={handleClosePopup}
-                        disabled={loading}
-                        style={{
-                            background: '#f7fafc',
-                            color: '#4a5568',
-                            border: '2px solid #e2e8f0',
-                            padding: '12px 24px',
-                            borderRadius: '10px',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            opacity: loading ? 0.6 : 1
-                        }}
-                    >
-                        Close
-                    </button>
-
-                    {/* Show reschedule button only for scheduled workouts */}
-                    {activeTab === 'scheduled' && (
+                    {/* Action Buttons */}
+                    <div style={{
+                        display: 'flex',
+                        gap: '12px',
+                        justifyContent: 'flex-end'
+                    }}>
                         <button
-                            onClick={handleRescheduleWorkout}
-                            disabled={loading || !selectedWorkout || !scheduleData.scheduledDate || !scheduleData.scheduledTime}
+                            onClick={handleClosePopup}
+                            disabled={loading}
                             style={{
-                                background: (loading || !selectedWorkout || !scheduleData.scheduledDate || !scheduleData.scheduledTime)
-                                    ? '#cbd5e0'
-                                    : 'linear-gradient(135deg, #48bb78, #38a169)',
-                                color: 'white',
-                                border: 'none',
+                                background: '#f7fafc',
+                                color: '#4a5568',
+                                border: '2px solid #e2e8f0',
                                 padding: '12px 24px',
                                 borderRadius: '10px',
-                                cursor: (loading || !selectedWorkout || !scheduleData.scheduledDate || !scheduleData.scheduledTime)
-                                    ? 'not-allowed'
-                                    : 'pointer',
+                                cursor: loading ? 'not-allowed' : 'pointer',
                                 fontSize: '14px',
-                                fontWeight: '600'
+                                fontWeight: '600',
+                                opacity: loading ? 0.6 : 1
                             }}
                         >
-                            {loading ? 'Se reprogramează...' : 'Reschedule Workout'}
+                            Close
                         </button>
-                    )}
-                </div>
 
-                {/* CSS for animations */}
-                <style jsx>{`
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                `}</style>
+                        {/* Show reschedule button only for scheduled workouts */}
+                        {activeTab === 'scheduled' && (
+                            <button
+                                onClick={handleRescheduleWorkout}
+                                disabled={loading || !selectedWorkout || !scheduleData.scheduledDate || !scheduleData.scheduledTime}
+                                style={{
+                                    background: (loading || !selectedWorkout || !scheduleData.scheduledDate || !scheduleData.scheduledTime)
+                                        ? '#cbd5e0'
+                                        : 'linear-gradient(135deg, #48bb78, #38a169)',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '12px 24px',
+                                    borderRadius: '10px',
+                                    cursor: (loading || !selectedWorkout || !scheduleData.scheduledDate || !scheduleData.scheduledTime)
+                                        ? 'not-allowed'
+                                        : 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '600'
+                                }}
+                            >
+                                {loading ? 'Se reprogramează...' : 'Reschedule Workout'}
+                            </button>
+                        )}
+                    </div>
+
+                    {/* CSS for animations */}
+                    <style jsx>{`
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    `}</style>
+                </div>
             </div>
-        </div>
+
+            {/* NEW: Schedule Workout Modal */}
+            <WorkoutScheduleModal
+                isOpen={showScheduleModal}
+                onClose={() => {
+                    setShowScheduleModal(false);
+                    setSelectedPlanForScheduling(null);
+                }}
+                workoutPlan={selectedPlanForScheduling}
+                currentUserId={currentUserId}
+                onWorkoutScheduled={handleWorkoutScheduled}
+            />
+        </>
     );
 };
 
