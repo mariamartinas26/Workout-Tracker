@@ -5,6 +5,7 @@ import Register from './components/Register';
 import CompleteProfile from './components/CompleteProfile';
 import Goals from './components/Goals';
 import WorkoutPlanCreator from './components/WorkoutPlanCreator';
+import WorkoutScheduler from './components/WorkoutScheduler'; // Import nou
 
 const App = () => {
     const [currentView, setCurrentView] = useState('homepage'); // 'homepage', 'login', 'register', 'complete-profile', 'goals'
@@ -13,6 +14,10 @@ const App = () => {
     const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false);
 
     const [showWorkoutPopup, setShowWorkoutPopup] = useState(false);
+    const [showSchedulerPopup, setShowSchedulerPopup] = useState(false); // State nou pentru scheduler
+
+    // Debug - să vedem state-ul
+    console.log('showSchedulerPopup state:', showSchedulerPopup);
 
     // Sample exercises data
     const sampleExercises = [
@@ -486,6 +491,7 @@ const App = () => {
                             gap: '24px',
                             marginTop: '48px'
                         }}>
+                            {/* Create Workout Plan Card - MODIFICAT */}
                             <div style={{
                                 background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.05))',
                                 padding: '32px',
@@ -525,7 +531,7 @@ const App = () => {
                                     marginBottom: '12px',
                                     letterSpacing: '-0.25px'
                                 }}>
-                                    Track Workouts
+                                    Create Workout Plan
                                 </h3>
                                 <p style={{
                                     color: '#718096',
@@ -534,7 +540,66 @@ const App = () => {
                                     lineHeight: '1.5',
                                     fontWeight: '500'
                                 }}>
-                                    Log and monitor your daily training sessions with detailed exercise tracking
+                                    Design custom workout plans with detailed exercise routines
+                                </p>
+                            </div>
+
+                            {/* Schedule Workout Card - NOU */}
+                            <div
+                                onClick={() => {
+                                    console.log('Schedule Workout clicked!');
+                                    console.log('Current showSchedulerPopup state:', showSchedulerPopup);
+                                    setShowSchedulerPopup(true);
+                                    console.log('Setting showSchedulerPopup to true');
+                                }}
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(56, 178, 172, 0.1), rgba(49, 151, 149, 0.05))',
+                                    padding: '32px',
+                                    borderRadius: '16px',
+                                    border: '1px solid rgba(56, 178, 172, 0.1)',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    cursor: 'pointer',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.target.style.transform = 'translateY(-4px)';
+                                    e.target.style.boxShadow = '0 16px 40px rgba(56, 178, 172, 0.15)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.transform = 'translateY(0)';
+                                    e.target.style.boxShadow = 'none';
+                                }}>
+                                <div style={{
+                                    width: '56px',
+                                    height: '56px',
+                                    background: 'linear-gradient(135deg, #38b2ac, #319795)',
+                                    borderRadius: '14px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginBottom: '20px',
+                                    boxShadow: '0 8px 24px rgba(56, 178, 172, 0.3)'
+                                }}>
+                                    <span style={{ fontSize: '24px', color: 'white' }}>📅</span>
+                                </div>
+                                <h3 style={{
+                                    color: '#1a202c',
+                                    fontSize: '20px',
+                                    fontWeight: '700',
+                                    marginBottom: '12px',
+                                    letterSpacing: '-0.25px'
+                                }}>
+                                    Schedule Workout
+                                </h3>
+                                <p style={{
+                                    color: '#718096',
+                                    fontSize: '15px',
+                                    margin: '0',
+                                    lineHeight: '1.5',
+                                    fontWeight: '500'
+                                }}>
+                                    Plan your workout sessions from your existing workout plans
                                 </p>
                             </div>
 
@@ -644,12 +709,17 @@ const App = () => {
                     </div>
                 </div>
 
-
+                {/* Popupuri - AMBELE COMPONENTE */}
                 <WorkoutPlanCreator
                     isOpen={showWorkoutPopup}
                     onClose={() => setShowWorkoutPopup(false)}
                     sampleExercises={sampleExercises}
                     currentUserId={user?.id || 1} // Folosește ID-ul real al utilizatorului
+                />
+                <WorkoutScheduler
+                    isOpen={showSchedulerPopup}
+                    onClose={() => setShowSchedulerPopup(false)}
+                    currentUserId={user?.id || 1}
                 />
 
                 <style>
