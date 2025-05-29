@@ -109,22 +109,19 @@ const Goals = ({ user, onBack, onGoalSet }) => {
             id: 'lose_weight',
             title: 'Lose Weight',
             description: 'Burn fat and achieve your ideal weight',
-            icon: '⚖️',
-            color: 'linear-gradient(135deg, #f093fb, #f5576c)'
+            icon: '⚖️'
         },
         {
             id: 'gain_muscle',
             title: 'Gain Muscle',
             description: 'Build strength and muscle mass',
-            icon: '💪',
-            color: 'linear-gradient(135deg, #4facfe, #00f2fe)'
+            icon: '💪'
         },
         {
             id: 'maintain_health',
             title: 'Maintain Healthy Life',
             description: 'Stay fit and maintain overall wellness',
-            icon: '🌱',
-            color: 'linear-gradient(135deg, #43e97b, #38f9d7)'
+            icon: '🌱'
         }
     ];
 
@@ -1144,26 +1141,29 @@ const Goals = ({ user, onBack, onGoalSet }) => {
 
                 {/* Header */}
                 <div style={{ textAlign: 'center', marginBottom: '48px', marginTop: '40px' }}>
-                    <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '100px',
-                        height: '100px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                        borderRadius: '25px',
-                        marginBottom: '24px',
-                        boxShadow: '0 12px 40px rgba(102, 126, 234, 0.3)'
-                    }}>
-                        <span style={{ fontSize: '40px', color: 'white' }}>🎯</span>
+                    <div >
+                        <img
+                            src="/target.png"
+                            alt="Target Logo"
+                            style={{
+                                width: '48px',
+                                height: '48px',
+                                objectFit: 'contain'
+                            }}
+                            onError={(e) => {
+                                // Fallback în caz că imaginea nu se poate încărca
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                            }}
+                        />
                     </div>
                     <h1 style={{
-                        color: '#1a202c',
+                        color: '#000000',
                         fontSize: '36px',
                         fontWeight: '800',
                         marginBottom: '16px',
                         letterSpacing: '-0.5px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                        background: '#000000',
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent'
