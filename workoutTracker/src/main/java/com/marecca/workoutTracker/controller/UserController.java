@@ -34,7 +34,7 @@ public class UserController {
         try {
             log.info("Updating complete profile for user ID: {}", userId);
 
-            // Verifică dacă utilizatorul există
+            //checks if user exists
             Optional<User> existingUserOptional = userService.findById(userId);
             if (existingUserOptional.isEmpty()) {
                 return createErrorResponse("User not found", HttpStatus.NOT_FOUND);
@@ -42,7 +42,6 @@ public class UserController {
 
             User existingUser = existingUserOptional.get();
 
-            // Validare input doar pentru câmpurile obligatorii
             if (request.getFirstName() != null && !request.getFirstName().trim().isEmpty()) {
                 existingUser.setFirstName(request.getFirstName().trim());
             }
@@ -52,7 +51,7 @@ public class UserController {
             }
 
             if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
-                // Verifică dacă email-ul nu este deja folosit de alt utilizator
+                //checks if email is already used
                 Optional<User> userWithEmail = userService.findByEmail(request.getEmail().trim());
                 if (userWithEmail.isPresent() && !userWithEmail.get().getUserId().equals(userId)) {
                     return createErrorResponse("Email already exists", HttpStatus.BAD_REQUEST);
@@ -60,7 +59,6 @@ public class UserController {
                 existingUser.setEmail(request.getEmail().trim().toLowerCase());
             }
 
-            // Actualizează câmpurile opționale
             if (request.getDateOfBirth() != null) {
                 existingUser.setDateOfBirth(request.getDateOfBirth());
             }
@@ -87,12 +85,9 @@ public class UserController {
                 existingUser.setFitnessLevel(request.getFitnessLevel());
             }
 
-            // Actualizează utilizatorul
+            //updates user
             User savedUser = userService.updateUser(userId, existingUser);
 
-            log.info("Complete profile updated successfully for user ID: {}", userId);
-
-            // Returnează răspuns compatibil cu frontend (ca AuthController)
             Map<String, Object> response = new HashMap<>();
             response.put("userId", savedUser.getUserId());
             response.put("username", savedUser.getUsername());
@@ -109,19 +104,16 @@ public class UserController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error updating complete profile for user ID: {}", userId, e);
             return createErrorResponse("Error updating profile", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     /**
-     * Obține profilul utilizatorului după ID
+     * gets user profile by ID
      * GET /api/users/{userId}
      */
     @GetMapping("/{userId}")
     public ResponseEntity<?> getUserProfile(@PathVariable Long userId) {
         try {
-            log.debug("Getting user profile for ID: {}", userId);
-
             Optional<User> userOptional = userService.findById(userId);
 
             if (userOptional.isEmpty()) {
@@ -132,7 +124,6 @@ public class UserController {
             return ResponseEntity.ok(userResponse);
 
         } catch (Exception e) {
-            log.error("Error getting user profile for ID: {}", userId, e);
             return createErrorResponse("Error retrieving user profile", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -140,9 +131,6 @@ public class UserController {
     @PutMapping("/complete-profile")
     public ResponseEntity<?> completeProfileUser(@RequestBody Map<String, Object> request) {
         try {
-            log.info("Complete profile request: {}", request);
-
-            // Verifică și extrage userId cu validare
             Object userIdObj = request.get("userId");
             if (userIdObj == null) {
                 return createErrorResponse("User ID is required", HttpStatus.BAD_REQUEST);
@@ -166,7 +154,6 @@ public class UserController {
 
             User user = userOptional.get();
 
-            // Actualizează câmpurile dacă sunt prezente și nu sunt null
             Object dateOfBirthObj = request.get("dateOfBirth");
             if (dateOfBirthObj != null && !dateOfBirthObj.toString().trim().isEmpty()) {
                 try {
@@ -220,7 +207,6 @@ public class UserController {
 
             User savedUser = userService.updateUser(userId, user);
 
-            // Returnează răspuns compatibil cu frontend
             Map<String, Object> response = new HashMap<>();
             response.put("userId", savedUser.getUserId());
             response.put("username", savedUser.getUsername());
@@ -233,75 +219,13 @@ public class UserController {
             response.put("fitnessLevel", savedUser.getFitnessLevel());
             response.put("isActive", savedUser.getIsActive());
 
-            log.info("Profile completed successfully for user ID: {}", userId);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error completing profile", e);
             return createErrorResponse("Error completing profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-    /**
-     * Schimbă parola utilizatorului
-     * POST /api/users/{userId}/change-password
-     */
-    @PostMapping("/{userId}/change-password")
-    public ResponseEntity<?> changePassword(@PathVariable Long userId, @RequestBody ChangePasswordRequest request) {
-        try {
-            log.info("Changing password for user ID: {}", userId);
 
-            // Validare input
-            if (request.getCurrentPassword() == null || request.getCurrentPassword().isEmpty()) {
-                return createErrorResponse("Current password is required", HttpStatus.BAD_REQUEST);
-            }
-
-            if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
-                return createErrorResponse("New password must be at least 6 characters", HttpStatus.BAD_REQUEST);
-            }
-
-            // Schimbă parola
-            userService.changePassword(userId, request.getCurrentPassword(), request.getNewPassword());
-
-            log.info("Password changed successfully for user ID: {}", userId);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Password changed successfully");
-            response.put("timestamp", LocalDateTime.now());
-
-            return ResponseEntity.ok(response);
-
-        } catch (IllegalArgumentException e) {
-            log.error("Password change validation error for user ID {}: {}", userId, e.getMessage());
-            return createErrorResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
-        } catch (Exception e) {
-            log.error("Error changing password for user ID: {}", userId, e);
-            return createErrorResponse("Error changing password", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Obține toți utilizatorii activi
-     * GET /api/users/active
-     */
-    @GetMapping("/active")
-    public ResponseEntity<?> getActiveUsers() {
-        try {
-            log.debug("Getting all active users");
-
-            List<User> activeUsers = userService.findActiveUsers();
-
-            List<DetailedUserResponse> userResponses = activeUsers.stream()
-                    .map(DetailedUserResponse::new)
-                    .collect(Collectors.toList());
-
-            return ResponseEntity.ok(userResponses);
-
-        } catch (Exception e) {
-            log.error("Error getting active users", e);
-            return createErrorResponse("Error retrieving active users", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
 
     /**
      * Obține utilizatori după nivelul de fitness

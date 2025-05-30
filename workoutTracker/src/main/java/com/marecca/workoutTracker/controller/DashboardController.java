@@ -14,8 +14,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
- * Controller pentru dashboard și analytics
- * Oferă endpoint-uri pentru statistici și progres
+ * Dashboard controller
  */
 @RestController
 @RequestMapping("/api/dashboard")

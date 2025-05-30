@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import WorkoutRecommendations from './WorkoutRecommendation';
-// GoalsApi for backend integration
+
 const GoalsApi = {
     createGoal: async (goalData) => {
         try {

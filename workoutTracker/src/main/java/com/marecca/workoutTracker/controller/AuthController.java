@@ -75,23 +75,14 @@ public class AuthController {
     }
 
     /**
-     * Test endpoint
+     * register endpoint
+     * @param request
+     * @return
      */
-    @GetMapping("/test")
-    public ResponseEntity<?> test() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Auth controller is working!");
-        response.put("timestamp", LocalDateTime.now());
-        response.put("service", "WorkoutTracker Authentication API");
-        return ResponseEntity.ok(response);
-    }
-
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
-            log.info("Register attempt for email: {}", request.getEmail());
-
-            // Validare
+            //validations
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 return createErrorResponse("Email is required", HttpStatus.BAD_REQUEST);
             }
@@ -105,18 +96,16 @@ public class AuthController {
                 return createErrorResponse("Last name is required", HttpStatus.BAD_REQUEST);
             }
 
-            // Verifică dacă utilizatorul există deja
+            //checks if user already exists
             if (userService.existsByEmail(request.getEmail())) {
                 return createErrorResponse("Email already exists", HttpStatus.BAD_REQUEST);
             }
 
-            // Generează username dacă nu este furnizat
+            //generates username
             String username = request.getUsername();
             if (username == null || username.trim().isEmpty()) {
-                // Generează username din email (partea dinaintea @)
                 username = request.getEmail().split("@")[0];
 
-                // Dacă username-ul generat există deja, adaugă un număr
                 String baseUsername = username;
                 int counter = 1;
                 while (userService.existsByUsername(username)) {
@@ -125,13 +114,12 @@ public class AuthController {
                 }
                 log.info("Generated username: {}", username);
             } else {
-                // Verifică dacă username-ul furnizat există
                 if (userService.existsByUsername(username)) {
                     return createErrorResponse("Username already exists", HttpStatus.BAD_REQUEST);
                 }
             }
 
-            // Creează utilizatorul
+            //creates user
             User newUser = new User();
             newUser.setUsername(username.trim());
             newUser.setEmail(request.getEmail().trim());
@@ -150,13 +138,11 @@ public class AuthController {
     }
 
     /**
-     * Login utilizator
+     * login user
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
-            log.info("Login attempt for email: {}", request.getEmail());
-
             Optional<User> userOptional = userService.authenticateUser(request.getEmail(), request.getPassword());
 
             if (userOptional.isEmpty()) {
@@ -178,7 +164,7 @@ public class AuthController {
     }
 
     /**
-     * Completează profilul utilizatorului
+     * complete profile
      */
     @PutMapping("/complete-profile")
     public ResponseEntity<?> completeProfile(@RequestBody CompleteProfileRequest request) {
@@ -196,7 +182,7 @@ public class AuthController {
 
             User user = userOptional.get();
 
-            // Actualizează profilul
+            //updates profile
             if (request.getDateOfBirth() != null) {
                 user.setDateOfBirth(request.getDateOfBirth());
             }
@@ -221,11 +207,10 @@ public class AuthController {
         }
     }
 
-    // Metode helper
     private Map<String, Object> createUserResponse(User user) {
         Map<String, Object> response = new HashMap<>();
-        response.put("userId", user.getUserId()); // Asigură-te că este userId, nu id
-        response.put("id", user.getUserId()); // Adaugă și id pentru compatibilitate
+        response.put("userId", user.getUserId());
+        response.put("id", user.getUserId());
         response.put("username", user.getUsername());
         response.put("email", user.getEmail());
         response.put("firstName", user.getFirstName());

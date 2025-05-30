@@ -1,3 +1,8 @@
+--user profile: fitness level, weight, workout history in the past 90 days
+-- based on this the alg calculates an strength-multiplier (range 0.8x begginers <=5 completed workouts,
+--1.3x expert users >=50 completed workouts)
+--
+
 CREATE OR REPLACE FUNCTION recommend_workout(
     p_user_id BIGINT,
     p_goal_type VARCHAR(50)
@@ -19,28 +24,28 @@ DECLARE
     v_avg_user_weight DECIMAL(6,2);
     v_workout_count INTEGER := 0;
 BEGIN
-    -- Get user info
+    --user info: weight and fitness level
     SELECT fitness_level, weight_kg
     INTO v_user_fitness_level, v_avg_user_weight
     FROM users WHERE user_id = p_user_id;
-
+    --exception if user does not exist
     IF NOT FOUND THEN
         RAISE EXCEPTION 'User not found with ID: %', p_user_id;
     END IF;
 
-    -- Calculate user experience based on workout history
+    --counts nr of workouts done in the past 90 days
     SELECT COUNT(DISTINCT sw.scheduled_workout_id) INTO v_workout_count
     FROM scheduled_workouts sw
     WHERE sw.user_id = p_user_id
     AND sw.status = 'COMPLETED'
     AND sw.actual_start_time >= CURRENT_DATE - INTERVAL '90 days';
 
-    -- Set strength multiplier based on experience
+    --strength multiplier based on experience
     v_strength_multiplier := CASE
-        WHEN v_workout_count > 50 THEN 1.3
-        WHEN v_workout_count > 20 THEN 1.15
-        WHEN v_workout_count > 5 THEN 1.0
-        ELSE 0.8
+        WHEN v_workout_count > 50 THEN 1.3 --very advanced
+        WHEN v_workout_count > 20 THEN 1.15 --advanced
+        WHEN v_workout_count > 5 THEN 1.0 --medium
+        ELSE 0.8 --beginner
     END;
 
     RETURN QUERY
@@ -60,25 +65,25 @@ BEGIN
             COUNT(wel.log_id) as times_performed,
             -- Calories estimation based on category and muscle groups
             CASE e.category
-                WHEN 'CARDIO' THEN 12.0
+                WHEN 'CARDIO' THEN 12.0 --12 calories per minute
                 WHEN 'STRENGTH' THEN
                     CASE
-                        WHEN e.primary_muscle_group = 'FULL_BODY' THEN 8.0
-                        WHEN e.primary_muscle_group = 'BACK' THEN 6.0
+                        WHEN e.primary_muscle_group = 'FULL_BODY' THEN 8.0 --8 cal/min
+                        WHEN e.primary_muscle_group = 'BACK' THEN 6.0 --6 cal/min
                         WHEN e.primary_muscle_group = 'QUADRICEPS' THEN 7.0
                         ELSE 5.0
                     END
-                ELSE 4.0
+                ELSE 4.0 --general activities 4cal/min
             END as estimated_calories_per_minute,
             -- Muscle building potential
             CASE e.category
                 WHEN 'STRENGTH' THEN
                     CASE
-                        WHEN e.primary_muscle_group = 'FULL_BODY' THEN 5
+                        WHEN e.primary_muscle_group = 'FULL_BODY' THEN 5 --the most efficient
                         WHEN e.primary_muscle_group IN ('BACK', 'CHEST', 'QUADRICEPS') THEN 4
                         ELSE 3
                     END
-                ELSE 2
+                ELSE 2 --minimal impact
             END as muscle_building_potential,
             -- Cardio effectiveness
             CASE e.category
@@ -91,6 +96,9 @@ BEGIN
                 ELSE 3
             END as cardio_effectiveness,
             -- Recently performed penalty
+            -- if the exercise was done in the las 7 days->-1points
+            --else, 0 points
+            --purpose: avoids exercise repetition and promotes variety for muscle recovery
             CASE
                 WHEN EXISTS (
                     SELECT 1 FROM workout_exercise_logs wel2

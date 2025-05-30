@@ -31,8 +31,6 @@ public class GoalController {
     @PostMapping
     public ResponseEntity<?> createGoal(@RequestBody CreateGoalRequest request) {
         try {
-            log.info("Creating goal for user {}: {}", request.getUserId(), request.getGoalType());
-
             // Validation
             if (request.getUserId() == null) {
                 return createErrorResponse("User ID is required", HttpStatus.BAD_REQUEST);
@@ -56,10 +54,8 @@ public class GoalController {
             return ResponseEntity.ok(response);
 
         } catch (IllegalArgumentException e) {
-            log.error("Invalid goal type: {}", request.getGoalType());
             return createErrorResponse("Invalid goal type: " + request.getGoalType(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            log.error("Error creating goal", e);
             return createErrorResponse("Failed to create goal: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -70,8 +66,6 @@ public class GoalController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getUserGoals(@PathVariable Long userId) {
         try {
-            log.info("Fetching goals for user: {}", userId);
-
             List<Goal> goals = goalService.getUserGoals(userId);
 
             Map<String, Object> response = new HashMap<>();
@@ -82,7 +76,6 @@ public class GoalController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error fetching goals for user {}", userId, e);
             return createErrorResponse("Failed to fetch goals: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -93,8 +86,6 @@ public class GoalController {
     @GetMapping("/user/{userId}/active")
     public ResponseEntity<?> getActiveUserGoals(@PathVariable Long userId) {
         try {
-            log.info("Fetching active goals for user: {}", userId);
-
             List<Goal> activeGoals = goalService.getActiveUserGoals(userId);
 
             Map<String, Object> response = new HashMap<>();
@@ -104,7 +95,6 @@ public class GoalController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error fetching active goals for user {}", userId, e);
             return createErrorResponse("Failed to fetch active goals: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -115,8 +105,6 @@ public class GoalController {
     @GetMapping("/{goalId}")
     public ResponseEntity<?> getGoal(@PathVariable Long goalId) {
         try {
-            log.info("Fetching goal: {}", goalId);
-
             Optional<Goal> goalOptional = goalService.getGoalById(goalId);
             if (goalOptional.isEmpty()) {
                 return createErrorResponse("Goal not found", HttpStatus.NOT_FOUND);
@@ -126,7 +114,6 @@ public class GoalController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error fetching goal {}", goalId, e);
             return createErrorResponse("Failed to fetch goal: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -151,7 +138,6 @@ public class GoalController {
         } catch (IllegalArgumentException e) {
             return createErrorResponse("Invalid status value", HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            log.error("Error updating goal status for goal {}", goalId, e);
             return createErrorResponse("Failed to update goal status: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -172,12 +158,10 @@ public class GoalController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error deleting goal {}", goalId, e);
             return createErrorResponse("Failed to delete goal: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    // Helper methods
     private Map<String, Object> createGoalResponse(Goal goal) {
         Map<String, Object> response = new HashMap<>();
         response.put("goalId", goal.getGoalId());
