@@ -231,8 +231,11 @@ public class ScheduledWorkoutController {
         private LocalTime scheduledTime;
     }
 
+
     @lombok.Data
     @lombok.Builder
+    @lombok.NoArgsConstructor  // Add this annotation
+    @lombok.AllArgsConstructor // Add this annotation
     public static class CompleteWorkoutRequest {
         private Integer caloriesBurned;
         private Integer rating;
