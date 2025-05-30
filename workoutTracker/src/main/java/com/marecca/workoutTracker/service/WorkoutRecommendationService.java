@@ -10,7 +10,6 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -29,18 +28,17 @@ public class WorkoutRecommendationService {
     private JdbcTemplate jdbcTemplate;
 
     /**
-     * Obține recomandări de workout pentru un utilizator și tipul de goal
+     * Workout recommendation based on plsql function "recommend_workout" !!!
      */
     public List<WorkoutRecommendation> getRecommendations(Long userId, String goalType) {
         logger.info("Getting workout recommendations for user: {} with goal: {}", userId, goalType);
 
         try {
-            // Verifică dacă utilizatorul există
             if (!userExists(userId)) {
                 throw new IllegalArgumentException("User with ID " + userId + " does not exist");
             }
 
-            // Apelează funcția PostgreSQL
+            //calls plsql function
             String sql = "SELECT * FROM recommend_workout(?, ?)";
 
             List<WorkoutRecommendation> recommendations = jdbcTemplate.query(
@@ -62,13 +60,12 @@ public class WorkoutRecommendationService {
     }
 
     /**
-     * Salvează un plan de workout bazat pe recomandări
+     * Saves a workout plan based on recommendations
      */
     public Map<String, Object> saveWorkoutPlan(Long userId, List<WorkoutRecommendation> recommendations, Long goalId) {
         logger.info("Saving workout plan for user: {} with {} exercises", userId, recommendations.size());
 
         try {
-            // Verifică dacă utilizatorul există
             if (!userExists(userId)) {
                 throw new IllegalArgumentException("User with ID " + userId + " does not exist");
             }
@@ -77,13 +74,13 @@ public class WorkoutRecommendationService {
                 throw new IllegalArgumentException("Cannot save workout plan without recommendations");
             }
 
-            // Generează numele planului
+            //generates plan name
             String planName = generateWorkoutPlanName(goalId);
 
-            // Calculează durata estimată
+            //calculates estimated duration
             int estimatedDuration = calculateEstimatedDuration(recommendations);
 
-            // Inserează planul de workout
+            //inserts workout plan into workout_plans table
             String insertPlanSql = """
                 INSERT INTO workout_plans (user_id, plan_name, description, estimated_duration_minutes, 
                                          difficulty_level, goals, notes, created_at, updated_at)
@@ -91,7 +88,7 @@ public class WorkoutRecommendationService {
                 RETURNING workout_plan_id
                 """;
 
-            String description = "AI-generated workout plan based on personalized recommendations";
+            String description = "Generated workout plan based on personalized recommendations";
             String goals = goalId != null ? "Goal ID: " + goalId : "General fitness improvement";
             String notes = "Generated with " + recommendations.size() + " exercises";
             Timestamp now = Timestamp.valueOf(LocalDateTime.now());
@@ -107,10 +104,9 @@ public class WorkoutRecommendationService {
 
             logger.info("Created workout plan with ID: {} for user: {}", workoutPlanId, userId);
 
-            // Inserează detaliile exercițiilor
+            //inserts exercises details
             insertWorkoutExerciseDetails(workoutPlanId, recommendations);
 
-            // Construiește răspunsul
             Map<String, Object> result = new HashMap<>();
             result.put("workoutPlanId", workoutPlanId);
             result.put("planName", planName);
@@ -182,7 +178,7 @@ public class WorkoutRecommendationService {
     }
 
     /**
-     * Verifică dacă utilizatorul există
+     * Checks if user exists
      */
     private boolean userExists(Long userId) {
         try {
@@ -196,10 +192,10 @@ public class WorkoutRecommendationService {
     }
 
     /**
-     * Generează numele planului de workout
+     * Generates workout plan name
      */
     private String generateWorkoutPlanName(Long goalId) {
-        String baseName = "AI Recommended Workout";
+        String baseName = "Recommended Workout";
         String timestamp = LocalDateTime.now().toString().substring(0, 16).replace("T", " ");
 
         if (goalId != null) {
@@ -209,25 +205,25 @@ public class WorkoutRecommendationService {
     }
 
     /**
-     * Calculează durata estimată a workout-ului
+     * Calculates duration of workout
      */
     private int calculateEstimatedDuration(List<WorkoutRecommendation> recommendations) {
         int totalMinutes = 0;
 
         for (WorkoutRecommendation rec : recommendations) {
-            // Estimare: 2 minute per set + timp de odihnă
+            //2 minutes for set + rest time
             int setsTime = (rec.getRecommendedSets() != null ? rec.getRecommendedSets() : 3) * 2;
             int restTime = (rec.getRestTimeSeconds() != null ? rec.getRestTimeSeconds() : 60)
                     * (rec.getRecommendedSets() != null ? rec.getRecommendedSets() : 3) / 60;
             totalMinutes += setsTime + restTime;
         }
 
-        // Adaugă 10 minute pentru încălzire și răcire
-        return Math.max(totalMinutes + 10, 30); // Minimum 30 de minute
+        //10 minutes for warm up
+        return Math.max(totalMinutes + 10, 30); //minimum 30 mins
     }
 
     /**
-     * Calculează dificultatea medie
+     * Calculates difficulty
      */
     private int calculateAverageDifficulty(List<WorkoutRecommendation> recommendations) {
         if (recommendations.isEmpty()) return 3;
@@ -237,7 +233,6 @@ public class WorkoutRecommendationService {
                 .average()
                 .orElse(3.0);
 
-        // Convertește scorul în dificultate (1-5)
         if (avgScore >= 4.5) return 5;
         if (avgScore >= 3.5) return 4;
         if (avgScore >= 2.5) return 3;
@@ -246,7 +241,7 @@ public class WorkoutRecommendationService {
     }
 
     /**
-     * Inserează detaliile exercițiilor în planul de workout
+     * Inserts exercise details into workout plan
      */
     private void insertWorkoutExerciseDetails(Long workoutPlanId, List<WorkoutRecommendation> recommendations) {
         String sql = """
@@ -259,18 +254,18 @@ public class WorkoutRecommendationService {
         for (int i = 0; i < recommendations.size(); i++) {
             WorkoutRecommendation rec = recommendations.get(i);
 
-            String notes = String.format("AI Recommendation - Priority Score: %.2f, Weight: %s%%",
+            String notes = String.format("Recommendation - Priority Score: %.2f, Weight: %s%%",
                     rec.getPriorityScore() != null ? rec.getPriorityScore().doubleValue() : 0.0,
                     rec.getRecommendedWeightPercentage() != null ? rec.getRecommendedWeightPercentage().toString() : "N/A");
 
             jdbcTemplate.update(sql,
                     workoutPlanId,
                     rec.getExerciseId(),
-                    i + 1, // exercise_order
+                    i + 1,
                     rec.getRecommendedSets(),
                     rec.getRecommendedRepsMin(),
                     rec.getRecommendedRepsMax(),
-                    null, // target_weight_kg - va fi calculată pe baza procentului
+                    null,
                     rec.getRestTimeSeconds(),
                     notes
             );
@@ -280,16 +275,15 @@ public class WorkoutRecommendationService {
     }
 
     /**
-     * Calculează frecvența workout-urilor pe săptămână
+     * Calculates workout frequency for workout
      */
     private double calculateWorkoutFrequency(Number completedWorkouts) {
         if (completedWorkouts == null) return 0.0;
-        // 90 zile = ~13 săptămâni
         return Math.round(completedWorkouts.doubleValue() / 13.0 * 100.0) / 100.0;
     }
 
     /**
-     * RowMapper pentru WorkoutRecommendation
+     * RowMapper for WorkoutRecommendation
      */
     private static class WorkoutRecommendationRowMapper implements RowMapper<WorkoutRecommendation> {
         @Override

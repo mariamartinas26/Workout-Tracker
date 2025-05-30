@@ -1,6 +1,5 @@
 package com.marecca.workoutTracker.controller;
 
-
 import com.marecca.workoutTracker.dto.SaveWorkoutPlanRequest;
 import com.marecca.workoutTracker.dto.WorkoutRecommendation;
 import com.marecca.workoutTracker.dto.WorkoutRecommendationRequest;
@@ -19,7 +18,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/workouts")
-@CrossOrigin(origins = "http://localhost:3000") // Pentru frontend React
+@CrossOrigin(origins = "http://localhost:3000")
 public class WorkoutRecommendationController {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkoutRecommendationController.class);
@@ -28,7 +27,7 @@ public class WorkoutRecommendationController {
     private WorkoutRecommendationService workoutRecommendationService;
 
     /**
-     * Endpoint pentru obținerea recomandărilor de workout
+     * endpoint for getting workout recommendation
      * POST /api/workouts/recommend
      */
     @PostMapping("/recommend")
@@ -37,7 +36,6 @@ public class WorkoutRecommendationController {
             logger.info("Getting workout recommendations for user: {} with goal: {}",
                     request.getUserId(), request.getGoalType());
 
-            // Validare basic
             if (request.getUserId() == null) {
                 return ResponseEntity.badRequest()
                         .body(createErrorResponse("User ID is required"));
@@ -48,20 +46,18 @@ public class WorkoutRecommendationController {
                         .body(createErrorResponse("Goal type is required"));
             }
 
-            // Validare goal type
             if (!isValidGoalType(request.getGoalType())) {
                 return ResponseEntity.badRequest()
                         .body(createErrorResponse("Invalid goal type. Valid values: WEIGHT_LOSS, MUSCLE_GAIN, MAINTENANCE"));
             }
 
-            // Obține recomandările
             List<WorkoutRecommendation> recommendations = workoutRecommendationService
                     .getRecommendations(request.getUserId(), request.getGoalType());
 
             logger.info("Generated {} recommendations for user {}",
                     recommendations.size(), request.getUserId());
 
-            // Construiește răspunsul
+            //response
             Map<String, Object> response = new HashMap<>();
             response.put("recommendations", recommendations);
             response.put("message", "Recommendations generated successfully");
@@ -89,7 +85,7 @@ public class WorkoutRecommendationController {
     }
 
     /**
-     * Endpoint pentru salvarea planului de workout bazat pe recomandări
+     * Endpoint for saving workout plan based on recommendation
      * POST /api/workouts/save-recommended-plan
      */
     @PostMapping("/save-recommended-plan")
@@ -98,7 +94,6 @@ public class WorkoutRecommendationController {
             logger.info("Saving workout plan for user: {} with goal: {}",
                     request.getUserId(), request.getGoalId());
 
-            // Validare basic
             if (request.getUserId() == null) {
                 return ResponseEntity.badRequest()
                         .body(createErrorResponse("User ID is required"));
@@ -109,14 +104,14 @@ public class WorkoutRecommendationController {
                         .body(createErrorResponse("Recommendations are required to save workout plan"));
             }
 
-            // Salvează planul de workout
+            //saves workout plan
             Map<String, Object> savedPlan = workoutRecommendationService
                     .saveWorkoutPlan(request.getUserId(), request.getRecommendations(), request.getGoalId());
 
             logger.info("Successfully saved workout plan with ID: {} for user: {}",
                     savedPlan.get("workoutPlanId"), request.getUserId());
 
-            // Construiește răspunsul
+            //response
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Workout plan saved successfully");
             response.put("workoutPlan", savedPlan);
@@ -142,7 +137,7 @@ public class WorkoutRecommendationController {
     }
 
     /**
-     * Endpoint pentru obținerea statisticilor utilizatorului (opțional)
+     * Endpoint for getting user statistics
      * GET /api/workouts/user/{userId}/stats
      */
     @GetMapping("/user/{userId}/stats")
@@ -177,7 +172,7 @@ public class WorkoutRecommendationController {
     }
 
     /**
-     * Validează tipul de goal
+     * Validates type of goal
      */
     private boolean isValidGoalType(String goalType) {
         return goalType != null && (
@@ -188,7 +183,7 @@ public class WorkoutRecommendationController {
     }
 
     /**
-     * Creează un răspuns de eroare standardizat
+     * Error response
      */
     private Map<String, Object> createErrorResponse(String message) {
         Map<String, Object> errorResponse = new HashMap<>();

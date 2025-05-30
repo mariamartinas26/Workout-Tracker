@@ -170,7 +170,7 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
         if (name.includes('yoga') || name.includes('stretch')) return '🧘‍♀️';
         if (name.includes('curl') || name.includes('bicep')) return '💪';
         if (name.includes('deadlift')) return '🏋️‍♀️';
-        return '💪'; // default icon
+        return '💪';
     };
 
     const getDifficultyColor = (score) => {
@@ -359,30 +359,12 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                                         alignItems: 'center',
                                         minWidth: '80px'
                                     }}>
-                                        <div style={{
-                                            width: '50px',
-                                            height: '50px',
-                                            background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                                            borderRadius: '12px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            marginBottom: '8px'
-                                        }}>
+                                        <div>
                                             <span style={{fontSize: '20px'}}>
                                                 {getExerciseIcon(rec.exerciseName)}
                                             </span>
                                         </div>
-                                        <span style={{
-                                            background: 'rgba(102, 126, 234, 0.1)',
-                                            color: '#667eea',
-                                            padding: '4px 8px',
-                                            borderRadius: '12px',
-                                            fontSize: '12px',
-                                            fontWeight: '600'
-                                        }}>
-                                            #{index + 1}
-                                        </span>
+
                                     </div>
 
                                     {/* Exercise details */}

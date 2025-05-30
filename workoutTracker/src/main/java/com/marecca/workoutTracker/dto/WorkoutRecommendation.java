@@ -29,24 +29,22 @@ public class WorkoutRecommendation {
     @JsonProperty("priorityScore")
     private BigDecimal priorityScore;
 
-    // Constructors
     public WorkoutRecommendation() {}
 
     public WorkoutRecommendation(Long exerciseId, String exerciseName,
                                  Integer recommendedSets, Integer recommendedRepsMin,
                                  Integer recommendedRepsMax, BigDecimal recommendedWeightPercentage,
                                  Integer restTimeSeconds, BigDecimal priorityScore) {
-        this.exerciseId = exerciseId;
-        this.exerciseName = exerciseName;
-        this.recommendedSets = recommendedSets;
-        this.recommendedRepsMin = recommendedRepsMin;
-        this.recommendedRepsMax = recommendedRepsMax;
-        this.recommendedWeightPercentage = recommendedWeightPercentage;
-        this.restTimeSeconds = restTimeSeconds;
-        this.priorityScore = priorityScore;
+                    this.exerciseId = exerciseId;
+                    this.exerciseName = exerciseName;
+                    this.recommendedSets = recommendedSets;
+                    this.recommendedRepsMin = recommendedRepsMin;
+                    this.recommendedRepsMax = recommendedRepsMax;
+                    this.recommendedWeightPercentage = recommendedWeightPercentage;
+                    this.restTimeSeconds = restTimeSeconds;
+                    this.priorityScore = priorityScore;
     }
 
-    // Getters and Setters
     public Long getExerciseId() {
         return exerciseId;
     }

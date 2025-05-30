@@ -896,7 +896,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                     </div>
                                     <div style={{display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap'}}>
                                         <span style={{
-                                            background: goal.status === 'ACTIVE' ? 'linear-gradient(135deg, #43e97b, #38f9d7)' :
+                                            background: goal.status === 'ACTIVE' ? '#22c55e' :
                                                 goal.status === 'COMPLETED' ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#cbd5e0',
                                             color: 'white',
                                             padding: '6px 12px',
@@ -907,28 +907,12 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                         }}>
                                             {goal.status?.toLowerCase()}
                                         </span>
-                                        {/*  Recommend Workout */}
-                                        <button
-                                            onClick={() => handleRecommendWorkout(goal)}
-                                            style={{
-                                                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                                                border: 'none',
-                                                borderRadius: '8px',
-                                                padding: '6px 12px',
-                                                cursor: 'pointer',
-                                                fontSize: '12px',
-                                                fontWeight: '600',
-                                                color: 'white',
-                                                transition: 'all 0.2s'
-                                            }}
-                                        >
-                                             Recommend Workout
-                                        </button>
+
                                         {goal.status === 'ACTIVE' && (
                                             <button
                                                 onClick={() => handleUpdateGoalStatus(goal.goalId, 'COMPLETED')}
                                                 style={{
-                                                    background: 'linear-gradient(135deg, #43e97b, #38f9d7)',
+                                                    background: '#6366f1',
                                                     border: 'none',
                                                     borderRadius: '8px',
                                                     padding: '6px 12px',
@@ -941,11 +925,13 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                             >
                                                 Complete
                                             </button>
+
                                         )}
+
                                         <button
                                             onClick={() => handleDeleteGoal(goal.goalId)}
                                             style={{
-                                                background: 'linear-gradient(135deg, #f093fb, #f5576c)',
+                                                background: '#ef4444',
                                                 border: 'none',
                                                 borderRadius: '8px',
                                                 padding: '6px 12px',
@@ -957,6 +943,23 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                             }}
                                         >
                                             Delete
+                                        </button>
+                                        {/*  Recommend Workout */}
+                                        <button
+                                            onClick={() => handleRecommendWorkout(goal)}
+                                            style={{
+                                                background: '#374151',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                padding: '6px 12px',
+                                                cursor: 'pointer',
+                                                fontSize: '12px',
+                                                fontWeight: '600',
+                                                color: 'white',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            Recommend Workout
                                         </button>
                                     </div>
                                 </div>

@@ -1,6 +1,5 @@
 package com.marecca.workoutTracker.dto;
 
-
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Pattern;
@@ -16,7 +15,6 @@ public class WorkoutRecommendationRequest {
             message = "Goal type must be WEIGHT_LOSS, MUSCLE_GAIN, or MAINTENANCE")
     private String goalType;
 
-    // Constructors
     public WorkoutRecommendationRequest() {}
 
     public WorkoutRecommendationRequest(Long userId, String goalType) {
@@ -24,7 +22,6 @@ public class WorkoutRecommendationRequest {
         this.goalType = goalType;
     }
 
-    // Getters and Setters
     public Long getUserId() {
         return userId;
     }
