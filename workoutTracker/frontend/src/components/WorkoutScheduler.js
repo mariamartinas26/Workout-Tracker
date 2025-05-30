@@ -638,15 +638,13 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                     </button>
 
                     <h2 style={{
-                        color: '#1a202c',
+                        color: '#000000',
                         fontSize: '28px',
                         fontWeight: '800',
                         marginBottom: '24px',
                         textAlign: 'center',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
                         backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent'
+                        WebkitBackgroundClip: 'text'
                     }}>
                         Workout Manager
                     </h2>

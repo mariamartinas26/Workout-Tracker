@@ -228,15 +228,13 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
                 </button>
 
                 <h2 style={{
-                    color: '#1a202c',
+                    color: '#000000',
                     fontSize: '28px',
                     fontWeight: '800',
                     marginBottom: '24px',
                     textAlign: 'center',
-                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
                     backgroundClip: 'text',
                     WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent'
                 }}>
                     Create New Workout Plan
                 </h2>
