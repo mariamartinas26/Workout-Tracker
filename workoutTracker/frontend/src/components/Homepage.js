@@ -128,10 +128,13 @@ const Homepage = ({ onLogin, onRegister }) => {
                         Think less.
                         <br />
                         <span style={{
-                            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                            background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
                             backgroundClip: 'text',
                             WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent'
+                            color: 'transparent',
+                            WebkitTextFillColor: 'transparent',
+                            fontWeight: '800',
+                            fontSize: '110px'
                         }}>Lift more.</span>
                     </h1>
 
@@ -160,7 +163,7 @@ const Homepage = ({ onLogin, onRegister }) => {
                         onClick={onRegister}
                         style={{
                             padding: '18px 40px',
-                            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                            background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
                             color: 'white',
                             border: 'none',
                             borderRadius: '16px',
@@ -168,12 +171,14 @@ const Homepage = ({ onLogin, onRegister }) => {
                             fontWeight: '700',
                             cursor: 'pointer',
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            boxShadow: '0 12px 40px rgba(59, 130, 246, 0.3)',
+                            boxShadow: '0 12px 40px rgba(30, 64, 175, 0.4)',
                             letterSpacing: '0.025em',
                             fontFamily: 'inherit',
                             position: 'relative',
                             overflow: 'hidden'
                         }}
+
+
                         onMouseEnter={(e) => {
                             e.target.style.transform = 'translateY(-3px)';
                             e.target.style.boxShadow = '0 16px 50px rgba(59, 130, 246, 0.4)';

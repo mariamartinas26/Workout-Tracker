@@ -193,9 +193,6 @@ public class WorkoutRecommendationController {
         return errorResponse;
     }
 
-    /**
-     * Handler pentru excepții de validare
-     */
     @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleValidationException(
             org.springframework.web.bind.MethodArgumentNotValidException ex) {
@@ -214,9 +211,7 @@ public class WorkoutRecommendationController {
                 .body(createErrorResponse(errorMessage.toString()));
     }
 
-    /**
-     * Handler global pentru excepții neașteptate
-     */
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGenericException(Exception ex) {
         logger.error("Unexpected error in WorkoutRecommendationController", ex);
