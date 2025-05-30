@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Entitate Exercise corespunzătoare tabelului 'exercises' din baza de date
+ * Exercise entity coresponding to the exercises table in the database
  */
 @Entity
 @Table(name = "exercises")
@@ -48,15 +48,14 @@ public class Exercise {
     private MuscleGroupType primaryMuscleGroup;
 
     /**
-     * Câmpul pentru array-uri PostgreSQL
-     * Folosim @JdbcTypeCode pentru a specifica că este un array SQL
+     * This field maps to a SQL ARRAY type in the database
      */
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "secondary_muscle_groups", columnDefinition = "muscle_group_type[]")
     @Builder.Default
     private List<MuscleGroupType> secondaryMuscleGroups = new ArrayList<>();
 
-    // Schimbat din equipmentNeeded în equipment pentru consistență cu repository
+
     @Column(name = "equipment_needed", length = 200)
     private String equipment;
 
@@ -70,9 +69,6 @@ public class Exercise {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-
-
-    // Relații
     @OneToMany(mappedBy = "exercise", fetch = FetchType.LAZY)
     private List<WorkoutExerciseDetail> workoutExerciseDetails = new ArrayList<>();
 
@@ -94,7 +90,6 @@ public class Exercise {
         }
     }
 
-    // Metodă helper pentru a obține numele echipamentului (backward compatibility)
     public String getEquipmentNeeded() {
         return this.equipment;
     }
