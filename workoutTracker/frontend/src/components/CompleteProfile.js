@@ -106,7 +106,7 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
     return (
         <div style={{
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -153,18 +153,21 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
             }}>
                 {/* Header */}
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                    <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '80px',
-                        height: '80px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                        borderRadius: '20px',
-                        marginBottom: '24px',
-                        boxShadow: '0 12px 40px rgba(102, 126, 234, 0.3)'
-                    }}>
-                        <span style={{ fontSize: '32px', color: 'white' }}>👤</span>
+                    <div>
+                        <img
+                            src="/man.png"
+                            alt="Man Logo"
+                            style={{
+                                width: '48px',
+                                height: '48px',
+                                objectFit: 'contain'
+                            }}
+                            onError={(e) => {
+                                // Fallback în caz că imaginea nu se poate încărca
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                            }}
+                        />
                     </div>
                     <h1 style={{
                         color: '#1a202c',
@@ -182,7 +185,7 @@ const CompleteProfile = ({ user, onProfileComplete, onSkip }) => {
                         lineHeight: '1.5',
                         fontWeight: '500'
                     }}>
-                        {user?.dateOfBirth || user?.heightCm || user?.weightKg ? 'Update your fitness information' : 'Help us personalize your fitness experience'}
+                    {user?.dateOfBirth || user?.heightCm || user?.weightKg ? 'Update your fitness information' : 'Help us personalize your fitness experience'}
                     </p>
                 </div>
 

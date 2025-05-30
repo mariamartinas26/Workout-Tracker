@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+import WorkoutRecommendations from './WorkoutRecommendation';
 // GoalsApi for backend integration
 const GoalsApi = {
     createGoal: async (goalData) => {
@@ -353,6 +353,24 @@ const Goals = ({ user, onBack, onGoalSet }) => {
             month: 'short',
             day: 'numeric'
         });
+    };
+    const [showWorkoutRecommendations, setShowWorkoutRecommendations] = useState(false);
+    const [selectedGoalForWorkout, setSelectedGoalForWorkout] = useState(null);
+    // Funcție pentru a deschide recomandările de workout
+    const handleRecommendWorkout = (goal) => {
+        setSelectedGoalForWorkout(goal);
+        setShowWorkoutRecommendations(true);
+    };
+
+    // Funcție pentru a reveni din recomandări la lista de goals
+    const handleBackFromRecommendations = () => {
+        setShowWorkoutRecommendations(false);
+        setSelectedGoalForWorkout(null);
+    };
+
+    // Funcție pentru salvarea planului de workout
+    const handleSaveWorkoutPlan = (savedPlan) => {
+        console.log('Workout plan saved:', savedPlan);
     };
 
     const renderGoalDetails = () => {
@@ -889,6 +907,23 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                         }}>
                                             {goal.status?.toLowerCase()}
                                         </span>
+                                        {/*  Recommend Workout */}
+                                        <button
+                                            onClick={() => handleRecommendWorkout(goal)}
+                                            style={{
+                                                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                padding: '6px 12px',
+                                                cursor: 'pointer',
+                                                fontSize: '12px',
+                                                fontWeight: '600',
+                                                color: 'white',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                             Recommend Workout
+                                        </button>
                                         {goal.status === 'ACTIVE' && (
                                             <button
                                                 onClick={() => handleUpdateGoalStatus(goal.goalId, 'COMPLETED')}
@@ -1329,7 +1364,17 @@ const Goals = ({ user, onBack, onGoalSet }) => {
         </div>
     );
 
-    // Main render logic
+    if (showWorkoutRecommendations && selectedGoalForWorkout) {
+        return (
+            <WorkoutRecommendations
+                user={user}
+                goal={selectedGoalForWorkout}
+                onBack={handleBackFromRecommendations}
+                onSavePlan={handleSaveWorkoutPlan}
+            />
+        );
+    }
+
     if (showGoalsList || currentStep === 3) {
         return renderGoalsList();
     }
