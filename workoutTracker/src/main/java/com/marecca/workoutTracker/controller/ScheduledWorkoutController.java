@@ -68,7 +68,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Găsește toate workout-urile pentru un utilizator
+     * Find all scheduled workouts for a user
 */
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<ScheduledWorkout>> getUserWorkouts(@PathVariable Long userId) {
@@ -91,7 +91,7 @@ public class ScheduledWorkoutController {
     }
      */
     /**
-     * Găsește workout-urile de astăzi pentru un utilizator
+     * Shows the schedueled workouts for today for a user
      */
     @GetMapping("/user/{userId}/today")
     public ResponseEntity<List<ScheduledWorkout>> getTodaysWorkouts(@PathVariable Long userId) {
@@ -191,7 +191,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Găsește workout-urile recent completate
+     * Shows the recently completed workouts
      */
     @GetMapping("/user/{userId}/recent-completed")
     public ResponseEntity<List<ScheduledWorkout>> getRecentCompletedWorkouts(@PathVariable Long userId) {
@@ -200,7 +200,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Statistici workout-uri pentru utilizator
+     * Shows how many completed workout are for a user
      */
     @GetMapping("/user/{userId}/statistics")
     public ResponseEntity<ScheduledWorkoutService.WorkoutStatistics> getUserStatistics(@PathVariable Long userId) {

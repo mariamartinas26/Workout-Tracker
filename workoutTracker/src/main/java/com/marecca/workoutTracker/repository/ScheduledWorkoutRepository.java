@@ -138,5 +138,34 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             @Param("workoutPlanId") Long workoutPlanId,
             @Param("userId") Long userId);
 
+    // Dashboard Summary
+    @Query(value = "SELECT * FROM get_dashboard_summary(:userId, :currentDate)", nativeQuery = true)
+    List<Object[]> getDashboardSummary(@Param("userId") Long userId, @Param("currentDate") LocalDate currentDate);
 
+    // Workout Calendar (for heatmap)
+    @Query(value = "SELECT * FROM get_workout_calendar(:userId, :startDate, :endDate)", nativeQuery = true)
+    List<Object[]> getWorkoutCalendar(@Param("userId") Long userId,
+                                      @Param("startDate") LocalDate startDate,
+                                      @Param("endDate") LocalDate endDate);
+
+    // Workout Trends
+    @Query(value = "SELECT * FROM get_workout_trends(:userId, :periodType, :startDate, :endDate)", nativeQuery = true)
+    List<Object[]> getWorkoutTrends(@Param("userId") Long userId,
+                                    @Param("periodType") String periodType,
+                                    @Param("startDate") LocalDate startDate,
+                                    @Param("endDate") LocalDate endDate);
+
+    // Workout Type Breakdown
+    @Query(value = "SELECT * FROM get_workout_type_breakdown(:userId, :startDate, :endDate)", nativeQuery = true)
+    List<Object[]> getWorkoutTypeBreakdown(@Param("userId") Long userId,
+                                           @Param("startDate") LocalDate startDate,
+                                           @Param("endDate") LocalDate endDate);
+
+    // Recent Achievements
+    @Query(value = "SELECT * FROM get_recent_achievements(:userId, :daysBack)", nativeQuery = true)
+    List<Object[]> getRecentAchievements(@Param("userId") Long userId, @Param("daysBack") Integer daysBack);
+
+    // Update Streak (called after workout completion)
+    @Query(value = "SELECT * FROM update_workout_streak(:userId, :workoutDate)", nativeQuery = true)
+    List<Object[]> updateWorkoutStreak(@Param("userId") Long userId, @Param("workoutDate") LocalDate workoutDate);
 }
