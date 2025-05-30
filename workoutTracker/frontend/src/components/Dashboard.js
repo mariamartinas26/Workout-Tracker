@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import WorkoutPlanCreator from './WorkoutPlanCreator';
 import WorkoutScheduler from './WorkoutScheduler';
+import WorkoutDashboard from './WorkoutDashboard'; // Add this import
 
 const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals }) => {
     const [showWorkoutPopup, setShowWorkoutPopup] = useState(false);
     const [showSchedulerPopup, setShowSchedulerPopup] = useState(false);
+    const [showAnalytics, setShowAnalytics] = useState(false); // Add this state
 
     // Debug - să vedem state-ul
     console.log('showSchedulerPopup state:', showSchedulerPopup);
@@ -119,6 +121,37 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                         </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {/* Add Analytics Button */}
+                        <button
+                            onClick={() => setShowAnalytics(true)}
+                            style={{
+                                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                                color: 'white',
+                                border: 'none',
+                                padding: '12px 20px',
+                                borderRadius: '10px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                letterSpacing: '0.025em',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.transform = 'translateY(-2px)';
+                                e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.transform = 'translateY(0)';
+                                e.target.style.boxShadow = '0 4px 16px rgba(102, 126, 234, 0.3)';
+                            }}
+                        >
+                            📊 Analytics
+                        </button>
+
                         <button
                             onClick={onEditProfile}
                             style={{
@@ -459,7 +492,7 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                             </p>
                         </div>
 
-                        {/* Monitor Progress Card */}
+                        {/* Monitor Progress Card - UPDATED with Analytics */}
                         <div style={{
                             background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.05))',
                             padding: '32px',
@@ -470,6 +503,7 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                             position: 'relative',
                             overflow: 'hidden'
                         }}
+                             onClick={() => setShowAnalytics(true)} // UPDATED: Open analytics
                              onMouseEnter={(e) => {
                                  e.target.style.transform = 'translateY(-4px)';
                                  e.target.style.boxShadow = '0 16px 40px rgba(102, 126, 234, 0.15)';
@@ -573,17 +607,23 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                 </div>
             </div>
 
-            {/* Popupuri - AMBELE COMPONENTE */}
+            {/* Popupuri - ALL THREE COMPONENTS */}
             <WorkoutPlanCreator
                 isOpen={showWorkoutPopup}
                 onClose={() => setShowWorkoutPopup(false)}
                 sampleExercises={sampleExercises}
-                currentUserId={user?.id || 1} // Folosește ID-ul real al utilizatorului
+                currentUserId={user?.id || user?.userId || user?.user_id || 1} // Handle different ID formats
             />
             <WorkoutScheduler
                 isOpen={showSchedulerPopup}
                 onClose={() => setShowSchedulerPopup(false)}
-                currentUserId={user?.id || 1}
+                currentUserId={user?.id || user?.userId || user?.user_id || 1}
+            />
+            {/* ADD WORKOUT DASHBOARD */}
+            <WorkoutDashboard
+                isOpen={showAnalytics}
+                onClose={() => setShowAnalytics(false)}
+                currentUserId={user?.id || user?.userId || user?.user_id || 1}
             />
 
             <style>

@@ -284,6 +284,7 @@ END;
 $$;
 
 -- Function to get workout trends (for charts)
+-- Fixed function to get workout trends (for charts)
 CREATE OR REPLACE FUNCTION get_workout_trends(
     p_user_id BIGINT,
     p_period_type VARCHAR(10), -- 'daily', 'weekly', 'monthly'
@@ -305,8 +306,8 @@ BEGIN
         RETURN QUERY
 SELECT
     sw.scheduled_date as period_date,
-    TO_CHAR(sw.scheduled_date, 'Mon DD') as period_label,
-    COUNT(*)::INTEGER as workout_count,
+    TO_CHAR(sw.scheduled_date, 'Mon DD')::VARCHAR(20) as period_label, -- Cast to VARCHAR
+        COUNT(*)::INTEGER as workout_count,
         COALESCE(SUM(sw.calories_burned), 0)::INTEGER as total_calories,
         ROUND(AVG(sw.actual_duration_minutes), 1) as avg_duration,
     ROUND(AVG(sw.overall_rating), 1) as avg_rating
@@ -321,8 +322,8 @@ ELSIF p_period_type = 'weekly' THEN
         RETURN QUERY
 SELECT
     DATE_TRUNC('week', sw.scheduled_date)::DATE as period_date,
-        'Week ' || TO_CHAR(DATE_TRUNC('week', sw.scheduled_date), 'MM/DD') as period_label,
-    COUNT(*)::INTEGER as workout_count,
+        ('Week ' || TO_CHAR(DATE_TRUNC('week', sw.scheduled_date), 'MM/DD'))::VARCHAR(20) as period_label, -- Cast to VARCHAR
+        COUNT(*)::INTEGER as workout_count,
         COALESCE(SUM(sw.calories_burned), 0)::INTEGER as total_calories,
         ROUND(AVG(sw.actual_duration_minutes), 1) as avg_duration,
     ROUND(AVG(sw.overall_rating), 1) as avg_rating
@@ -337,8 +338,8 @@ ELSIF p_period_type = 'monthly' THEN
         RETURN QUERY
 SELECT
     DATE_TRUNC('month', sw.scheduled_date)::DATE as period_date,
-        TO_CHAR(DATE_TRUNC('month', sw.scheduled_date), 'Mon YYYY') as period_label,
-    COUNT(*)::INTEGER as workout_count,
+        TO_CHAR(DATE_TRUNC('month', sw.scheduled_date), 'Mon YYYY')::VARCHAR(20) as period_label, -- Cast to VARCHAR
+        COUNT(*)::INTEGER as workout_count,
         COALESCE(SUM(sw.calories_burned), 0)::INTEGER as total_calories,
         ROUND(AVG(sw.actual_duration_minutes), 1) as avg_duration,
     ROUND(AVG(sw.overall_rating), 1) as avg_rating
