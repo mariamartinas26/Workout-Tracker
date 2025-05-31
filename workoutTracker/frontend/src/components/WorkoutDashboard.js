@@ -1191,31 +1191,6 @@ const WorkoutDashboard = ({ currentUserId = 1, isOpen, onClose }) => {
                     justifyContent: 'space-between',
                     alignItems: 'center'
                 }}>
-                    <div style={{
-                        color: '#718096',
-                        fontSize: '14px'
-                    }}>
-                        Last updated: {new Date().toLocaleString()}
-                    </div>
-                    <button
-                        onClick={loadDashboardData}
-                        disabled={loading}
-                        style={{
-                            padding: '10px 20px',
-                            backgroundColor: loading ? '#cbd5e0' : '#667eea',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                        }}
-                    >
-                        {loading ? '⏳' : '🔄'} Refresh Data
-                    </button>
                 </div>
 
                 {/* CSS Animations */}

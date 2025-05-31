@@ -1704,7 +1704,7 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                         fontWeight: '600'
                                     }}
                                 >
-                                    👁️ View Exercises
+                                     View Exercises
                                 </button>
 
                                 <button
@@ -1723,7 +1723,7 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                         fontWeight: '600'
                                     }}
                                 >
-                                    ✏️ Edit Plan
+                                    Edit Plan
                                 </button>
 
                                 <button
@@ -1751,7 +1751,7 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                         fontWeight: '600'
                                     }}
                                 >
-                                    🗑️ Delete Plan
+                                    Delete Plan
                                 </button>
 
                                 <button
@@ -1770,7 +1770,7 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                         fontWeight: '600'
                                     }}
                                 >
-                                    📅 Schedule Workout
+                                    Schedule Workout
                                 </button>
                             </div>
                         </div>
