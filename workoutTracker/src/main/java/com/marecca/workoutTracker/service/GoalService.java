@@ -14,6 +14,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -145,5 +146,22 @@ public class GoalService {
      */
     public Long countActiveGoals(Long userId) {
         return goalRepository.countActiveGoalsByUserId(userId);
+    }
+
+    /**
+     * Obține goalurile completed pentru un user într-un anumit interval de timp
+     */
+    public List<Goal> getCompletedGoalsByUserAndTimeframe(Long userId, Integer daysBack) {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(daysBack);
+
+        // Folosește metoda existentă și filtrează manual
+        List<Goal> allUserGoals = getUserGoals(userId);
+
+        return allUserGoals.stream()
+                .filter(goal -> goal.getStatus() == Goal.GoalStatus.COMPLETED)
+                .filter(goal -> goal.getCompletedAt() != null)
+                .filter(goal -> goal.getCompletedAt().isAfter(startDate))
+                .sorted((g1, g2) -> g2.getCompletedAt().compareTo(g1.getCompletedAt())) // Sortare descrescătoare
+                .collect(Collectors.toList());
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,4 +40,9 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
     // Find completed goals for a user
     @Query("SELECT g FROM Goal g WHERE g.user.userId = :userId AND g.status = 'COMPLETED' ORDER BY g.completedAt DESC")
     List<Goal> findCompletedGoalsByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT g FROM Goal g WHERE g.user.userId = :userId AND g.status = :status AND g.completedAt > :completedAfter ORDER BY g.completedAt DESC")
+    List<Goal> findByUserIdAndStatusAndCompletedAtAfter(@Param("userId") Long userId,
+                                                        @Param("status") Goal.GoalStatus status,
+                                                        @Param("completedAfter") LocalDateTime completedAfter);
 }

@@ -242,8 +242,6 @@ public class UserService {
     }
 
 
-
-
     public void resetPassword(Long userId, String newPassword) {
         log.info("Resetting password for user ID: {}", userId);
 

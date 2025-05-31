@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -137,20 +138,19 @@ public class DashboardController {
     }
 
     /**
-     * Obține realizări recente
+     * Obține realizări recente - TEMPORARY FIX pentru a evita eroarea PostgreSQL
      */
     @GetMapping("/achievements/{userId}")
-    public ResponseEntity<List<AchievementDTO>> getRecentAchievements(
+    public ResponseEntity<List<Object>> getRecentAchievements(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "30") Integer daysBack) {
 
         try {
-            // Limit to reasonable range
-            if (daysBack < 1 || daysBack > 365) {
-                daysBack = 30;
-            }
+            // Temporary fix - returnează listă goală pentru a evita eroarea PostgreSQL
+            // Frontend-ul va folosi goalurile completed din GoalController în schimb
+            log.info("Achievements endpoint called for user {} - returning empty list to avoid PostgreSQL error", userId);
 
-            List<AchievementDTO> achievements = dashboardService.getRecentAchievements(userId, daysBack);
+            List<Object> achievements = new ArrayList<>();
             return ResponseEntity.ok(achievements);
 
         } catch (Exception e) {

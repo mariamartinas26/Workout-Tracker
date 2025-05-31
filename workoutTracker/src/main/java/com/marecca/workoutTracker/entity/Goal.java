@@ -78,7 +78,12 @@ public class Goal {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
+    public enum GoalStatus {
+        ACTIVE,
+        COMPLETED,
+        PAUSED,
+        CANCELLED
+    }
     public enum GoalType {
         LOSE_WEIGHT("lose_weight"),
         GAIN_MUSCLE("gain_muscle"),
@@ -102,12 +107,5 @@ public class Goal {
             }
             throw new IllegalArgumentException("Unknown goal type: " + value);
         }
-    }
-
-    public enum GoalStatus {
-        ACTIVE,
-        COMPLETED,
-        PAUSED,
-        CANCELLED
     }
 }

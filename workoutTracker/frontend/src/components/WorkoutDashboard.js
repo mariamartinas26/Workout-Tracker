@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 const API_BASE_URL = 'http://localhost:8082/api';
 
 // Dashboard API Service
+// Updated DashboardService with Goals integration
 const DashboardService = {
     /**
      * Get complete dashboard summary
@@ -117,27 +118,172 @@ const DashboardService = {
     },
 
     /**
-     * Get recent achievements
+     * Get recent achievements - NEW VERSION with goals integration
      */
     getRecentAchievements: async (userId, daysBack = 30) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/dashboard/achievements/${userId}?daysBack=${daysBack}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
+            // Încercăm să obținem achievements din endpoint-ul original
+            let achievements = [];
+            let completedGoals = [];
 
-            if (!response.ok) {
-                throw new Error(`Failed to fetch achievements: ${response.status}`);
+            // Încearcă să obții achievements normale (dacă funcționează)
+            try {
+                const achievementsResponse = await fetch(`${API_BASE_URL}/dashboard/achievements/${userId}?daysBack=${daysBack}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (achievementsResponse.ok) {
+                    const achievementsData = await achievementsResponse.json();
+                    achievements = Array.isArray(achievementsData) ? achievementsData : [];
+                }
+            } catch (achievementsError) {
+                console.warn('Could not fetch regular achievements, continuing with goals only:', achievementsError);
             }
 
-            return await response.json();
+            // Obține goalurile completed (dacă ai implementat endpoint-ul)
+            try {
+                const goalsResponse = await fetch(`${API_BASE_URL}/goals/achievements/${userId}/completed-goals?daysBack=${daysBack}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (goalsResponse.ok) {
+                    const goalsData = await goalsResponse.json();
+                    completedGoals = goalsData.completedGoals || [];
+                }
+            } catch (goalsError) {
+                console.warn('Could not fetch completed goals:', goalsError);
+
+                // Fallback - încearcă să obții goalurile completed dintr-un endpoint existent
+                try {
+                    const allGoalsResponse = await fetch(`${API_BASE_URL}/goals/user/${userId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    if (allGoalsResponse.ok) {
+                        const allGoalsData = await allGoalsResponse.json();
+                        const allGoals = allGoalsData.goals || [];
+
+                        // Filtrează goalurile completed din ultimele X zile
+                        const cutoffDate = new Date();
+                        cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+
+                        completedGoals = allGoals
+                            .filter(goal => goal.status === 'COMPLETED')
+                            .filter(goal => goal.completedAt && new Date(goal.completedAt) > cutoffDate)
+                            .map(goal => ({
+                                id: goal.goalId,
+                                type: 'COMPLETED_GOAL',
+                                title: this.getGoalAchievementTitle(goal),
+                                description: this.getGoalAchievementDescription(goal),
+                                achievedAt: goal.completedAt,
+                                goalType: goal.goalType,
+                                originalGoal: goal,
+                                icon: this.getGoalAchievementIcon(goal.goalType),
+                                points: this.calculateAchievementPoints(goal)
+                            }));
+                    }
+                } catch (fallbackError) {
+                    console.warn('Fallback goal fetch also failed:', fallbackError);
+                }
+            }
+
+            // Combină achievements și goalurile completed
+            const combinedAchievements = [
+                ...achievements,
+                ...completedGoals
+            ];
+
+            // Sortează după dată
+            combinedAchievements.sort((a, b) => {
+                const dateA = new Date(a.achievedAt || a.achievedDate || 0);
+                const dateB = new Date(b.achievedAt || b.achievedDate || 0);
+                return dateB - dateA;
+            });
+
+            return combinedAchievements;
 
         } catch (error) {
             console.error('Error fetching achievements:', error);
-            throw error;
+            // Returnează array gol în loc să arunce eroare
+            return [];
         }
+    },
+
+    getGoalAchievementTitle: (goal) => {
+        const goalType = goal.goalType?.toLowerCase() || '';
+
+        if (goalType.includes('lose_weight')) {
+            return "🎯 Weight Loss Goal Achieved!";
+        } else if (goalType.includes('gain_muscle')) {
+            return "💪 Muscle Gain Goal Achieved!";
+        } else if (goalType.includes('maintain_health')) {
+            return "⚖️ Health Maintenance Goal Achieved!";
+        } else {
+            return "🏆 Goal Completed!";
+        }
+    },
+
+    getGoalAchievementDescription: (goal) => {
+        const goalType = goal.goalType?.toLowerCase() || '';
+        let description = "";
+
+        if (goalType.includes('lose_weight') && goal.targetWeightLoss && goal.targetWeightLoss > 0) {
+            description += `You lost ${goal.targetWeightLoss} kg`;
+        } else if (goalType.includes('gain_muscle') && goal.targetWeightGain && goal.targetWeightGain > 0) {
+            description += `You gained ${goal.targetWeightGain} kg of muscle`;
+        } else if (goalType.includes('maintain_health')) {
+            description += "You successfully maintained your health goals";
+        } else {
+            description += "You achieved your fitness goal";
+        }
+
+        if (goal.timeframeMonths) {
+            const months = goal.timeframeMonths === 1 ? "month" : "months";
+            description += ` in ${goal.timeframeMonths} ${months}`;
+        }
+
+        description += "!";
+        return description;
+    },
+
+    getGoalAchievementIcon: (goalType) => {
+        const type = goalType?.toLowerCase() || '';
+
+        if (type.includes('lose_weight')) {
+            return "🎯";
+        } else if (type.includes('gain_muscle')) {
+            return "💪";
+        } else if (type.includes('maintain_health')) {
+            return "⚖️";
+        } else {
+            return "🏆";
+        }
+    },
+
+    calculateAchievementPoints: (goal) => {
+        let basePoints = 100;
+
+        if (goal.targetWeightLoss) {
+            basePoints += goal.targetWeightLoss * 10;
+        }
+        if (goal.targetWeightGain) {
+            basePoints += goal.targetWeightGain * 10;
+        }
+
+        if (goal.timeframeMonths) {
+            basePoints += Math.max(0, (12 - goal.timeframeMonths) * 5);
+        }
+
+        return basePoints;
     },
 
     /**
@@ -564,7 +710,303 @@ const WorkoutDashboard = ({ currentUserId = 1, isOpen, onClose }) => {
                                 )}
                             </div>
                         )}
+                        {/* Achievements Tab Component*/}
+                        {selectedTab === 'achievements' && (
+                            <div>
+                                <div style={{
+                                    backgroundColor: '#f7fafc',
+                                    padding: '24px',
+                                    borderRadius: '16px'
+                                }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        marginBottom: '20px'
+                                    }}>
+                                        <h3 style={{
+                                            color: '#2d3748',
+                                            fontSize: '20px',
+                                            fontWeight: '700',
+                                            margin: 0
+                                        }}>
+                                            Recent Achievements 🏆
+                                        </h3>
+                                        <div style={{
+                                            backgroundColor: '#667eea',
+                                            color: 'white',
+                                            padding: '6px 12px',
+                                            borderRadius: '20px',
+                                            fontSize: '14px',
+                                            fontWeight: '600'
+                                        }}>
+                                            {achievements.length} achievements
+                                        </div>
+                                    </div>
 
+                                    {achievements.length > 0 ? (
+                                        <div style={{
+                                            display: 'grid',
+                                            gap: '16px'
+                                        }}>
+                                            {achievements.map((achievement, index) => {
+                                                // Verifică dacă este un goal completed sau achievement normal
+                                                const isGoalAchievement = achievement.type === 'COMPLETED_GOAL';
+
+                                                return (
+                                                    <div key={index} style={{
+                                                        backgroundColor: 'white',
+                                                        padding: '20px',
+                                                        borderRadius: '12px',
+                                                        border: '2px solid #e2e8f0',
+                                                        borderLeft: `4px solid ${isGoalAchievement ? '#48bb78' : '#667eea'}`,
+                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                        transition: 'transform 0.2s, box-shadow 0.2s',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                         onMouseEnter={(e) => {
+                                                             e.currentTarget.style.transform = 'translateY(-2px)';
+                                                             e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)';
+                                                         }}
+                                                         onMouseLeave={(e) => {
+                                                             e.currentTarget.style.transform = 'translateY(0)';
+                                                             e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                                                         }}>
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            alignItems: 'flex-start',
+                                                            gap: '16px'
+                                                        }}>
+                                                            {/* Icon */}
+                                                            <div style={{
+                                                                fontSize: '32px',
+                                                                minWidth: '40px',
+                                                                textAlign: 'center'
+                                                            }}>
+                                                                {achievement.icon || (isGoalAchievement ? '🎯' : '🏆')}
+                                                            </div>
+
+                                                            {/* Content */}
+                                                            <div style={{ flex: 1 }}>
+                                                                <div style={{
+                                                                    color: '#2d3748',
+                                                                    fontSize: '18px',
+                                                                    fontWeight: '700',
+                                                                    marginBottom: '8px',
+                                                                    lineHeight: '1.3'
+                                                                }}>
+                                                                    {achievement.title || achievement.achievementTitle}
+                                                                </div>
+
+                                                                <div style={{
+                                                                    color: '#4a5568',
+                                                                    fontSize: '14px',
+                                                                    marginBottom: '12px',
+                                                                    lineHeight: '1.4'
+                                                                }}>
+                                                                    {achievement.description || achievement.achievementDescription}
+                                                                </div>
+
+                                                                <div style={{
+                                                                    display: 'flex',
+                                                                    justifyContent: 'space-between',
+                                                                    alignItems: 'center'
+                                                                }}>
+                                                                    <div style={{
+                                                                        color: '#718096',
+                                                                        fontSize: '12px',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px'
+                                                                    }}>
+                                                                        📅 {new Date(achievement.achievedAt || achievement.achievedDate).toLocaleDateString('ro-RO', {
+                                                                        day: 'numeric',
+                                                                        month: 'long',
+                                                                        year: 'numeric'
+                                                                    })}
+                                                                    </div>
+
+                                                                    {/* Badges */}
+                                                                    <div style={{
+                                                                        display: 'flex',
+                                                                        gap: '8px',
+                                                                        alignItems: 'center'
+                                                                    }}>
+                                                                        {isGoalAchievement && (
+                                                                            <span style={{
+                                                                                backgroundColor: '#48bb78',
+                                                                                color: 'white',
+                                                                                padding: '4px 8px',
+                                                                                borderRadius: '12px',
+                                                                                fontSize: '11px',
+                                                                                fontWeight: '600'
+                                                                            }}>
+                                                        GOAL
+                                                    </span>
+                                                                        )}
+
+                                                                        {achievement.points && (
+                                                                            <span style={{
+                                                                                backgroundColor: '#fbb040',
+                                                                                color: 'white',
+                                                                                padding: '4px 8px',
+                                                                                borderRadius: '12px',
+                                                                                fontSize: '11px',
+                                                                                fontWeight: '600'
+                                                                            }}>
+                                                        +{achievement.points} PTS
+                                                    </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Goal specific details */}
+                                                                {isGoalAchievement && achievement.originalGoal && (
+                                                                    <div style={{
+                                                                        marginTop: '12px',
+                                                                        padding: '12px',
+                                                                        backgroundColor: '#f7fafc',
+                                                                        borderRadius: '8px',
+                                                                        fontSize: '12px'
+                                                                    }}>
+                                                                        <div style={{
+                                                                            color: '#4a5568',
+                                                                            fontWeight: '600',
+                                                                            marginBottom: '4px'
+                                                                        }}>
+                                                                            Goal Details:
+                                                                        </div>
+                                                                        <div style={{ color: '#718096' }}>
+                                                                            {achievement.originalGoal.targetWeightLoss &&
+                                                                                `Target: -${achievement.originalGoal.targetWeightLoss} kg`}
+                                                                            {achievement.originalGoal.targetWeightGain &&
+                                                                                `Target: +${achievement.originalGoal.targetWeightGain} kg`}
+                                                                            {achievement.originalGoal.timeframeMonths &&
+                                                                                ` in ${achievement.originalGoal.timeframeMonths} months`}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div style={{
+                                            textAlign: 'center',
+                                            padding: '60px 20px',
+                                            color: '#718096'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '64px',
+                                                marginBottom: '20px',
+                                                opacity: 0.7
+                                            }}>
+                                                🏆
+                                            </div>
+                                            <div style={{
+                                                fontSize: '20px',
+                                                fontWeight: '600',
+                                                marginBottom: '12px',
+                                                color: '#2d3748'
+                                            }}>
+                                                No recent achievements
+                                            </div>
+                                            <div style={{
+                                                fontSize: '16px',
+                                                lineHeight: '1.5',
+                                                maxWidth: '400px',
+                                                margin: '0 auto'
+                                            }}>
+                                                Keep working out and completing your goals to unlock achievements!
+                                            </div>
+                                            <div style={{
+                                                marginTop: '20px',
+                                                fontSize: '14px',
+                                                color: '#a0aec0'
+                                            }}>
+                                                💪 Complete workouts • 🎯 Achieve goals • 🏆 Earn achievements
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Achievement Stats Summary */}
+                                    {achievements.length > 0 && (
+                                        <div style={{
+                                            marginTop: '24px',
+                                            padding: '20px',
+                                            backgroundColor: 'white',
+                                            borderRadius: '12px',
+                                            border: '2px solid #e2e8f0'
+                                        }}>
+                                            <h4 style={{
+                                                color: '#2d3748',
+                                                fontSize: '16px',
+                                                fontWeight: '600',
+                                                marginBottom: '16px'
+                                            }}>
+                                                Achievement Summary
+                                            </h4>
+
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                                                gap: '16px'
+                                            }}>
+                                                <div style={{ textAlign: 'center' }}>
+                                                    <div style={{
+                                                        color: '#667eea',
+                                                        fontSize: '24px',
+                                                        fontWeight: '800'
+                                                    }}>
+                                                        {achievements.length}
+                                                    </div>
+                                                    <div style={{
+                                                        color: '#718096',
+                                                        fontSize: '12px'
+                                                    }}>
+                                                        Total Achievements
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ textAlign: 'center' }}>
+                                                    <div style={{
+                                                        color: '#48bb78',
+                                                        fontSize: '24px',
+                                                        fontWeight: '800'
+                                                    }}>
+                                                        {achievements.filter(a => a.type === 'COMPLETED_GOAL').length}
+                                                    </div>
+                                                    <div style={{
+                                                        color: '#718096',
+                                                        fontSize: '12px'
+                                                    }}>
+                                                        Completed Goals
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ textAlign: 'center' }}>
+                                                    <div style={{
+                                                        color: '#fbb040',
+                                                        fontSize: '24px',
+                                                        fontWeight: '800'
+                                                    }}>
+                                                        {achievements.reduce((total, a) => total + (a.points || 0), 0)}
+                                                    </div>
+                                                    <div style={{
+                                                        color: '#718096',
+                                                        fontSize: '12px'
+                                                    }}>
+                                                        Total Points
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                         {/* Trends Tab */}
                         {selectedTab === 'trends' && (
                             <div>
@@ -736,79 +1178,6 @@ const WorkoutDashboard = ({ currentUserId = 1, isOpen, onClose }) => {
                                         ))}
                                         <span>More</span>
                                     </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Achievements Tab */}
-                        {selectedTab === 'achievements' && (
-                            <div>
-                                <div style={{
-                                    backgroundColor: '#f7fafc',
-                                    padding: '24px',
-                                    borderRadius: '16px'
-                                }}>
-                                    <h3 style={{
-                                        color: '#2d3748',
-                                        fontSize: '20px',
-                                        fontWeight: '700',
-                                        marginBottom: '20px'
-                                    }}>
-                                        Recent Achievements 🏆
-                                    </h3>
-
-                                    {achievements.length > 0 ? (
-                                        <div style={{
-                                            display: 'grid',
-                                            gap: '16px'
-                                        }}>
-                                            {achievements.map((achievement, index) => (
-                                                <div key={index} style={{
-                                                    backgroundColor: 'white',
-                                                    padding: '20px',
-                                                    borderRadius: '12px',
-                                                    border: '2px solid #e2e8f0',
-                                                    borderLeft: '4px solid #667eea'
-                                                }}>
-                                                    <div style={{
-                                                        color: '#2d3748',
-                                                        fontSize: '18px',
-                                                        fontWeight: '700',
-                                                        marginBottom: '8px'
-                                                    }}>
-                                                        {achievement.achievementTitle}
-                                                    </div>
-                                                    <div style={{
-                                                        color: '#4a5568',
-                                                        fontSize: '14px',
-                                                        marginBottom: '8px'
-                                                    }}>
-                                                        {achievement.achievementDescription}
-                                                    </div>
-                                                    <div style={{
-                                                        color: '#718096',
-                                                        fontSize: '12px'
-                                                    }}>
-                                                        Achieved on {achievement.achievedDate}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div style={{
-                                            textAlign: 'center',
-                                            padding: '40px',
-                                            color: '#718096'
-                                        }}>
-                                            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏆</div>
-                                            <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
-                                                No recent achievements
-                                            </div>
-                                            <div style={{ fontSize: '14px' }}>
-                                                Keep working out to unlock achievements!
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         )}

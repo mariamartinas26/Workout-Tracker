@@ -288,7 +288,7 @@ WHERE sw.user_id = p_user_id
 END;
 $$ LANGUAGE plpgsql;
 
--- Funcție pentru programarea unui workout
+--Schedule workout function (ScheduleWorkoutService)!
 CREATE OR REPLACE FUNCTION schedule_workout(
     p_user_id BIGINT,
     p_workout_plan_id BIGINT,
@@ -298,12 +298,12 @@ CREATE OR REPLACE FUNCTION schedule_workout(
 DECLARE
 v_scheduled_workout_id BIGINT;
 BEGIN
-    -- Validează că utilizatorul există
+    --checks if user exists
     IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
         RAISE EXCEPTION 'User with ID % does not exist', p_user_id;
 END IF;
 
-    -- Validează că planul de workout există și aparține utilizatorului
+    --checks if workout plan exists and is owned by user
     IF NOT EXISTS (
         SELECT 1 FROM workout_plans
         WHERE workout_plan_id = p_workout_plan_id AND user_id = p_user_id
@@ -312,7 +312,7 @@ END IF;
             p_workout_plan_id, p_user_id;
 END IF;
 
-    -- Verifică dacă utilizatorul are deja un workout programat la aceeași dată și oră
+    --checks if user already has a workout scheduled at the same date and hour
     IF EXISTS (
         SELECT 1 FROM scheduled_workouts
         WHERE user_id = p_user_id
@@ -324,7 +324,7 @@ END IF;
             p_scheduled_date, COALESCE(p_scheduled_time::TEXT, '');
 END IF;
 
-    -- Creează workout-ul programat
+    --creates workout
 INSERT INTO scheduled_workouts (
     user_id, workout_plan_id, scheduled_date, scheduled_time
 ) VALUES (
