@@ -337,7 +337,6 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
 
         switch (status) {
             case 'planned':
-            case 'scheduled':
                 return {
                     text: '▶️ Start Workout',
                     action: 'start',
@@ -364,6 +363,21 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                     action: 'none',
                     color: '#9ca3af',
                     enabled: false
+                };
+            case 'missed':
+                return {
+                    text: '⏰ Missed',
+                    action: 'none',
+                    color: '#ef4444',
+                    enabled: false
+                };
+            // Legacy status handling
+            case 'scheduled':
+                return {
+                    text: '▶️ Start Workout',
+                    action: 'start',
+                    color: 'linear-gradient(135deg, #10b981, #059669)',
+                    enabled: true
                 };
             default:
                 return {
@@ -566,22 +580,31 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
 
     const getStatusColor = (status) => {
         switch (status?.toLowerCase()) {
+            case 'planned':
+                return {bg: '#e6f3ff', border: '#3182ce', text: '#2c5282'};
+            case 'in_progress':
+                return {bg: '#fff2e6', border: '#ed8936', text: '#c05621'};
+            case 'completed':
+                return {bg: '#e6ffe6', border: '#38a169', text: '#2f855a'};
+            case 'cancelled':
+                return {bg: '#ffe6e6', border: '#e53e3e', text: '#c53030'};
+            case 'missed':
+                return {bg: '#fef2f2', border: '#ef4444', text: '#dc2626'};
+            // Legacy status mappings (if your backend sometimes returns these)
             case 'scheduled':
             case 'programat':
                 return {bg: '#e6f3ff', border: '#3182ce', text: '#2c5282'};
-            case 'in_progress':
             case 'în progres':
                 return {bg: '#fff2e6', border: '#ed8936', text: '#c05621'};
-            case 'completed':
             case 'finalizat':
                 return {bg: '#e6ffe6', border: '#38a169', text: '#2f855a'};
-            case 'cancelled':
             case 'anulat':
                 return {bg: '#ffe6e6', border: '#e53e3e', text: '#c53030'};
             default:
                 return {bg: '#f7fafc', border: '#cbd5e0', text: '#4a5568'};
         }
     };
+
 
     if (!isOpen) return null;
 
@@ -1237,7 +1260,7 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                         </div>
                     )}
 
-                    {/* Reschedule section - doar pentru scheduled workouts */}
+                    {/* Enhanced Reschedule section - replace your existing reschedule section */}
                     {activeTab === 'scheduled' && selectedWorkout && (
                         <div style={{
                             backgroundColor: '#f0fff4',
@@ -1251,9 +1274,12 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                 color: '#2d3748',
                                 fontSize: '18px',
                                 fontWeight: '700',
-                                marginBottom: '16px'
+                                marginBottom: '16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
                             }}>
-                                Reschedule Details
+                                📅 Reschedule Workout
                             </h3>
 
                             <div style={{
@@ -1268,8 +1294,7 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                     fontWeight: '600',
                                     marginBottom: '8px'
                                 }}>
-                                    Selected
-                                    Workout: {selectedWorkout.workoutPlan?.planName || `Workout #${selectedWorkout.scheduledWorkoutId}`}
+                                    Selected Workout: {selectedWorkout.workoutPlan?.planName || `Workout #${selectedWorkout.scheduledWorkoutId}`}
                                 </div>
                                 <div style={{
                                     color: '#718096',
@@ -1281,128 +1306,287 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                 </div>
                                 <div style={{
                                     color: '#718096',
-                                    fontSize: '14px'
+                                    fontSize: '14px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
                                 }}>
-                                    {selectedWorkout.workoutPlan?.estimatedDurationMinutes && `Duration: ${selectedWorkout.workoutPlan.estimatedDurationMinutes} minutes`}
-                                    {selectedWorkout.workoutPlan?.difficultyLevel && ` • Difficulty: Level ${selectedWorkout.workoutPlan.difficultyLevel}`}
+                <span style={{
+                    backgroundColor: getStatusColor(selectedWorkout.status).bg,
+                    color: getStatusColor(selectedWorkout.status).text,
+                    border: `1px solid ${getStatusColor(selectedWorkout.status).border}`,
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                }}>
+                    {selectedWorkout.status || 'PLANNED'}
+                </span>
+                                    {selectedWorkout.workoutPlan?.estimatedDurationMinutes && (
+                                        <>
+                                            <span>•</span>
+                                            <span>Duration: {selectedWorkout.workoutPlan.estimatedDurationMinutes} minutes</span>
+                                        </>
+                                    )}
+                                    {selectedWorkout.workoutPlan?.difficultyLevel && (
+                                        <>
+                                            <span>•</span>
+                                            <span>Difficulty: Level {selectedWorkout.workoutPlan.difficultyLevel}</span>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1fr',
-                                gap: '16px',
-                                marginBottom: '16px'
-                            }}>
-                                <div>
-                                    <label style={{
-                                        display: 'block',
-                                        marginBottom: '8px',
-                                        color: '#4a5568',
-                                        fontWeight: '600',
-                                        fontSize: '14px'
-                                    }}>
-                                        New Date *
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={scheduleData.scheduledDate}
-                                        onChange={(e) => setScheduleData(prev => ({
-                                            ...prev,
-                                            scheduledDate: e.target.value
-                                        }))}
-                                        min={new Date().toISOString().split('T')[0]}
-                                        disabled={loading}
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px 16px',
-                                            border: '2px solid #e2e8f0',
-                                            borderRadius: '8px',
-                                            fontSize: '14px',
-                                            boxSizing: 'border-box'
-                                        }}
-                                    />
+                            {/* Show warning for completed/in-progress workouts */}
+                            {(selectedWorkout.status?.toLowerCase() === 'completed' ||
+                                selectedWorkout.status?.toLowerCase() === 'in_progress') && (
+                                <div style={{
+                                    backgroundColor: '#fef3c7',
+                                    color: '#92400e',
+                                    padding: '12px 16px',
+                                    borderRadius: '8px',
+                                    marginBottom: '16px',
+                                    border: '1px solid #f59e0b',
+                                    fontSize: '14px',
+                                    fontWeight: '600'
+                                }}>
+                                    ⚠️ {selectedWorkout.status?.toLowerCase() === 'completed'
+                                    ? 'This workout is already completed and cannot be rescheduled.'
+                                    : 'This workout is in progress and cannot be rescheduled.'}
                                 </div>
-                                <div>
-                                    <label style={{
-                                        display: 'block',
-                                        marginBottom: '8px',
-                                        color: '#4a5568',
-                                        fontWeight: '600',
-                                        fontSize: '14px'
-                                    }}>
-                                        New Time *
-                                    </label>
-                                    <input
-                                        type="time"
-                                        value={scheduleData.scheduledTime}
-                                        onChange={(e) => setScheduleData(prev => ({
-                                            ...prev,
-                                            scheduledTime: e.target.value
-                                        }))}
-                                        disabled={loading}
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px 16px',
-                                            border: '2px solid #e2e8f0',
-                                            borderRadius: '8px',
-                                            fontSize: '14px',
-                                            boxSizing: 'border-box'
-                                        }}
-                                    />
-                                </div>
-                            </div>
+                            )}
 
-                            {/* Quick Date Options */}
-                            <div style={{
-                                marginTop: '16px',
-                                display: 'flex',
-                                gap: '8px',
-                                flexWrap: 'wrap'
-                            }}>
-                                <button
-                                    onClick={() => setScheduleData(prev => ({
-                                        ...prev,
-                                        scheduledDate: new Date().toISOString().split('T')[0]
-                                    }))}
-                                    disabled={loading}
-                                    style={{
-                                        background: '#e2e8f0',
-                                        color: '#4a5568',
-                                        border: 'none',
-                                        padding: '8px 12px',
-                                        borderRadius: '6px',
-                                        cursor: loading ? 'not-allowed' : 'pointer',
-                                        fontSize: '12px',
-                                        fontWeight: '600'
-                                    }}
-                                >
-                                    Today
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        const tomorrow = new Date();
-                                        tomorrow.setDate(tomorrow.getDate() + 1);
-                                        setScheduleData(prev => ({
-                                            ...prev,
-                                            scheduledDate: tomorrow.toISOString().split('T')[0]
-                                        }));
-                                    }}
-                                    disabled={loading}
-                                    style={{
-                                        background: '#e2e8f0',
-                                        color: '#4a5568',
-                                        border: 'none',
-                                        padding: '8px 12px',
-                                        borderRadius: '6px',
-                                        cursor: loading ? 'not-allowed' : 'pointer',
-                                        fontSize: '12px',
-                                        fontWeight: '600'
-                                    }}
-                                >
-                                    Tomorrow
-                                </button>
-                            </div>
+                            {/* Show info for missed workouts */}
+                            {selectedWorkout.status?.toLowerCase() === 'missed' && (
+                                <div style={{
+                                    backgroundColor: '#fef2f2',
+                                    color: '#dc2626',
+                                    padding: '12px 16px',
+                                    borderRadius: '8px',
+                                    marginBottom: '16px',
+                                    border: '1px solid #ef4444',
+                                    fontSize: '14px',
+                                    fontWeight: '600'
+                                }}>
+                                    ⏰ This workout was missed. You can reschedule it to try again.
+                                </div>
+                            )}
+
+                            {/* Show info for cancelled workouts */}
+                            {selectedWorkout.status?.toLowerCase() === 'cancelled' && (
+                                <div style={{
+                                    backgroundColor: '#fef2f2',
+                                    color: '#dc2626',
+                                    padding: '12px 16px',
+                                    borderRadius: '8px',
+                                    marginBottom: '16px',
+                                    border: '1px solid #ef4444',
+                                    fontSize: '14px',
+                                    fontWeight: '600'
+                                }}>
+                                    ❌ This workout was cancelled. Rescheduling will reactivate it.
+                                </div>
+                            )}
+
+                            {/* Only show reschedule inputs if workout can be rescheduled */}
+                            {selectedWorkout.status?.toLowerCase() !== 'completed' &&
+                                selectedWorkout.status?.toLowerCase() !== 'in_progress' && (
+                                    <>
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '1fr 1fr',
+                                            gap: '16px',
+                                            marginBottom: '16px'
+                                        }}>
+                                            <div>
+                                                <label style={{
+                                                    display: 'block',
+                                                    marginBottom: '8px',
+                                                    color: '#4a5568',
+                                                    fontWeight: '600',
+                                                    fontSize: '14px'
+                                                }}>
+                                                    New Date *
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    value={scheduleData.scheduledDate}
+                                                    onChange={(e) => setScheduleData(prev => ({
+                                                        ...prev,
+                                                        scheduledDate: e.target.value
+                                                    }))}
+                                                    min={new Date().toISOString().split('T')[0]}
+                                                    disabled={loading}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '12px 16px',
+                                                        border: '2px solid #e2e8f0',
+                                                        borderRadius: '8px',
+                                                        fontSize: '14px',
+                                                        boxSizing: 'border-box',
+                                                        backgroundColor: loading ? '#f7fafc' : 'white'
+                                                    }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{
+                                                    display: 'block',
+                                                    marginBottom: '8px',
+                                                    color: '#4a5568',
+                                                    fontWeight: '600',
+                                                    fontSize: '14px'
+                                                }}>
+                                                    New Time *
+                                                </label>
+                                                <input
+                                                    type="time"
+                                                    value={scheduleData.scheduledTime}
+                                                    onChange={(e) => setScheduleData(prev => ({
+                                                        ...prev,
+                                                        scheduledTime: e.target.value
+                                                    }))}
+                                                    disabled={loading}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '12px 16px',
+                                                        border: '2px solid #e2e8f0',
+                                                        borderRadius: '8px',
+                                                        fontSize: '14px',
+                                                        boxSizing: 'border-box',
+                                                        backgroundColor: loading ? '#f7fafc' : 'white'
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Quick Date Options */}
+                                        <div style={{
+                                            marginBottom: '16px'
+                                        }}>
+                                            <label style={{
+                                                display: 'block',
+                                                marginBottom: '8px',
+                                                color: '#4a5568',
+                                                fontWeight: '600',
+                                                fontSize: '14px'
+                                            }}>
+                                                Quick Options:
+                                            </label>
+                                            <div style={{
+                                                display: 'flex',
+                                                gap: '8px',
+                                                flexWrap: 'wrap'
+                                            }}>
+                                                <button
+                                                    onClick={() => setScheduleData(prev => ({
+                                                        ...prev,
+                                                        scheduledDate: new Date().toISOString().split('T')[0]
+                                                    }))}
+                                                    disabled={loading}
+                                                    style={{
+                                                        background: '#e2e8f0',
+                                                        color: '#4a5568',
+                                                        border: 'none',
+                                                        padding: '8px 12px',
+                                                        borderRadius: '6px',
+                                                        cursor: loading ? 'not-allowed' : 'pointer',
+                                                        fontSize: '12px',
+                                                        fontWeight: '600',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    📅 Today
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const tomorrow = new Date();
+                                                        tomorrow.setDate(tomorrow.getDate() + 1);
+                                                        setScheduleData(prev => ({
+                                                            ...prev,
+                                                            scheduledDate: tomorrow.toISOString().split('T')[0]
+                                                        }));
+                                                    }}
+                                                    disabled={loading}
+                                                    style={{
+                                                        background: '#e2e8f0',
+                                                        color: '#4a5568',
+                                                        border: 'none',
+                                                        padding: '8px 12px',
+                                                        borderRadius: '6px',
+                                                        cursor: loading ? 'not-allowed' : 'pointer',
+                                                        fontSize: '12px',
+                                                        fontWeight: '600',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    📅 Tomorrow
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const nextWeek = new Date();
+                                                        nextWeek.setDate(nextWeek.getDate() + 7);
+                                                        setScheduleData(prev => ({
+                                                            ...prev,
+                                                            scheduledDate: nextWeek.toISOString().split('T')[0]
+                                                        }));
+                                                    }}
+                                                    disabled={loading}
+                                                    style={{
+                                                        background: '#e2e8f0',
+                                                        color: '#4a5568',
+                                                        border: 'none',
+                                                        padding: '8px 12px',
+                                                        borderRadius: '6px',
+                                                        cursor: loading ? 'not-allowed' : 'pointer',
+                                                        fontSize: '12px',
+                                                        fontWeight: '600',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    📅 Next Week
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Show preview of new schedule */}
+                                        {scheduleData.scheduledDate && scheduleData.scheduledTime && (
+                                            <div style={{
+                                                backgroundColor: '#f0f9ff',
+                                                padding: '12px 16px',
+                                                borderRadius: '8px',
+                                                marginBottom: '16px',
+                                                border: '1px solid #bfdbfe'
+                                            }}>
+                                                <div style={{
+                                                    color: '#1e40af',
+                                                    fontSize: '14px',
+                                                    fontWeight: '600'
+                                                }}>
+                                                    📋 New Schedule Preview:
+                                                </div>
+                                                <div style={{
+                                                    color: '#3730a3',
+                                                    fontSize: '14px',
+                                                    marginTop: '4px'
+                                                }}>
+                                                    {formatDate(scheduleData.scheduledDate)} at {scheduleData.scheduledTime}
+                                                </div>
+                                                {/* Show reactivation message for cancelled/missed workouts */}
+                                                {(selectedWorkout.status?.toLowerCase() === 'cancelled' ||
+                                                    selectedWorkout.status?.toLowerCase() === 'missed') && (
+                                                    <div style={{
+                                                        color: '#059669',
+                                                        fontSize: '12px',
+                                                        marginTop: '4px',
+                                                        fontWeight: '600'
+                                                    }}>
+                                                        ✅ Status will change to PLANNED when rescheduled
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                         </div>
                     )}
 
@@ -1551,7 +1735,7 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
 
                                 <button
                                     onClick={async () => {
-                                        if (confirm(`Are you sure you want to delete "${selectedPlan.planName}"?`)) {
+                                        if (window.confirm(`Are you sure you want to delete "${selectedPlan.planName}"?`)) {
                                             try {
                                                 await WorkoutPlanService.deleteWorkoutPlan(selectedPlan.workoutPlanId);
                                                 alert('Plan deleted successfully!');

@@ -207,8 +207,56 @@ public class ScheduledWorkoutController {
         ScheduledWorkoutService.WorkoutStatistics stats = scheduledWorkoutService.getUserWorkoutStatistics(userId);
         return ResponseEntity.ok(stats);
     }
+    /**
+     * Reprogramează un workout existent
+     */
+    @PutMapping("/{workoutId}/reschedule")
+    public ResponseEntity<?> rescheduleWorkout(
+            @PathVariable Long workoutId,
+            @Valid @RequestBody RescheduleWorkoutRequest request) {
+        try {
+            scheduledWorkoutService.rescheduleWorkout(
+                    workoutId,
+                    request.getScheduledDate(),
+                    request.getScheduledTime()
+            );
+
+            return ResponseEntity.ok()
+                    .body(SuccessResponse.builder()
+                            .message("Workout reprogramat cu succes")
+                            .build());
+
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(ErrorResponse.builder()
+                            .error("Eroare de validare")
+                            .message(e.getMessage())
+                            .build());
+        } catch (Exception e) {
+            log.error("Unexpected error while rescheduling workout: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ErrorResponse.builder()
+                            .error("Eroare internă")
+                            .message("A apărut o eroare neașteptată")
+                            .build());
+        }
+    }
+
 
     // DTO Classes pentru request/response
+
+    @lombok.Data
+    @lombok.Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class RescheduleWorkoutRequest {
+        @NotNull(message = "Data programată este obligatorie")
+        @JsonFormat(pattern = "yyyy-MM-dd")
+        private LocalDate scheduledDate;
+
+        @JsonFormat(pattern = "HH:mm")
+        private LocalTime scheduledTime;
+    }
 
     @lombok.Data
     @lombok.Builder

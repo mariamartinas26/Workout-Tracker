@@ -77,6 +77,37 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             Long userId, WorkoutStatusType status);
 
     /**
+     * Simple exact time conflict check for reschedule
+     */
+    @Query("SELECT sw FROM ScheduledWorkout sw " +
+            "WHERE sw.user.userId = :userId " +
+            "AND sw.scheduledDate = :date " +
+            "AND sw.scheduledTime = :scheduledTime " +
+            "AND sw.scheduledWorkoutId != :excludeWorkoutId " +
+            "AND sw.status IN :activeStatuses")
+    List<ScheduledWorkout> findExactTimeConflictsForReschedule(
+            @Param("userId") Long userId,
+            @Param("date") LocalDate date,
+            @Param("scheduledTime") LocalTime scheduledTime,
+            @Param("excludeWorkoutId") Long excludeWorkoutId,
+            @Param("activeStatuses") List<WorkoutStatusType> activeStatuses
+    );
+
+
+    @Query("SELECT sw FROM ScheduledWorkout sw " +
+            "WHERE sw.user.userId = :userId " +
+            "AND sw.scheduledDate = :date " +
+            "AND sw.scheduledWorkoutId != :excludeWorkoutId " +
+            "AND sw.status IN :activeStatuses " +
+            "AND sw.scheduledTime IS NOT NULL")
+    List<ScheduledWorkout> findWorkoutsForDateExcluding(
+            @Param("userId") Long userId,
+            @Param("date") LocalDate date,
+            @Param("excludeWorkoutId") Long excludeWorkoutId,
+            @Param("activeStatuses") List<WorkoutStatusType> activeStatuses
+    );
+
+    /**
      * Varianta 1: Apelare directă a funcției PostgreSQL
      * Folosește funcția schedule_workout creată în PostgreSQL
      */

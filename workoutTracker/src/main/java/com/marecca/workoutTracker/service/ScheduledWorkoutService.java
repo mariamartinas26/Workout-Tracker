@@ -525,6 +525,144 @@ public class ScheduledWorkoutService {
         Optional<ScheduledWorkout> workout = scheduledWorkoutRepository.findById(scheduledWorkoutId);
         return workout.isPresent() && workout.get().getUser().getUserId().equals(userId);
     }
+    /**
+     * Reprogramează un workout existent
+     */
+    @Transactional
+    public void rescheduleWorkout(Long scheduledWorkoutId, LocalDate newDate, LocalTime newTime) {
+        log.info("Attempting to reschedule workout with ID: {}", scheduledWorkoutId);
+
+        try {
+            // Găsește workout-ul existent
+            ScheduledWorkout scheduledWorkout = scheduledWorkoutRepository.findById(scheduledWorkoutId)
+                    .orElseThrow(() -> new IllegalArgumentException("Workout-ul programat nu a fost găsit"));
+
+            // Verifică dacă workout-ul poate fi reprogramat
+            if (scheduledWorkout.getStatus() == WorkoutStatusType.COMPLETED) {
+                throw new IllegalStateException("Nu se poate reprograma un workout finalizat");
+            }
+
+            if (scheduledWorkout.getStatus() == WorkoutStatusType.IN_PROGRESS) {
+                throw new IllegalStateException("Nu se poate reprograma un workout în desfășurare");
+            }
+
+            // Validează noua dată
+            if (newDate.isBefore(LocalDate.now())) {
+                throw new IllegalArgumentException("Nu se poate programa un workout în trecut");
+            }
+
+            // Verifică conflictele doar dacă data/ora s-au schimbat
+            boolean dateChanged = !newDate.equals(scheduledWorkout.getScheduledDate());
+            boolean timeChanged = (newTime != null && !newTime.equals(scheduledWorkout.getScheduledTime())) ||
+                    (newTime == null && scheduledWorkout.getScheduledTime() != null);
+
+            if (dateChanged || timeChanged) {
+                if (!isTimeSlotAvailable(scheduledWorkout.getUser().getUserId(), newDate, newTime, scheduledWorkoutId)) {
+                    throw new IllegalStateException("Slotul selectat nu este disponibil - există deja un workout programat");
+                }
+            }
+
+            // Păstrează statusul original
+            WorkoutStatusType originalStatus = scheduledWorkout.getStatus();
+
+            // Actualizează workout-ul
+            scheduledWorkout.setScheduledDate(newDate);
+            scheduledWorkout.setScheduledTime(newTime);
+            scheduledWorkout.setUpdatedAt(LocalDateTime.now());
+
+            // Gestionează schimbările de status
+            switch (scheduledWorkout.getStatus()) {
+                case CANCELLED:
+                case MISSED:
+                    scheduledWorkout.setStatus(WorkoutStatusType.PLANNED);
+                    log.info("Reactivated {} workout to PLANNED status", originalStatus);
+                    break;
+                case PLANNED:
+                    // Menține statusul PLANNED
+                    break;
+                default:
+                    scheduledWorkout.setStatus(WorkoutStatusType.PLANNED);
+                    log.warn("Changed status from {} to PLANNED during reschedule", originalStatus);
+            }
+
+            scheduledWorkoutRepository.save(scheduledWorkout);
+
+            log.info("Workout rescheduled successfully: ID={}, OriginalStatus={}, NewStatus={}, NewDate={}, NewTime={}",
+                    scheduledWorkoutId, originalStatus, scheduledWorkout.getStatus(), newDate, newTime);
+
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Validation error during reschedule: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error during reschedule: {}", e.getMessage(), e);
+            throw new RuntimeException("A apărut o eroare neașteptată la reprogramarea workout-ului", e);
+        }
+    }
+
+
+    /**
+     * Verifică dacă un slot este disponibil pentru reschedule, excluzând workout-ul curent
+     */
+    private boolean isTimeSlotAvailable(Long userId, LocalDate date, LocalTime time, Long excludeWorkoutId) {
+        List<WorkoutStatusType> activeStatuses = Arrays.asList(
+                WorkoutStatusType.PLANNED,
+                WorkoutStatusType.IN_PROGRESS
+        );
+
+        try {
+            if (time == null) {
+                // If no specific time, check if there are any other workouts that day
+                List<ScheduledWorkout> dayWorkouts = scheduledWorkoutRepository
+                        .findWorkoutsForDateExcluding(userId, date, excludeWorkoutId, activeStatuses);
+                return dayWorkouts.isEmpty();
+            }
+
+            // Check for exact time conflicts first (most common case)
+            List<ScheduledWorkout> exactConflicts = scheduledWorkoutRepository
+                    .findExactTimeConflictsForReschedule(userId, date, time, excludeWorkoutId, activeStatuses);
+
+            if (!exactConflicts.isEmpty()) {
+                log.info("Found exact time conflict at {}", time);
+                return false;
+            }
+
+            // Check for time overlap using Java logic
+            List<ScheduledWorkout> dayWorkouts = scheduledWorkoutRepository
+                    .findWorkoutsForDateExcluding(userId, date, excludeWorkoutId, activeStatuses);
+
+            // Assume each workout is 1 hour long
+            LocalTime newWorkoutStart = time;
+            LocalTime newWorkoutEnd = time.plusHours(1);
+
+            for (ScheduledWorkout existingWorkout : dayWorkouts) {
+                LocalTime existingStart = existingWorkout.getScheduledTime();
+
+                if (existingStart == null) {
+                    continue; // Skip workouts without specific time
+                }
+
+                LocalTime existingEnd = existingStart.plusHours(1);
+
+                // Check for time overlap
+                boolean hasOverlap = !(newWorkoutEnd.isBefore(existingStart) ||
+                        newWorkoutStart.isAfter(existingEnd) ||
+                        newWorkoutEnd.equals(existingStart) ||
+                        newWorkoutStart.equals(existingEnd));
+
+                if (hasOverlap) {
+                    log.info("Found time overlap: new workout {}-{} conflicts with existing workout {}-{}",
+                            newWorkoutStart, newWorkoutEnd, existingStart, existingEnd);
+                    return false;
+                }
+            }
+
+            return true;
+
+        } catch (Exception e) {
+            log.warn("Error checking time slot availability, allowing scheduling: {}", e.getMessage());
+            return true; // If we can't check, allow the scheduling
+        }
+    }
 
     // =============== METODE PRIVATE PENTRU VALIDARE ===============
 

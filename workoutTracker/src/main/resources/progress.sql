@@ -347,7 +347,7 @@ FROM scheduled_workouts sw
 WHERE sw.user_id = p_user_id
   AND sw.status = 'COMPLETED'
   AND sw.scheduled_date BETWEEN p_start_date AND p_end_date
-GROUP BY DATE_TRUNC('month', sw.scheduled_date)
+GROUP BY DATE_TRUNC('month', sw.scheduled_date)cke
 ORDER BY DATE_TRUNC('month', sw.scheduled_date);
 END IF;
 END;
