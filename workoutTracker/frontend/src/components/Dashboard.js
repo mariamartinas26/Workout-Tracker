@@ -492,62 +492,6 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                             </p>
                         </div>
 
-                        {/* Monitor Progress Card - UPDATED with Analytics */}
-                        <div style={{
-                            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.05))',
-                            padding: '32px',
-                            borderRadius: '16px',
-                            border: '1px solid rgba(102, 126, 234, 0.1)',
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            cursor: 'pointer',
-                            position: 'relative',
-                            overflow: 'hidden'
-                        }}
-                             onClick={() => setShowAnalytics(true)} // UPDATED: Open analytics
-                             onMouseEnter={(e) => {
-                                 e.target.style.transform = 'translateY(-4px)';
-                                 e.target.style.boxShadow = '0 16px 40px rgba(102, 126, 234, 0.15)';
-                             }}
-                             onMouseLeave={(e) => {
-                                 e.target.style.transform = 'translateY(0)';
-                                 e.target.style.boxShadow = 'none';
-                             }}>
-                            <div>
-                                <img
-                                    src="/rising.png"
-                                    alt="Progress Logo"
-                                    style={{
-                                        width: '48px',
-                                        height: '48px',
-                                        objectFit: 'contain'
-                                    }}
-                                    onError={(e) => {
-                                        // Fallback în caz că imaginea nu se poate încărca
-                                        e.target.style.display = 'none';
-                                        e.target.nextSibling.style.display = 'flex';
-                                    }}
-                                />
-                            </div>
-                            <h3 style={{
-                                color: '#1a202c',
-                                fontSize: '20px',
-                                fontWeight: '700',
-                                marginBottom: '12px',
-                                letterSpacing: '-0.25px'
-                            }}>
-                                Monitor Progress
-                            </h3>
-                            <p style={{
-                                color: '#718096',
-                                fontSize: '15px',
-                                margin: '0',
-                                lineHeight: '1.5',
-                                fontWeight: '500'
-                            }}>
-                                Visualize your fitness journey with comprehensive analytics and insights
-                            </p>
-                        </div>
-
                         {/* Achieve Goals Card */}
                         <div style={{
                             background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.05))',
