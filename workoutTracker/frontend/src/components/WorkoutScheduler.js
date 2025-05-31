@@ -507,6 +507,25 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                 break;
         }
     };
+    const cleanWorkoutTitle = (planName) => {
+        if (!planName) return 'Workout';
+
+        // Îndepărtează "(Goal X)" și timestamp-ul din titlu
+        let cleanTitle = planName
+            // Îndepărtează "(Goal [număr])"
+            .replace(/\(Goal \d+\)/gi, '')
+            // Îndepărtează timestamp-urile în format "- YYYY-MM-DD HH:MM"
+            .replace(/\s*-\s*\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/g, '')
+            // Îndepărtează timestamp-urile în alte formate comune
+            .replace(/\s*-\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/g, '')
+            .replace(/\s*-\s*\d{2}:\d{2}/g, '')
+            // Curăță spațiile extra
+            .trim()
+            // Îndepărtează multiple spații consecutive
+            .replace(/\s+/g, ' ');
+
+        return cleanTitle || 'Workout';
+    };
 
     const handleRescheduleWorkout = async () => {
         if (!selectedWorkout) {
@@ -740,7 +759,7 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                 fontWeight: '700',
                                 marginBottom: '16px'
                             }}>
-                                Your Workout Plans (Templates)
+                                Your Workout Plans
                             </h3>
 
                             {loadingPlans ? (
@@ -800,17 +819,6 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                         {plan.planName}
                                                     </h4>
 
-                                                    <div style={{
-                                                        color: '#4a5568',
-                                                        fontSize: '14px',
-                                                        marginBottom: '8px'
-                                                    }}>
-                                                        📅 Created: {formatDate(plan.createdAt)}
-                                                        {plan.updatedAt && plan.updatedAt !== plan.createdAt &&
-                                                            ` • Updated: ${formatDate(plan.updatedAt)}`
-                                                        }
-                                                    </div>
-
                                                     {plan.description && (
                                                         <p style={{
                                                             color: '#718096',
@@ -855,9 +863,7 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                 {plan.difficultyLevel && (
                                                     <span>💪 Level {plan.difficultyLevel}/5</span>
                                                 )}
-                                                {plan.goals && (
-                                                    <span>🎯 {plan.goals}</span>
-                                                )}
+
                                             </div>
                                         </div>
                                     ))}
@@ -985,7 +991,7 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                                 fontWeight: '700',
                                                                 marginBottom: '4px'
                                                             }}>
-                                                                {workout.workoutPlan?.planName || `Workout #${workout.scheduledWorkoutId}`}
+                                                                {cleanWorkoutTitle(workout.workoutPlan?.planName) || `Workout #${workout.scheduledWorkoutId}`}
                                                             </h4>
 
                                                             <div style={{
@@ -1636,9 +1642,9 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                 )}
 
                                 <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                                    gap: '12px',
+                                    display: 'flex',
+                                    gap: '16px',
+                                    flexWrap: 'wrap',
                                     color: '#718096',
                                     fontSize: '14px'
                                 }}>
@@ -1650,19 +1656,6 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
                                     {selectedPlan.difficultyLevel && (
                                         <div>
                                             <strong>Difficulty:</strong> Level {selectedPlan.difficultyLevel}/5
-                                        </div>
-                                    )}
-                                    {selectedPlan.goals && (
-                                        <div>
-                                            <strong>Goals:</strong> {selectedPlan.goals}
-                                        </div>
-                                    )}
-                                    <div>
-                                        <strong>Created:</strong> {formatDate(selectedPlan.createdAt)}
-                                    </div>
-                                    {selectedPlan.updatedAt && selectedPlan.updatedAt !== selectedPlan.createdAt && (
-                                        <div>
-                                            <strong>Updated:</strong> {formatDate(selectedPlan.updatedAt)}
                                         </div>
                                     )}
                                 </div>

@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,9 +63,7 @@ public class WorkoutRecommendationService {
     /**
      * Saves a workout plan based on recommendations
      */
-    public Map<String, Object> saveWorkoutPlan(Long userId, List<WorkoutRecommendation> recommendations, Long goalId) {
-        logger.info("Saving workout plan for user: {} with {} exercises", userId, recommendations.size());
-
+    public Map<String, Object> saveWorkoutPlan(Long userId, List<WorkoutRecommendation> recommendations, Long goalId, String planName) {
         try {
             if (!userExists(userId)) {
                 throw new IllegalArgumentException("User with ID " + userId + " does not exist");
@@ -74,19 +73,21 @@ public class WorkoutRecommendationService {
                 throw new IllegalArgumentException("Cannot save workout plan without recommendations");
             }
 
-            //generates plan name
-            String planName = generateWorkoutPlanName(goalId);
+            // Generează numele planului bazat pe goalId sau folosește planName custom
+            if (planName == null || planName.trim().isEmpty()) {
+                planName = generatePlanNameFromGoal(goalId);
+            }
 
             //calculates estimated duration
             int estimatedDuration = calculateEstimatedDuration(recommendations);
 
             //inserts workout plan into workout_plans table
             String insertPlanSql = """
-                INSERT INTO workout_plans (user_id, plan_name, description, estimated_duration_minutes, 
-                                         difficulty_level, goals, notes, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                RETURNING workout_plan_id
-                """;
+        INSERT INTO workout_plans (user_id, plan_name, description, estimated_duration_minutes, 
+                                 difficulty_level, goals, notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING workout_plan_id
+        """;
 
             String description = "Generated workout plan based on personalized recommendations";
             String goals = goalId != null ? "Goal ID: " + goalId : "General fitness improvement";
@@ -115,7 +116,6 @@ public class WorkoutRecommendationService {
             result.put("exerciseCount", recommendations.size());
             result.put("createdAt", now);
             result.put("userId", userId);
-            result.put("goalId", goalId);
 
             logger.info("Successfully saved workout plan with ID: {} for user: {}", workoutPlanId, userId);
             return result;
@@ -129,6 +129,49 @@ public class WorkoutRecommendationService {
         }
     }
 
+    /**
+     * Generează numele planului bazat pe goal type
+     */
+    private String generatePlanNameFromGoal(Long goalId) {
+        if (goalId == null) {
+            return "Recommended Workout";
+        }
+
+        try {
+            // Query pentru a obține goal type din baza de date
+            String getGoalTypeSql = "SELECT goal_type FROM goals WHERE goal_id = ?";
+            String goalType = jdbcTemplate.queryForObject(getGoalTypeSql, String.class, goalId);
+
+            // Mapează goal type la nume user-friendly
+            String goalTypeDisplay = mapGoalTypeToDisplay(goalType);
+
+            return "Recommended Workout for " + goalTypeDisplay;
+
+        } catch (Exception e) {
+            logger.warn("Could not fetch goal type for goal ID: {}, using default name", goalId);
+            return "Recommended Workout";
+        }
+    }
+
+    /**
+     * Mapează goal type din baza de date la nume user-friendly
+     */
+    private String mapGoalTypeToDisplay(String goalType) {
+        if (goalType == null) {
+            return "Fitness";
+        }
+
+        switch (goalType.toLowerCase()) {
+            case "lose_weight":
+                return "Weight Loss";
+            case "gain_muscle":
+                return "Muscle Gain";
+            case "maintain_health":
+                return "Health Maintenance";
+            default:
+                return "Fitness";
+        }
+    }
     /**
      * Obține statistici despre workout-urile utilizatorului
      */

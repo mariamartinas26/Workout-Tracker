@@ -466,16 +466,14 @@ const WorkoutDashboard = ({ currentUserId = 1, isOpen, onClose }) => {
                 {/* Header */}
                 <div style={{ marginBottom: '32px' }}>
                     <h1 style={{
-                        color: '#1a202c',
+                        color: '#000000',
                         fontSize: '32px',
                         fontWeight: '800',
                         marginBottom: '8px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent'
                     }}>
-                        📊 Fitness Dashboard
+                        Fitness Dashboard
                     </h1>
                     <p style={{
                         color: '#718096',

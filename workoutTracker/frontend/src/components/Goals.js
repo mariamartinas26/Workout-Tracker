@@ -886,13 +886,6 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                         }}>
                                             Created: {formatDate(goal.createdAt)}
                                         </p>
-                                        <p style={{
-                                            color: '#718096',
-                                            fontSize: '12px',
-                                            margin: '0'
-                                        }}>
-                                            Goal ID: {goal.goalId}
-                                        </p>
                                     </div>
                                     <div style={{display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap'}}>
                                         <span style={{

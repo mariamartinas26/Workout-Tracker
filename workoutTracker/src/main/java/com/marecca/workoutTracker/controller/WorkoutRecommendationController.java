@@ -91,8 +91,8 @@ public class WorkoutRecommendationController {
     @PostMapping("/save-recommended-plan")
     public ResponseEntity<?> saveRecommendedWorkoutPlan(@Valid @RequestBody SaveWorkoutPlanRequest request) {
         try {
-            logger.info("Saving workout plan for user: {} with goal: {}",
-                    request.getUserId(), request.getGoalId());
+            logger.info("Saving workout plan for user: {} with goal: {} and planName: {}",
+                    request.getUserId(), request.getGoalId(), request.getPlanName());
 
             if (request.getUserId() == null) {
                 return ResponseEntity.badRequest()
@@ -104,9 +104,15 @@ public class WorkoutRecommendationController {
                         .body(createErrorResponse("Recommendations are required to save workout plan"));
             }
 
-            //saves workout plan
+            // Obține planName din request sau setează default
+            String planName = request.getPlanName();
+            if (planName == null || planName.trim().isEmpty()) {
+                planName = "Recommended Workout"; // Default simplu
+            }
+
+            // Apelează service-ul cu parametrul planName
             Map<String, Object> savedPlan = workoutRecommendationService
-                    .saveWorkoutPlan(request.getUserId(), request.getRecommendations(), request.getGoalId());
+                    .saveWorkoutPlan(request.getUserId(), request.getRecommendations(), request.getGoalId(), planName);
 
             logger.info("Successfully saved workout plan with ID: {} for user: {}",
                     savedPlan.get("workoutPlanId"), request.getUserId());
@@ -135,7 +141,6 @@ public class WorkoutRecommendationController {
                     .body(createErrorResponse("An unexpected error occurred while saving the workout plan"));
         }
     }
-
     /**
      * Endpoint for getting user statistics
      * GET /api/workouts/user/{userId}/stats

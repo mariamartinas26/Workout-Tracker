@@ -36,7 +36,7 @@ const WorkoutRecommendationsApi = {
                 body: JSON.stringify({
                     userId: userId,
                     goalId: goalId,
-                    recommendations: recommendations
+                    recommendations: recommendations,
                 })
             });
 
@@ -52,6 +52,7 @@ const WorkoutRecommendationsApi = {
         }
     }
 };
+
 
 const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
     const [recommendations, setRecommendations] = useState([]);
@@ -131,18 +132,31 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
             setSaving(true);
             setError('');
 
-            const response = await WorkoutRecommendationsApi.saveWorkoutPlan(
-                user.id,
-                recommendations,
-                goal.goalId
-            );
+            // Trimite un titlu simplu, curat
+            const response = await fetch(`http://localhost:8082/api/workouts/save-recommended-plan`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    userId: user.id,
+                    goalId: goal.goalId,
+                    recommendations: recommendations,
+                    planName: `Recommended Workout for ${mapGoalTypeForDisplay(goal.goalType)}`
+                })
+            });
 
-            console.log('Workout plan saved:', response);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to save workout plan');
+            }
+
+            const result = await response.json();
+            console.log('Workout plan saved:', result);
             setSuccess('Workout plan saved successfully! You can now find it in your workout plans.');
 
-            // Callback pentru părinte dacă există
             if (onSavePlan) {
-                onSavePlan(response);
+                onSavePlan(result);
             }
 
             setTimeout(() => setSuccess(''), 5000);

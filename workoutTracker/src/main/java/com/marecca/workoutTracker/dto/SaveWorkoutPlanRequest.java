@@ -13,6 +13,16 @@ public class SaveWorkoutPlanRequest {
 
     private Long goalId; // Optional - poate fi null
 
+    private String planName;
+
+    public String getPlanName() {
+        return planName;
+    }
+
+    public void setPlanName(String planName) {
+        this.planName = planName;
+    }
+
     @NotEmpty(message = "Recommendations list cannot be empty")
     private List<WorkoutRecommendation> recommendations;
 
