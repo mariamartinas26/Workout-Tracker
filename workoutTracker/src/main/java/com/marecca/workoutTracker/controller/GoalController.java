@@ -162,7 +162,7 @@ public class GoalController {
         }
     }
     /**
-     * Endpoint specific pentru goalurile completed (alternativă)
+     * endpoint for completed goals
      */
     @GetMapping("/achievements/{userId}/completed-goals")
     public ResponseEntity<?> getCompletedGoalsAsAchievements(
@@ -185,13 +185,12 @@ public class GoalController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error getting completed goals for user {}: {}", userId, e.getMessage());
             return createErrorResponse("Failed to fetch completed goals: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     /**
-     * Creează un răspuns pentru goalurile completed ca achievements
+     * creates answear for completed goals as achievements
      */
     private Map<String, Object> createGoalAchievementResponse(Goal goal) {
         Map<String, Object> response = new HashMap<>();
@@ -208,7 +207,7 @@ public class GoalController {
     }
 
     /**
-     * Generează titlul pentru achievement-ul bazat pe goal - ENGLISH VERSION
+     * generates achievements title
      */
     private String getGoalAchievementTitle(Goal goal) {
         String goalTypeValue = goal.getGoalType().getValue().toLowerCase();
@@ -218,14 +217,14 @@ public class GoalController {
         } else if (goalTypeValue.contains("gain_muscle")) {
             return "Muscle Gain Goal Achieved!";
         } else if (goalTypeValue.contains("maintain_health")) {
-            return "⚖Health Maintenance Goal Achieved!";
+            return "Health Maintenance Goal Achieved!";
         } else {
             return "Goal Completed!";
         }
     }
 
     /**
-     * Generează descrierea pentru achievement-ul bazat pe goal - ENGLISH VERSION
+     * generates description for achievement
      */
     private String getGoalAchievementDescription(Goal goal) {
         String goalTypeValue = goal.getGoalType().getValue().toLowerCase();
@@ -250,9 +249,6 @@ public class GoalController {
         return description.toString();
     }
 
-    /**
-     * Returnează iconul pentru tipul de goal - UPDATED FOR YOUR ENUM
-     */
     private String getGoalAchievementIcon(Goal.GoalType goalType) {
         String goalTypeValue = goalType.getValue().toLowerCase();
 
@@ -268,12 +264,11 @@ public class GoalController {
     }
 
     /**
-     * Calculează punctele pentru achievement bazat pe dificultatea goalului
+     * calculates points for achievementbased on goal difficulty
      */
     private Integer calculateAchievementPoints(Goal goal) {
         int basePoints = 100;
 
-        // Adaugă puncte bazate pe cantitatea de greutate
         if (goal.getTargetWeightLoss() != null) {
             basePoints += goal.getTargetWeightLoss().intValue() * 10;
         }
@@ -281,7 +276,7 @@ public class GoalController {
             basePoints += goal.getTargetWeightGain().intValue() * 10;
         }
 
-        // Adaugă puncte bazate pe durata
+        //points based on durration
         if (goal.getTimeframeMonths() != null) {
             basePoints += Math.max(0, (12 - goal.getTimeframeMonths()) * 5); // Mai multe puncte pentru obiective mai rapide
         }

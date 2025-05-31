@@ -202,8 +202,6 @@ public class WorkoutRecommendationController {
     public ResponseEntity<?> handleValidationException(
             org.springframework.web.bind.MethodArgumentNotValidException ex) {
 
-        logger.error("Validation error: {}", ex.getMessage());
-
         StringBuilder errorMessage = new StringBuilder("Validation failed: ");
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errorMessage.append(error.getField())

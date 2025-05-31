@@ -14,7 +14,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,15 +46,11 @@ public class WorkoutRecommendationService {
                     new Object[]{userId, goalType},
                     new WorkoutRecommendationRowMapper()
             );
-
-            logger.info("Successfully retrieved {} recommendations for user: {}", recommendations.size(), userId);
             return recommendations;
 
         } catch (DataAccessException e) {
-            logger.error("Database error while getting recommendations for user: {}", userId, e);
             throw new RuntimeException("Failed to retrieve workout recommendations: " + e.getMessage(), e);
         } catch (Exception e) {
-            logger.error("Unexpected error while getting recommendations for user: {}", userId, e);
             throw new RuntimeException("An unexpected error occurred while generating recommendations", e);
         }
     }
@@ -73,7 +68,7 @@ public class WorkoutRecommendationService {
                 throw new IllegalArgumentException("Cannot save workout plan without recommendations");
             }
 
-            // Generează numele planului bazat pe goalId sau folosește planName custom
+            //generates plan name based on goal type
             if (planName == null || planName.trim().isEmpty()) {
                 planName = generatePlanNameFromGoal(goalId);
             }
@@ -103,8 +98,6 @@ public class WorkoutRecommendationService {
                     Long.class
             );
 
-            logger.info("Created workout plan with ID: {} for user: {}", workoutPlanId, userId);
-
             //inserts exercises details
             insertWorkoutExerciseDetails(workoutPlanId, recommendations);
 
@@ -117,20 +110,17 @@ public class WorkoutRecommendationService {
             result.put("createdAt", now);
             result.put("userId", userId);
 
-            logger.info("Successfully saved workout plan with ID: {} for user: {}", workoutPlanId, userId);
             return result;
 
         } catch (DataAccessException e) {
-            logger.error("Database error while saving workout plan for user: {}", userId, e);
             throw new RuntimeException("Failed to save workout plan: " + e.getMessage(), e);
         } catch (Exception e) {
-            logger.error("Unexpected error while saving workout plan for user: {}", userId, e);
             throw new RuntimeException("An unexpected error occurred while saving the workout plan", e);
         }
     }
 
     /**
-     * Generează numele planului bazat pe goal type
+     * Generates plan name based on goal type
      */
     private String generatePlanNameFromGoal(Long goalId) {
         if (goalId == null) {
@@ -138,23 +128,21 @@ public class WorkoutRecommendationService {
         }
 
         try {
-            // Query pentru a obține goal type din baza de date
+            //query for obtaining goal type fron db
             String getGoalTypeSql = "SELECT goal_type FROM goals WHERE goal_id = ?";
             String goalType = jdbcTemplate.queryForObject(getGoalTypeSql, String.class, goalId);
 
-            // Mapează goal type la nume user-friendly
             String goalTypeDisplay = mapGoalTypeToDisplay(goalType);
 
             return "Recommended Workout for " + goalTypeDisplay;
 
         } catch (Exception e) {
-            logger.warn("Could not fetch goal type for goal ID: {}, using default name", goalId);
             return "Recommended Workout";
         }
     }
 
     /**
-     * Mapează goal type din baza de date la nume user-friendly
+     * maps goal type from db to a user-frendly name
      */
     private String mapGoalTypeToDisplay(String goalType) {
         if (goalType == null) {
@@ -173,11 +161,9 @@ public class WorkoutRecommendationService {
         }
     }
     /**
-     * Obține statistici despre workout-urile utilizatorului
+     * Statistics about user workouts
      */
     public Map<String, Object> getUserWorkoutStats(Long userId) {
-        logger.info("Getting workout stats for user: {}", userId);
-
         try {
             if (!userExists(userId)) {
                 throw new IllegalArgumentException("User with ID " + userId + " does not exist");
@@ -202,20 +188,16 @@ public class WorkoutRecommendationService {
 
             Map<String, Object> stats = jdbcTemplate.queryForMap(sql, userId);
 
-            // Adaugă statistici suplimentare
             stats.put("userId", userId);
             stats.put("periodDays", 90);
             stats.put("workoutFrequencyPerWeek",
                     calculateWorkoutFrequency((Number) stats.get("completed_workouts")));
 
-            logger.info("Successfully retrieved stats for user: {}", userId);
             return stats;
 
         } catch (DataAccessException e) {
-            logger.error("Database error while getting stats for user: {}", userId, e);
             throw new RuntimeException("Failed to retrieve user workout stats: " + e.getMessage(), e);
         } catch (Exception e) {
-            logger.error("Unexpected error while getting stats for user: {}", userId, e);
             throw new RuntimeException("An unexpected error occurred while retrieving stats", e);
         }
     }
@@ -229,23 +211,10 @@ public class WorkoutRecommendationService {
             Integer count = jdbcTemplate.queryForObject(sql, new Object[]{userId}, Integer.class);
             return count != null && count > 0;
         } catch (DataAccessException e) {
-            logger.error("Error checking if user exists: {}", userId, e);
             return false;
         }
     }
 
-    /**
-     * Generates workout plan name
-     */
-    private String generateWorkoutPlanName(Long goalId) {
-        String baseName = "Recommended Workout";
-        String timestamp = LocalDateTime.now().toString().substring(0, 16).replace("T", " ");
-
-        if (goalId != null) {
-            return baseName + " (Goal " + goalId + ") - " + timestamp;
-        }
-        return baseName + " - " + timestamp;
-    }
 
     /**
      * Calculates duration of workout
@@ -313,8 +282,6 @@ public class WorkoutRecommendationService {
                     notes
             );
         }
-
-        logger.info("Inserted {} exercise details for workout plan ID: {}", recommendations.size(), workoutPlanId);
     }
 
     /**
