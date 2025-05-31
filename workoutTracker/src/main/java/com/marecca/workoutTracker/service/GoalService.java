@@ -33,10 +33,9 @@ public class GoalService {
 
         goal.setUser(user);
 
-        // Calculate additional fields based on goal type
+        //calculate additional fields based on goal type
         calculateGoalMetrics(goal);
 
-        log.info("Creating goal for user {}: {}", userId, goal.getGoalType());
         return goalRepository.save(goal);
     }
 
@@ -44,7 +43,6 @@ public class GoalService {
      * Get all goals for a user
      */
     public List<Goal> getUserGoals(Long userId) {
-        log.info("Fetching goals for user: {}", userId);
         return goalRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
@@ -52,7 +50,6 @@ public class GoalService {
      * Get active goals for a user
      */
     public List<Goal> getActiveUserGoals(Long userId) {
-        log.info("Fetching active goals for user: {}", userId);
         return goalRepository.findActiveGoalsByUserId(userId);
     }
 
@@ -75,7 +72,6 @@ public class GoalService {
             goal.setCompletedAt(LocalDateTime.now());
         }
 
-        log.info("Updated goal {} status to {}", goalId, status);
         return goalRepository.save(goal);
     }
 
@@ -87,7 +83,6 @@ public class GoalService {
             throw new RuntimeException("Goal not found with id: " + goalId);
         }
         goalRepository.deleteById(goalId);
-        log.info("Deleted goal: {}", goalId);
     }
 
     /**

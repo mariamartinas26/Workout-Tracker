@@ -13,8 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Service pentru gestionarea utilizatorilor
- * Conține logica de business pentru operațiile cu utilizatori
+ * business logic for operations with users
  */
 @Service
 @RequiredArgsConstructor
@@ -26,10 +25,10 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     /**
-     * Creează un utilizator nou
-     * @param user obiectul User cu datele de intrare
-     * @return utilizatorul creat
-     * @throws IllegalArgumentException dacă username-ul sau email-ul există deja
+     * creates a new user
+     * @param user
+     * @return
+     * @throws IllegalArgumentException if username or email already exists
      */
     public User createUser(User user) {
         log.info("Creating new user: {}", user.getUsername());
@@ -37,7 +36,6 @@ public class UserService {
         validateUniqueUsername(user.getUsername());
         validateUniqueEmail(user.getEmail());
 
-        // Criptează parola
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
         //user.setActive(true);
@@ -55,9 +53,9 @@ public class UserService {
     }
 
     /**
-     * Găsește un utilizator după username
-     * @param username numele de utilizator
-     * @return Optional cu utilizatorul găsit
+     * Finds a user by username
+     * @param username
+     * @return
      */
     @Transactional(readOnly = true)
     public Optional<User> findByUsername(String username) {
@@ -66,9 +64,9 @@ public class UserService {
     }
 
     /**
-     * Găsește un utilizator după email
-     * @param email adresa de email
-     * @return Optional cu utilizatorul găsit
+     * finds user by email
+     * @param email
+     * @return
      */
     @Transactional(readOnly = true)
     public Optional<User> findByEmail(String email) {
@@ -77,17 +75,16 @@ public class UserService {
     }
 
     /**
-     * Actualizează informațiile utilizatorului
-     * @param userId ID-ul utilizatorului de actualizat
-     * @param updatedUser obiectul cu noile date
-     * @return utilizatorul actualizat
-     * @throws IllegalArgumentException dacă utilizatorul nu există sau datele nu sunt valide
+     * Update user info
+     * @param userId
+     * @param updatedUser
+     * @return
+     * @throws IllegalArgumentException if user does not exist or invalid data
      */
     public User updateUser(Long userId, User updatedUser) {
         User existingUser = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Copiază doar câmpurile care nu sunt null
         if (updatedUser.getDateOfBirth() != null) {
             existingUser.setDateOfBirth(updatedUser.getDateOfBirth());
         }
@@ -106,9 +103,9 @@ public class UserService {
     }
 
     /**
-     * Dezactivează un utilizator
-     * @param userId ID-ul utilizatorului de dezactivat
-     * @throws IllegalArgumentException dacă utilizatorul nu există
+     * Deactivates user
+     * @param userId
+     * @throws IllegalArgumentException if user does not exist
      */
     public void deactivateUser(Long userId) {
         log.info("Deactivating user with ID: {}", userId);
@@ -120,9 +117,9 @@ public class UserService {
     }
 
     /**
-     * Activează un utilizator
-     * @param userId ID-ul utilizatorului de activat
-     * @throws IllegalArgumentException dacă utilizatorul nu există
+     * Activates user
+     * @param userId
+     * @throws IllegalArgumentException
      */
     public void activateUser(Long userId) {
         log.info("Activating user with ID: {}", userId);
@@ -136,8 +133,8 @@ public class UserService {
     }
 
     /**
-     * Găsește toți utilizatorii activi
-     * @return lista utilizatorilor activi
+     * finds all active users
+     * @return
      */
     @Transactional(readOnly = true)
     public List<User> findActiveUsers() {
@@ -146,9 +143,9 @@ public class UserService {
     }
 
     /**
-     * Găsește utilizatori după nivelul de fitness
-     * @param fitnessLevel nivelul de fitness (BEGINNER, INTERMEDIATE, ADVANCED)
-     * @return lista utilizatorilor cu nivelul specificat
+     * finds user by fitness level
+     * @param fitnessLevel
+     * @return
      */
     @Transactional(readOnly = true)
     public List<User> findByFitnessLevel(String fitnessLevel) {
