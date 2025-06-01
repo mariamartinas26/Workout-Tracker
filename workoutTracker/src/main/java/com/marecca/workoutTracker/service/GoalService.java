@@ -88,6 +88,7 @@ public class GoalService {
 
     /**
      * Calculate goal metrics (calories, weight change, etc.)
+     * for MENTAIN_HEALTH goal we don't have to calculate any metrics
      */
     private void calculateGoalMetrics(Goal goal) {
         if (goal.getGoalType() == Goal.GoalType.LOSE_WEIGHT &&
@@ -149,19 +150,18 @@ public class GoalService {
     }
 
     /**
-     * Obține goalurile completed pentru un user într-un anumit interval de timp
+     * Gets completed goals for a user at a specific time
      */
     public List<Goal> getCompletedGoalsByUserAndTimeframe(Long userId, Integer daysBack) {
         LocalDateTime startDate = LocalDateTime.now().minusDays(daysBack);
 
-        // Folosește metoda existentă și filtrează manual
         List<Goal> allUserGoals = getUserGoals(userId);
 
         return allUserGoals.stream()
                 .filter(goal -> goal.getStatus() == Goal.GoalStatus.COMPLETED)
                 .filter(goal -> goal.getCompletedAt() != null)
                 .filter(goal -> goal.getCompletedAt().isAfter(startDate))
-                .sorted((g1, g2) -> g2.getCompletedAt().compareTo(g1.getCompletedAt())) // Sortare descrescătoare
+                .sorted((g1, g2) -> g2.getCompletedAt().compareTo(g1.getCompletedAt())) //descendent order
                 .collect(Collectors.toList());
     }
 }

@@ -1,7 +1,6 @@
 --user profile: fitness level, weight, workout history in the past 90 days
 -- based on this the alg calculates an strength-multiplier (range 0.8x begginers <=5 completed workouts,
 --1.3x expert users >=50 completed workouts)
---
 
 --user profile: fitness level, weight, workout history in the past 90 days
 -- based on this the alg calculates an strength-multiplier (range 0.8x begginers <=5 completed workouts,
@@ -20,7 +19,10 @@ CREATE OR REPLACE FUNCTION recommend_workout(
     recommended_weight_percentage DECIMAL(5,2),
     rest_time_seconds INTEGER,
     priority_score DECIMAL(5,2)
+	--score that reflects how appropriate is an exercise
 )
+--returns a tabel with recommended workout plan for a user basen on his goals
+
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -93,12 +95,18 @@ RETURN QUERY
             e.primary_muscle_group,
             e.difficulty_level,
             -- Average performance metrics from user's history
-            COALESCE(AVG(wel.weight_used_kg), 0) as avg_weight_used,
-            COALESCE(AVG(wel.reps_completed), 0) as avg_reps,
-            COALESCE(AVG(wel.sets_completed), 0) as avg_sets,
-            COALESCE(AVG(wel.difficulty_rating), 3) as avg_difficulty,
-            COUNT(wel.log_id) as times_performed,
-            -- Calories estimation based on category and muscle groups
+			COALESCE(AVG(wel.weight_used_kg), 0) as avg_weight_used,
+			-- Calculates the average weight used across workout logs; defaults to 0 if no data
+			COALESCE(AVG(wel.reps_completed), 0) as avg_reps,
+			-- Calculates the average number of reps completed; defaults to 0 if no data
+			COALESCE(AVG(wel.sets_completed), 0) as avg_sets,
+			-- Calculates the average number of sets completed; defaults to 0 if no data
+			COALESCE(AVG(wel.difficulty_rating), 3) as avg_difficulty,
+			-- Calculates the average difficulty rating given by the user; defaults to 3 if no data
+			COUNT(wel.log_id) as times_performed,
+			-- Counts how many times the exercise has been performed
+
+			-- Calories estimation based on category and muscle groups
             CASE e.category
                 WHEN 'CARDIO' THEN 12.0 --12 calories per minute
                 WHEN 'STRENGTH' THEN
@@ -159,7 +167,7 @@ RETURN QUERY
     scored_exercises AS (
         SELECT
             *,
-            -- Calculate priority score based on goal type
+            --we compute calculated_priority_score based on goal, eficency and penalty
             CASE p_goal_type
                 WHEN 'WEIGHT_LOSS' THEN
                     (cardio_effectiveness * 0.6 +

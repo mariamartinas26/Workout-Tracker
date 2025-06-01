@@ -1,8 +1,10 @@
 package com.marecca.workoutTracker.service;
 
 import com.marecca.workoutTracker.dto.WorkoutRecommendation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.marecca.workoutTracker.service.exceptions.InvalidGoalTypeException;
+import com.marecca.workoutTracker.service.exceptions.InvalidUserDataException;
+import com.marecca.workoutTracker.service.exceptions.NoExercisesFoundException;
+import com.marecca.workoutTracker.service.exceptions.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,46 +23,14 @@ import java.util.Map;
 @Service
 @Transactional
 public class WorkoutRecommendationService {
-
-    private static final Logger logger = LoggerFactory.getLogger(WorkoutRecommendationService.class);
-
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    /// Custom exception classes
-    public static class UserNotFoundException extends RuntimeException {
-        public UserNotFoundException(String message) {
-            super(message);
-        }
-    }
-
-    public static class InvalidGoalTypeException extends RuntimeException {
-        public InvalidGoalTypeException(String message) {
-            super(message);
-        }
-    }
-
-    public static class InvalidUserDataException extends RuntimeException {
-        public InvalidUserDataException(String message) {
-            super(message);
-        }
-    }
-
-    public static class NoExercisesFoundException extends RuntimeException {
-        public NoExercisesFoundException(String message) {
-            super(message);
-        }
-    }
-
     /**
      * Workout recommendation based on PL/SQL function "recommend_workout"
-     * Now properly handles exceptions thrown by the PL/SQL function
      */
     public List<WorkoutRecommendation> getRecommendations(Long userId, String goalType) {
-        logger.info("Getting workout recommendations for user: {} with goal: {}", userId, goalType);
-
         try {
-            // Remove local validation since PL/SQL function handles all validation
             String sql = "SELECT * FROM recommend_workout(?, ?)";
 
             List<WorkoutRecommendation> recommendations = jdbcTemplate.query(
@@ -69,15 +39,11 @@ public class WorkoutRecommendationService {
                     new WorkoutRecommendationRowMapper()
             );
 
-            logger.info("Successfully retrieved {} recommendations for user: {}",
-                    recommendations.size(), userId);
             return recommendations;
 
         } catch (DataAccessException e) {
             String errorMessage = e.getMessage();
             String sqlState = extractSQLState(e);
-
-            logger.error("Database error for user {}: {}", userId, errorMessage);
 
             // Handle specific PL/SQL exceptions based on error codes and messages
             if (sqlState != null) {
@@ -124,7 +90,6 @@ public class WorkoutRecommendationService {
                 }
             }
 
-            // Handle common database exceptions by message content (fallback)
             if (errorMessage.contains("USER_NOT_FOUND")) {
                 throw new UserNotFoundException(
                         extractUserIdFromError(errorMessage, "USER_NOT_FOUND"));
@@ -139,21 +104,16 @@ public class WorkoutRecommendationService {
                         extractCustomErrorMessage(errorMessage, "NO_EXERCISES_FOUND"));
             }
 
-            // Generic database error
             throw new RuntimeException("Failed to retrieve workout recommendations: " + errorMessage, e);
 
         } catch (UserNotFoundException | InvalidGoalTypeException |
                  InvalidUserDataException | NoExercisesFoundException e) {
-            // Re-throw custom exceptions without wrapping
             throw e;
 
         } catch (IllegalArgumentException e) {
-            // Re-throw validation errors
             throw e;
 
         } catch (Exception e) {
-            logger.error("Unexpected error while getting recommendations for user {}: {}",
-                    userId, e.getMessage());
             throw new RuntimeException("An unexpected error occurred while generating recommendations", e);
         }
     }
@@ -162,7 +122,6 @@ public class WorkoutRecommendationService {
      * Extracts the SQL state from DataAccessException
      */
     private String extractSQLState(DataAccessException e) {
-        // Try to extract SQL state from the exception
         Throwable cause = e.getCause();
         while (cause != null) {
             if (cause instanceof java.sql.SQLException) {
@@ -179,11 +138,9 @@ public class WorkoutRecommendationService {
     private String extractCustomErrorMessage(String fullErrorMessage, String errorPrefix) {
         if (fullErrorMessage == null) return "Unknown error";
 
-        // Look for the pattern "ERROR_CODE: actual message"
         int prefixIndex = fullErrorMessage.indexOf(errorPrefix + ":");
         if (prefixIndex != -1) {
             String message = fullErrorMessage.substring(prefixIndex + errorPrefix.length() + 1).trim();
-            // Remove any trailing SQL error information
             int whereIndex = message.indexOf(" Where:");
             if (whereIndex != -1) {
                 message = message.substring(0, whereIndex).trim();
