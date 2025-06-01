@@ -7,11 +7,16 @@ import com.marecca.workoutTracker.entity.enums.WorkoutStatusType;
 import com.marecca.workoutTracker.repository.ScheduledWorkoutRepository;
 import com.marecca.workoutTracker.repository.UserRepository;
 import com.marecca.workoutTracker.repository.WorkoutPlanRepository;
+import com.marecca.workoutTracker.service.exceptions.UserNotFoundException;
+import com.marecca.workoutTracker.service.exceptions.WorkoutAlreadyScheduledException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.marecca.workoutTracker.service.exceptions.WorkoutPlanNotFoundException;
+import com.marecca.workoutTracker.service.exceptions.WorkoutNotFoundException;
+import com.marecca.workoutTracker.service.exceptions.InvalidWorkoutStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,6 +24,8 @@ import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Service pentru gestionarea workout-urilor programate
@@ -36,23 +43,11 @@ public class ScheduledWorkoutService {
     private final WorkoutPlanRepository workoutPlanRepository;
 
 
-    /**
-     * Programează un workout folosind funcția PostgreSQL optimizată
-     *
-     * @param userId ID-ul utilizatorului
-     * @param workoutPlanId ID-ul planului de workout
-     * @param scheduledDate Data programată
-     * @param scheduledTime Ora programată (opțională)
-     * @return ID-ul workout-ului programat
-     * @throws RuntimeException dacă apar erori de validare sau de bază de date
-     */
     @Transactional
     public Long scheduleWorkoutWithFunction(Long userId, Long workoutPlanId,
                                             LocalDate scheduledDate, LocalTime scheduledTime) {
         log.info("Scheduling workout with PostgreSQL function for user {} with plan {} on {} at {}",
                 userId, workoutPlanId, scheduledDate, scheduledTime);
-
-        validateScheduleWorkoutInput(userId, workoutPlanId, scheduledDate);
 
         try {
             Long scheduledWorkoutId;
@@ -69,11 +64,90 @@ public class ScheduledWorkoutService {
             return scheduledWorkoutId;
 
         } catch (DataAccessException e) {
-            log.error("Database error while scheduling workout: {}", e.getMessage());
-            String errorMessage = extractUserFriendlyError(e.getMessage());
-            throw new RuntimeException(errorMessage, e);
+            String errorMessage = e.getMessage();
+            String sqlState = extractSQLState(e);
+
+            log.error("Database error while scheduling workout: {}", errorMessage);
+
+            // Handle specific PL/SQL exceptions based on error codes and messages
+            if (sqlState != null) {
+                switch (sqlState) {
+                    case "00001":
+                        // INVALID_USER_ID
+                        throw new IllegalArgumentException(
+                                extractCustomErrorMessage(errorMessage, "INVALID_USER_ID"));
+
+                    case "00002":
+                        // INVALID_WORKOUT_PLAN_ID
+                        throw new IllegalArgumentException(
+                                extractCustomErrorMessage(errorMessage, "INVALID_WORKOUT_PLAN_ID"));
+
+                    case "00003":
+                        // USER_NOT_FOUND
+                        throw new UserNotFoundException(
+                                extractCustomErrorMessage(errorMessage, "USER_NOT_FOUND"));
+
+                    case "00004":
+                        // WORKOUT_PLAN_NOT_FOUND
+                        throw new WorkoutPlanNotFoundException(
+                                extractCustomErrorMessage(errorMessage, "WORKOUT_PLAN_NOT_FOUND"));
+
+                    case "00005":
+                        // WORKOUT_PLAN_NOT_OWNED
+                        throw new IllegalArgumentException(
+                                extractCustomErrorMessage(errorMessage, "WORKOUT_PLAN_NOT_OWNED"));
+
+                    case "00006":
+                        // INVALID_SCHEDULED_DATE
+                        throw new IllegalArgumentException(
+                                extractCustomErrorMessage(errorMessage, "INVALID_SCHEDULED_DATE"));
+
+                    case "00007":
+                        // WORKOUT_ALREADY_SCHEDULED
+                        throw new WorkoutAlreadyScheduledException(
+                                extractCustomErrorMessage(errorMessage, "WORKOUT_ALREADY_SCHEDULED"));
+
+                    case "00999":
+                        // DATABASE_ERROR
+                        throw new RuntimeException(
+                                "Database error occurred: " +
+                                        extractCustomErrorMessage(errorMessage, "DATABASE_ERROR"), e);
+
+                    default:
+                        break;
+                }
+            }
+
+            // Fallback error message extraction
+            if (errorMessage.contains("User with ID") && errorMessage.contains("does not exist")) {
+                throw new UserNotFoundException("Utilizatorul specificat nu există");
+            }
+            if (errorMessage.contains("Workout plan with ID") && errorMessage.contains("does not exist")) {
+                throw new WorkoutPlanNotFoundException("Planul de workout specificat nu există");
+            }
+            if (errorMessage.contains("already has a workout scheduled")) {
+                throw new WorkoutAlreadyScheduledException("Utilizatorul are deja un workout programat la această dată și oră");
+            }
+            if (errorMessage.contains("WORKOUT_PLAN_NOT_OWNED")) {
+                throw new IllegalArgumentException("Planul de workout nu aparține acestui utilizator");
+            }
+            if (errorMessage.contains("INVALID_SCHEDULED_DATE")) {
+                throw new IllegalArgumentException("Data programată nu poate fi în trecut");
+            }
+
+            throw new RuntimeException("Eroare la programarea workout-ului: " + errorMessage, e);
+
+        } catch (UserNotFoundException | WorkoutPlanNotFoundException |
+                 WorkoutAlreadyScheduledException e) {
+            throw e;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("A apărut o eroare neașteptată la programarea workout-ului", e);
         }
     }
+
+
 
     /**
      * Programează workout cu validare suplimentară în Java
@@ -345,56 +419,147 @@ public class ScheduledWorkoutService {
 
     /**
      * Începe un workout (schimbă statusul la IN_PROGRESS)
-     * @param scheduledWorkoutId ID-ul workout-ului
-     * @return workout-ul actualizat
-     * @throws IllegalArgumentException dacă workout-ul nu poate fi început
      */
     public ScheduledWorkout startWorkout(Long scheduledWorkoutId) {
         log.info("Starting workout with ID: {}", scheduledWorkoutId);
 
-        ScheduledWorkout workout = findScheduledWorkoutById(scheduledWorkoutId);
+        try {
+            LocalDateTime startTime = LocalDateTime.now();
+            scheduledWorkoutRepository.startWorkout(scheduledWorkoutId, startTime);
 
-        if (workout.getStatus() != WorkoutStatusType.PLANNED) {
-            throw new IllegalStateException("Workout-ul poate fi început doar dacă este planificat");
+            // Reîncarcă entitatea pentru a obține datele actualizate
+            ScheduledWorkout workout = findScheduledWorkoutById(scheduledWorkoutId);
+            log.info("Workout started successfully at: {}", startTime);
+
+            return workout;
+
+        } catch (DataAccessException e) {
+            String errorMessage = e.getMessage();
+            String sqlState = extractSQLState(e);
+
+            log.error("Database error while starting workout: {}", errorMessage);
+
+            if (sqlState != null) {
+                switch (sqlState) {
+                    case "00001":
+                        // WORKOUT_NOT_FOUND
+                        throw new WorkoutNotFoundException(
+                                extractCustomErrorMessage(errorMessage, "WORKOUT_NOT_FOUND"));
+
+                    case "00002":
+                        // INVALID_WORKOUT_STATUS
+                        throw new InvalidWorkoutStatusException(
+                                extractCustomErrorMessage(errorMessage, "INVALID_WORKOUT_STATUS"));
+
+                    case "00999":
+                        // DATABASE_ERROR
+                        throw new RuntimeException(
+                                "Database error occurred: " +
+                                        extractCustomErrorMessage(errorMessage, "DATABASE_ERROR"), e);
+
+                    default:
+                        break;
+                }
+            }
+
+            // Fallback error handling
+            if (errorMessage.contains("WORKOUT_NOT_FOUND")) {
+                throw new WorkoutNotFoundException("Workout-ul nu a fost găsit");
+            }
+            if (errorMessage.contains("INVALID_WORKOUT_STATUS")) {
+                throw new InvalidWorkoutStatusException("Workout-ul poate fi început doar dacă este planificat");
+            }
+
+            throw new RuntimeException("Eroare la începerea workout-ului: " + errorMessage, e);
+
+        } catch (WorkoutNotFoundException | InvalidWorkoutStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("A apărut o eroare neașteptată la începerea workout-ului", e);
         }
-
-        LocalDateTime startTime = LocalDateTime.now();
-        scheduledWorkoutRepository.startWorkout(scheduledWorkoutId, startTime);
-
-        // Reîncarcă entitatea pentru a obține datele actualizate
-        workout = findScheduledWorkoutById(scheduledWorkoutId);
-        log.info("Workout started successfully at: {}", startTime);
-
-        return workout;
     }
+
 
     /**
      * Completează un workout
-     * @param scheduledWorkoutId ID-ul workout-ului
-     * @param caloriesBurned caloriile arse
-     * @param rating rating-ul general (1-5)
-     * @return workout-ul actualizat
-     * @throws IllegalArgumentException dacă workout-ul nu poate fi completat
      */
     public ScheduledWorkout completeWorkout(Long scheduledWorkoutId, Integer caloriesBurned, Integer rating) {
         log.info("Completing workout with ID: {}", scheduledWorkoutId);
 
-        ScheduledWorkout workout = findScheduledWorkoutById(scheduledWorkoutId);
+        try {
+            validateCompletionData(caloriesBurned, rating);
 
-        if (workout.getStatus() != WorkoutStatusType.IN_PROGRESS) {
-            throw new IllegalStateException("Workout-ul poate fi completat doar dacă este în progres");
+            LocalDateTime endTime = LocalDateTime.now();
+            scheduledWorkoutRepository.completeWorkout(scheduledWorkoutId, endTime, caloriesBurned, rating);
+
+            // Reîncarcă entitatea pentru a obține datele actualizate
+            ScheduledWorkout workout = findScheduledWorkoutById(scheduledWorkoutId);
+            log.info("Workout completed successfully at: {}", endTime);
+
+            return workout;
+
+        } catch (DataAccessException e) {
+            String errorMessage = e.getMessage();
+            String sqlState = extractSQLState(e);
+
+            log.error("Database error while completing workout: {}", errorMessage);
+
+            if (sqlState != null) {
+                switch (sqlState) {
+                    case "00001":
+                        // WORKOUT_NOT_FOUND
+                        throw new WorkoutNotFoundException(
+                                extractCustomErrorMessage(errorMessage, "WORKOUT_NOT_FOUND"));
+
+                    case "00002":
+                        // INVALID_WORKOUT_STATUS
+                        throw new InvalidWorkoutStatusException(
+                                extractCustomErrorMessage(errorMessage, "INVALID_WORKOUT_STATUS"));
+
+                    case "00003":
+                        // INVALID_CALORIES
+                        throw new IllegalArgumentException(
+                                extractCustomErrorMessage(errorMessage, "INVALID_CALORIES"));
+
+                    case "00004":
+                        // INVALID_RATING
+                        throw new IllegalArgumentException(
+                                extractCustomErrorMessage(errorMessage, "INVALID_RATING"));
+
+                    case "00999":
+                        // DATABASE_ERROR
+                        throw new RuntimeException(
+                                "Database error occurred: " +
+                                        extractCustomErrorMessage(errorMessage, "DATABASE_ERROR"), e);
+
+                    default:
+                        break;
+                }
+            }
+
+            // Fallback error handling
+            if (errorMessage.contains("WORKOUT_NOT_FOUND")) {
+                throw new WorkoutNotFoundException("Workout-ul nu a fost găsit");
+            }
+            if (errorMessage.contains("INVALID_WORKOUT_STATUS")) {
+                throw new InvalidWorkoutStatusException("Workout-ul poate fi completat doar dacă este în progres");
+            }
+            if (errorMessage.contains("INVALID_CALORIES")) {
+                throw new IllegalArgumentException("Caloriile arse nu pot fi negative");
+            }
+            if (errorMessage.contains("INVALID_RATING")) {
+                throw new IllegalArgumentException("Rating-ul trebuie să fie între 1 și 5");
+            }
+
+            throw new RuntimeException("Eroare la completarea workout-ului: " + errorMessage, e);
+
+        } catch (WorkoutNotFoundException | InvalidWorkoutStatusException e) {
+            throw e;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("A apărut o eroare neașteptată la completarea workout-ului", e);
         }
-
-        validateCompletionData(caloriesBurned, rating);
-
-        LocalDateTime endTime = LocalDateTime.now();
-        scheduledWorkoutRepository.completeWorkout(scheduledWorkoutId, endTime, caloriesBurned, rating);
-
-        // Reîncarcă entitatea pentru a obține datele actualizate
-        workout = findScheduledWorkoutById(scheduledWorkoutId);
-        log.info("Workout completed successfully at: {}", endTime);
-
-        return workout;
     }
 
     /**
@@ -535,15 +700,15 @@ public class ScheduledWorkoutService {
         try {
             // Găsește workout-ul existent
             ScheduledWorkout scheduledWorkout = scheduledWorkoutRepository.findById(scheduledWorkoutId)
-                    .orElseThrow(() -> new IllegalArgumentException("Workout-ul programat nu a fost găsit"));
+                    .orElseThrow(() -> new WorkoutNotFoundException("Workout-ul programat nu a fost găsit"));
 
             // Verifică dacă workout-ul poate fi reprogramat
             if (scheduledWorkout.getStatus() == WorkoutStatusType.COMPLETED) {
-                throw new IllegalStateException("Nu se poate reprograma un workout finalizat");
+                throw new InvalidWorkoutStatusException("Nu se poate reprograma un workout finalizat");
             }
 
             if (scheduledWorkout.getStatus() == WorkoutStatusType.IN_PROGRESS) {
-                throw new IllegalStateException("Nu se poate reprograma un workout în desfășurare");
+                throw new InvalidWorkoutStatusException("Nu se poate reprograma un workout în desfășurare");
             }
 
             // Validează noua dată
@@ -558,7 +723,7 @@ public class ScheduledWorkoutService {
 
             if (dateChanged || timeChanged) {
                 if (!isTimeSlotAvailable(scheduledWorkout.getUser().getUserId(), newDate, newTime, scheduledWorkoutId)) {
-                    throw new IllegalStateException("Slotul selectat nu este disponibil - există deja un workout programat");
+                    throw new WorkoutAlreadyScheduledException("Slotul selectat nu este disponibil - există deja un workout programat");
                 }
             }
 
@@ -590,8 +755,10 @@ public class ScheduledWorkoutService {
             log.info("Workout rescheduled successfully: ID={}, OriginalStatus={}, NewStatus={}, NewDate={}, NewTime={}",
                     scheduledWorkoutId, originalStatus, scheduledWorkout.getStatus(), newDate, newTime);
 
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("Validation error during reschedule: {}", e.getMessage());
+        } catch (WorkoutNotFoundException | InvalidWorkoutStatusException |
+                 WorkoutAlreadyScheduledException e) {
+            throw e;
+        } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error during reschedule: {}", e.getMessage(), e);
@@ -758,6 +925,84 @@ public class ScheduledWorkoutService {
                 .orElseThrow(() -> new IllegalArgumentException("Workout-ul programat nu a fost găsit cu ID-ul: " + scheduledWorkoutId));
     }
 
+    /**
+     * Extracts SQL state from DataAccessException
+     */
+    private String extractSQLState(DataAccessException e) {
+        try {
+            if (e.getCause() != null && e.getCause().getCause() != null) {
+                String message = e.getCause().getCause().getMessage();
+                if (message != null && message.contains("ERROR:")) {
+                    // Extract SQL state from PostgreSQL error message
+                    Pattern pattern = Pattern.compile("ERROR:\\s*(\\d{5})");
+                    Matcher matcher = pattern.matcher(message);
+                    if (matcher.find()) {
+                        return matcher.group(1);
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Failed to extract SQL state: {}", ex.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Extracts custom error message from PostgreSQL exception
+     */
+    private String extractCustomErrorMessage(String errorMessage, String errorType) {
+        try {
+            // Try to extract custom message from PostgreSQL RAISE statement
+            Pattern pattern = Pattern.compile(errorType + ":\\s*([^\\n\\r]+)");
+            Matcher matcher = pattern.matcher(errorMessage);
+            if (matcher.find()) {
+                return matcher.group(1).trim();
+            }
+
+            // Fallback: look for the error type and return a default message
+            if (errorMessage.contains(errorType)) {
+                return getDefaultErrorMessage(errorType);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract custom error message for {}: {}", errorType, e.getMessage());
+        }
+
+        return getDefaultErrorMessage(errorType);
+    }
+
+    /**
+     * Returns default error messages for different error types
+     */
+    private String getDefaultErrorMessage(String errorType) {
+        switch (errorType) {
+            case "INVALID_USER_ID":
+                return "ID-ul utilizatorului este invalid";
+            case "INVALID_WORKOUT_PLAN_ID":
+                return "ID-ul planului de workout este invalid";
+            case "USER_NOT_FOUND":
+                return "Utilizatorul nu a fost găsit";
+            case "WORKOUT_PLAN_NOT_FOUND":
+                return "Planul de workout nu a fost găsit";
+            case "WORKOUT_PLAN_NOT_OWNED":
+                return "Planul de workout nu aparține acestui utilizator";
+            case "INVALID_SCHEDULED_DATE":
+                return "Data programată este invalidă";
+            case "WORKOUT_ALREADY_SCHEDULED":
+                return "Există deja un workout programat la această dată și oră";
+            case "WORKOUT_NOT_FOUND":
+                return "Workout-ul nu a fost găsit";
+            case "INVALID_WORKOUT_STATUS":
+                return "Statusul workout-ului nu permite această operație";
+            case "INVALID_CALORIES":
+                return "Caloriile arse sunt invalide";
+            case "INVALID_RATING":
+                return "Rating-ul este invalid";
+            case "DATABASE_ERROR":
+                return "A apărut o eroare de bază de date";
+            default:
+                return "A apărut o eroare neașteptată";
+        }
+    }
 
 
     @lombok.Builder
