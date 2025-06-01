@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * REST Controller pentru gestionarea exercițiilor
+ * Controller for exercise management
  */
 @RestController
 @RequestMapping("/api/exercises")
@@ -31,7 +31,7 @@ public class ExerciseController {
     private final ExerciseService exerciseService;
 
     /**
-     * Creează un exercițiu nou
+     * Create a new exercise
      * POST /api/exercises
      */
     @PostMapping
@@ -48,7 +48,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește un exercițiu după ID
+     * Find an exercise by ID
      * GET /api/exercises/{id}
      */
     @GetMapping("/{id}")
@@ -61,7 +61,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește toate exercițiile cu paginare și sortare
+     * Find all exercises with pagination and sorting
      * GET /api/exercises
      */
     @GetMapping
@@ -85,7 +85,7 @@ public class ExerciseController {
     }
 
     /**
-     * Căutare avansată cu filtre
+     * Advanced search with filters
      * GET /api/exercises/search
      */
     @GetMapping("/search")
@@ -118,7 +118,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exerciții după categorie
+     * Find exercises by category
      * GET /api/exercises/category/{category}
      */
     @GetMapping("/category/{category}")
@@ -136,7 +136,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exerciții după grupul de mușchi principal
+     * Find exercises by primary muscle group
      * GET /api/exercises/muscle-group/{muscleGroup}
      */
     @GetMapping("/muscle-group/{muscleGroup}")
@@ -154,7 +154,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exerciții după orice grup de mușchi (principal sau secundar)
+     * Find exercises by any muscle group (primary or secondary)
      * GET /api/exercises/any-muscle-group/{muscleGroup}
      */
     @GetMapping("/any-muscle-group/{muscleGroup}")
@@ -168,7 +168,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exerciții după nivelul de dificultate
+     * Find exercises by difficulty level
      * GET /api/exercises/difficulty/{level}
      */
     @GetMapping("/difficulty/{level}")
@@ -187,7 +187,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exerciții pentru începători
+     * Find beginner exercises
      * GET /api/exercises/beginner
      */
     @GetMapping("/beginner")
@@ -199,7 +199,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exerciții avansate
+     * Find advanced exercises
      * GET /api/exercises/advanced
      */
     @GetMapping("/advanced")
@@ -211,7 +211,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exerciții fără echipament
+     * Find exercises without equipment
      * GET /api/exercises/no-equipment
      */
     @GetMapping("/no-equipment")
@@ -223,7 +223,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exerciții după echipament
+     * Find exercises by equipment
      * GET /api/exercises/equipment/{equipment}
      */
     @GetMapping("/equipment/{equipment}")
@@ -237,7 +237,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exerciții similare
+     * Find similar exercises
      * GET /api/exercises/{id}/similar
      */
     @GetMapping("/{id}/similar")
@@ -257,7 +257,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exercițiile cele mai populare
+     * Find most popular exercises
      * GET /api/exercises/popular
      */
     @GetMapping("/popular")
@@ -276,7 +276,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exercițiile populare după categorie
+     * Find popular exercises by category
      * GET /api/exercises/popular/category/{category}
      */
     @GetMapping("/popular/category/{category}")
@@ -290,7 +290,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exercițiile cele mai înregistrate
+     * Find most logged exercises
      * GET /api/exercises/most-logged
      */
     @GetMapping("/most-logged")
@@ -309,7 +309,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exercițiile create recent
+     * Find recently created exercises
      * GET /api/exercises/recent
      */
     @GetMapping("/recent")
@@ -328,7 +328,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exercițiile nefolosite
+     * Find unused exercises
      * GET /api/exercises/unused
      */
     @GetMapping("/unused")
@@ -340,7 +340,7 @@ public class ExerciseController {
     }
 
     /**
-     * Actualizează un exercițiu
+     * Update an exercise
      * PUT /api/exercises/{id}
      */
     @PutMapping("/{id}")
@@ -360,7 +360,7 @@ public class ExerciseController {
     }
 
     /**
-     * Șterge un exercițiu
+     * Delete an exercise
      * DELETE /api/exercises/{id}
      */
     @DeleteMapping("/{id}")
@@ -380,7 +380,7 @@ public class ExerciseController {
     }
 
     /**
-     * Verifică dacă numele exercițiului este disponibil
+     * Check if exercise name is available
      * GET /api/exercises/check-name/{name}
      */
     @GetMapping("/check-name/{name}")
@@ -392,7 +392,7 @@ public class ExerciseController {
     }
 
     /**
-     * Numără exercițiile după categorie
+     * Count exercises by category
      * GET /api/exercises/count/category/{category}
      */
     @GetMapping("/count/category/{category}")
@@ -404,7 +404,7 @@ public class ExerciseController {
     }
 
     /**
-     * Numără exercițiile după grupul de mușchi
+     * Count exercises by muscle group
      * GET /api/exercises/count/muscle-group/{muscleGroup}
      */
     @GetMapping("/count/muscle-group/{muscleGroup}")
@@ -416,7 +416,7 @@ public class ExerciseController {
     }
 
     /**
-     * Numără câte planuri folosesc un exercițiu
+     * Count how many workout plans use an exercise
      * GET /api/exercises/{id}/usage-count
      */
     @GetMapping("/{id}/usage-count")
@@ -433,7 +433,7 @@ public class ExerciseController {
     }
 
     /**
-     * Obține statistici despre exerciții
+     * Get exercise statistics
      * GET /api/exercises/statistics
      */
     @GetMapping("/statistics")
@@ -445,7 +445,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exerciții după grupuri secundare de mușchi
+     * Find exercises by secondary muscle groups
      * POST /api/exercises/secondary-muscle-groups
      */
     @PostMapping("/secondary-muscle-groups")
@@ -459,7 +459,7 @@ public class ExerciseController {
     }
 
     /**
-     * Căutare simplă după nume
+     * Simple search by name
      * GET /api/exercises/search-by-name
      */
     @GetMapping("/search-by-name")
@@ -473,7 +473,7 @@ public class ExerciseController {
     }
 
     /**
-     * Găsește exerciții filtrate cu criterii multiple
+     * Find exercises filtered with multiple criteria
      * GET /api/exercises/filter
      */
     @GetMapping("/filter")
@@ -496,7 +496,7 @@ public class ExerciseController {
     }
 
     /**
-     * Exception handler pentru tratarea erorilor
+     * Exception handlers for error handling
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException e) {

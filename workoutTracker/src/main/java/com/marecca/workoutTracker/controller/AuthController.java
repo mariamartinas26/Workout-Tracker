@@ -24,7 +24,6 @@ public class AuthController {
 
     private final UserService userService;
 
-    // DTOs
     public static class RegisterRequest {
         private String username;
         private String email;
@@ -32,17 +31,12 @@ public class AuthController {
         private String firstName;
         private String lastName;
 
-        // Getters și setters
         public String getUsername() { return username; }
-        public void setUsername(String username) { this.username = username; }
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
         public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
         public String getFirstName() { return firstName; }
-        public void setFirstName(String firstName) { this.firstName = firstName; }
         public String getLastName() { return lastName; }
-        public void setLastName(String lastName) { this.lastName = lastName; }
     }
 
     public static class LoginRequest {
@@ -52,7 +46,7 @@ public class AuthController {
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
         public String getPassword() { return password; }
-        public void setPassword(String password) { this.password = password; }
+
     }
 
     public static class CompleteProfileRequest {
@@ -65,9 +59,7 @@ public class AuthController {
         public Long getUserId() { return userId; }
         public void setUserId(Long userId) { this.userId = userId; }
         public LocalDate getDateOfBirth() { return dateOfBirth; }
-        public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
         public Integer getHeightCm() { return heightCm; }
-        public void setHeightCm(Integer heightCm) { this.heightCm = heightCm; }
         public BigDecimal getWeightKg() { return weightKg; }
         public void setWeightKg(BigDecimal weightKg) { this.weightKg = weightKg; }
         public String getFitnessLevel() { return fitnessLevel; }

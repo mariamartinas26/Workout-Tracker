@@ -1,5 +1,6 @@
 package com.marecca.workoutTracker.controller;
 
+import com.marecca.workoutTracker.dto.*;
 import com.marecca.workoutTracker.entity.WorkoutExerciseLog;
 import com.marecca.workoutTracker.entity.ScheduledWorkout;
 import com.marecca.workoutTracker.service.WorkoutExerciseLogService;
@@ -22,8 +23,8 @@ import java.util.Map;
 import java.util.HashMap;
 
 /**
- * Controller pentru înregistrarea și vizualizarea workout-urilor
- * Oferă endpoint-uri pentru gestionarea logurilor de exerciții și istoricul workout-urilor
+ * Controller for logging and viewing workouts
+ * Provides endpoints for managing exercise logs and workout history
  */
 @RestController
 @RequestMapping("/api/workout-logs")
@@ -34,10 +35,8 @@ public class WorkoutLogController {
     private final WorkoutExerciseLogService workoutExerciseLogService;
     private final ScheduledWorkoutService scheduledWorkoutService;
 
-    // =============== ÎNREGISTRAREA WORKOUT-URILOR ===============
-
     /**
-     * Înregistrează un exercițiu într-un workout
+     * Log an exercise in a workout
      */
     @PostMapping("/exercises")
     public ResponseEntity<?> logExercise(@Valid @RequestBody LogExerciseRequest request) {
@@ -47,7 +46,7 @@ public class WorkoutLogController {
 
             LogExerciseResponse response = LogExerciseResponse.builder()
                     .logId(savedLog.getLogId())
-                    .message("Exercițiu înregistrat cu succes")
+                    .message("Exercise logged successfully")
                     .build();
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -56,7 +55,7 @@ public class WorkoutLogController {
             log.error("Validation error while logging exercise: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare de validare")
+                            .error("Validation error")
                             .message(e.getMessage())
                             .build());
 
@@ -64,14 +63,14 @@ public class WorkoutLogController {
             log.error("Unexpected error while logging exercise: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ErrorResponse.builder()
-                            .error("Eroare internă")
-                            .message("A apărut o eroare neașteptată")
+                            .error("Internal error")
+                            .message("An unexpected error occurred")
                             .build());
         }
     }
 
     /**
-     * Înregistrează multiple exerciții pentru un workout (batch)
+     * Log multiple exercises for a workout
      */
     @PostMapping("/exercises/batch")
     public ResponseEntity<?> logMultipleExercises(@Valid @RequestBody BatchLogExercisesRequest request) {
@@ -86,7 +85,7 @@ public class WorkoutLogController {
             BatchLogExercisesResponse response = BatchLogExercisesResponse.builder()
                     .loggedCount(savedLogs.size())
                     .logIds(savedLogs.stream().map(WorkoutExerciseLog::getLogId).toList())
-                    .message("Exerciții înregistrate cu succes")
+                    .message("Exercises logged successfully")
                     .build();
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -94,7 +93,7 @@ public class WorkoutLogController {
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare de validare")
+                            .error("Validation error")
                             .message(e.getMessage())
                             .build());
 
@@ -102,14 +101,14 @@ public class WorkoutLogController {
             log.error("Unexpected error while logging multiple exercises: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ErrorResponse.builder()
-                            .error("Eroare internă")
-                            .message("A apărut o eroare neașteptată")
+                            .error("Internal error")
+                            .message("An unexpected error occurred")
                             .build());
         }
     }
 
     /**
-     * Actualizează un log de exercițiu
+     * Update an exercise log
      */
     @PutMapping("/exercises/{logId}")
     public ResponseEntity<?> updateExerciseLog(
@@ -121,22 +120,20 @@ public class WorkoutLogController {
 
             return ResponseEntity.ok()
                     .body(SuccessResponse.builder()
-                            .message("Log de exercițiu actualizat cu succes")
+                            .message("Exercise log updated successfully")
                             .build());
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare de validare")
+                            .error("Validation error")
                             .message(e.getMessage())
                             .build());
         }
     }
 
-    // =============== VIZUALIZAREA WORKOUT-URILOR ===============
-
     /**
-     * Găsește toate workout-urile pentru un utilizator
+     * Find all workouts for a user
      */
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<ScheduledWorkout>> getUserWorkouts(@PathVariable Long userId) {
@@ -145,7 +142,7 @@ public class WorkoutLogController {
     }
 
     /**
-     * Găsește workout-urile pentru o perioadă specificată
+     * Find workouts for a specified period
      */
     @GetMapping("/user/{userId}/period")
     public ResponseEntity<List<ScheduledWorkout>> getUserWorkoutsByPeriod(
@@ -159,7 +156,7 @@ public class WorkoutLogController {
     }
 
     /**
-     * Găsește workout-urile de astăzi pentru un utilizator
+     * Find today's workouts for a user
      */
     @GetMapping("/user/{userId}/today")
     public ResponseEntity<List<ScheduledWorkout>> getTodaysWorkouts(@PathVariable Long userId) {
@@ -168,7 +165,7 @@ public class WorkoutLogController {
     }
 
     /**
-     * Găsește workout-urile completate recent
+     * Find recently completed workouts
      */
     @GetMapping("/user/{userId}/recent-completed")
     public ResponseEntity<List<ScheduledWorkout>> getRecentCompletedWorkouts(@PathVariable Long userId) {
@@ -177,11 +174,11 @@ public class WorkoutLogController {
     }
 
     /**
-     * Găsește detaliile unui workout specific (cu toate exercițiile)
+     * Find details of a specific workout (with all exercises)
      */
     @GetMapping("/workout/{scheduledWorkoutId}/details")
     public ResponseEntity<WorkoutDetailsResponse> getWorkoutDetails(@PathVariable Long scheduledWorkoutId) {
-        // Găsește workout-ul programat
+        // Find the scheduled workout
         ScheduledWorkout workout = scheduledWorkoutService.findById(scheduledWorkoutId)
                 .orElse(null);
 
@@ -189,7 +186,7 @@ public class WorkoutLogController {
             return ResponseEntity.notFound().build();
         }
 
-        // Găsește toate exercițiile înregistrate pentru workout
+        // Find all logged exercises for the workout
         List<WorkoutExerciseLog> exerciseLogs = workoutExerciseLogService
                 .findByScheduledWorkoutId(scheduledWorkoutId);
 
@@ -203,7 +200,7 @@ public class WorkoutLogController {
     }
 
     /**
-     * Găsește toate logurile de exerciții pentru un utilizator
+     * Find all exercise logs for a user
      */
     @GetMapping("/user/{userId}/exercise-logs")
     public ResponseEntity<List<WorkoutExerciseLog>> getUserExerciseLogs(@PathVariable Long userId) {
@@ -212,7 +209,7 @@ public class WorkoutLogController {
     }
 
     /**
-     * Găsește logurile de exerciții pentru o perioadă
+     * Find exercise logs for a period
      */
     @GetMapping("/user/{userId}/exercise-logs/period")
     public ResponseEntity<List<WorkoutExerciseLog>> getUserExerciseLogsByPeriod(
@@ -226,7 +223,7 @@ public class WorkoutLogController {
     }
 
     /**
-     * Găsește progresul pentru un exercițiu specific
+     * Find progress for a specific exercise
      */
     @GetMapping("/user/{userId}/progress/exercise/{exerciseId}")
     public ResponseEntity<ExerciseProgressResponse> getExerciseProgress(
@@ -257,7 +254,7 @@ public class WorkoutLogController {
     }
 
     /**
-     * Calculează volumul total pentru un exercițiu într-o perioadă
+     * Calculate total volume for an exercise in a period
      */
     @GetMapping("/user/{userId}/volume/exercise/{exerciseId}")
     public ResponseEntity<VolumeResponse> getExerciseVolume(
@@ -280,7 +277,7 @@ public class WorkoutLogController {
     }
 
     /**
-     * Găsește cele mai recente loguri de exerciții
+     * Find the most recent exercise logs
      */
     @GetMapping("/user/{userId}/recent-logs")
     public ResponseEntity<List<WorkoutExerciseLog>> getRecentExerciseLogs(
@@ -292,7 +289,7 @@ public class WorkoutLogController {
     }
 
     /**
-     * Găsește exercițiile cu cele mai bune performanțe
+     * Find best performing exercises
      */
     @GetMapping("/user/{userId}/top-performing")
     public ResponseEntity<List<WorkoutExerciseLog>> getTopPerformingExercises(
@@ -304,24 +301,24 @@ public class WorkoutLogController {
     }
 
     /**
-     * Statistici generale pentru utilizator
+     * General statistics for user
      */
     @GetMapping("/user/{userId}/statistics")
     public ResponseEntity<UserWorkoutStatistics> getUserStatistics(@PathVariable Long userId) {
-        // Găsește toate workout-urile completate
+        // Find all completed workouts
         List<ScheduledWorkout> completedWorkouts = scheduledWorkoutService
                 .findByUserIdAndStatus(userId, com.marecca.workoutTracker.entity.enums.WorkoutStatusType.COMPLETED);
 
-        // Calculează statistici
+        // Calculate statistics
         Long totalWorkouts = scheduledWorkoutService.countCompletedWorkouts(userId);
         Double averageDuration = scheduledWorkoutService.getAverageWorkoutDuration(userId);
 
-        // Calculează caloriile totale
+        // Calculate total calories
         Integer totalCalories = completedWorkouts.stream()
                 .mapToInt(w -> w.getCaloriesBurned() != null ? w.getCaloriesBurned() : 0)
                 .sum();
 
-        // Găsește cele mai recente loguri pentru diversitate exerciții
+        // Find most recent logs for exercise diversity
         List<WorkoutExerciseLog> recentLogs = workoutExerciseLogService.findRecentLogsForUser(userId, 50);
         Long uniqueExercises = recentLogs.stream()
                 .map(log -> log.getExercise().getExerciseId())
@@ -339,7 +336,7 @@ public class WorkoutLogController {
     }
 
     /**
-     * Șterge un log de exercițiu
+     * Delete an exercise log
      */
     @DeleteMapping("/exercises/{logId}")
     public ResponseEntity<?> deleteExerciseLog(@PathVariable Long logId) {
@@ -347,19 +344,18 @@ public class WorkoutLogController {
             workoutExerciseLogService.deleteExerciseLog(logId);
             return ResponseEntity.ok()
                     .body(SuccessResponse.builder()
-                            .message("Log de exercițiu șters cu succes")
+                            .message("Exercise log deleted successfully")
                             .build());
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare de validare")
+                            .error("Validation error")
                             .message(e.getMessage())
                             .build());
         }
     }
 
-    // =============== METODE HELPER ===============
 
     private WorkoutExerciseLog buildExerciseLogFromRequest(LogExerciseRequest request) {
         return WorkoutExerciseLog.builder()
@@ -381,113 +377,4 @@ public class WorkoutLogController {
                 .build();
     }
 
-    // =============== DTO CLASSES ===============
-
-    @lombok.Data
-    @lombok.Builder
-    public static class LogExerciseRequest {
-        @NotNull(message = "ID-ul workout-ului programat este obligatoriu")
-        private Long scheduledWorkoutId;
-
-        @NotNull(message = "ID-ul exercițiului este obligatoriu")
-        private Long exerciseId;
-
-        @NotNull(message = "Ordinea exercițiului este obligatorie")
-        @Positive(message = "Ordinea exercițiului trebuie să fie pozitivă")
-        private Integer exerciseOrder;
-
-        @NotNull(message = "Numărul de seturi completate este obligatoriu")
-        @Min(value = 0, message = "Numărul de seturi nu poate fi negativ")
-        private Integer setsCompleted;
-
-        @Min(value = 0, message = "Numărul de repetări nu poate fi negativ")
-        private Integer repsCompleted;
-
-        private BigDecimal weightUsedKg;
-
-        @Min(value = 0, message = "Durata nu poate fi negativă")
-        private Integer durationSeconds;
-
-        private BigDecimal distanceMeters;
-
-        @Min(value = 0, message = "Caloriile nu pot fi negative")
-        private Integer caloriesBurned;
-
-        @Min(value = 1, message = "Rating-ul trebuie să fie între 1 și 5")
-        @jakarta.validation.constraints.Max(value = 5, message = "Rating-ul trebuie să fie între 1 și 5")
-        private Integer difficultyRating;
-
-        private String notes;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class BatchLogExercisesRequest {
-        @NotNull(message = "Lista de exerciții este obligatorie")
-        private List<LogExerciseRequest> exercises;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class LogExerciseResponse {
-        private Long logId;
-        private String message;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class BatchLogExercisesResponse {
-        private Integer loggedCount;
-        private List<Long> logIds;
-        private String message;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class WorkoutDetailsResponse {
-        private ScheduledWorkout workout;
-        private List<WorkoutExerciseLog> exerciseLogs;
-        private Integer totalExercises;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class ExerciseProgressResponse {
-        private List<WorkoutExerciseLog> progressLogs;
-        private BigDecimal personalBestWeight;
-        private Integer personalBestReps;
-        private Double progressPercentage;
-        private Integer totalSessions;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class VolumeResponse {
-        private BigDecimal totalVolume;
-        private Long exerciseId;
-        private LocalDate startDate;
-        private LocalDate endDate;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class UserWorkoutStatistics {
-        private Long totalCompletedWorkouts;
-        private Double averageDurationMinutes;
-        private Integer totalCaloriesBurned;
-        private Long uniqueExercisesTrained;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class SuccessResponse {
-        private String message;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class ErrorResponse {
-        private String error;
-        private String message;
-    }
 }

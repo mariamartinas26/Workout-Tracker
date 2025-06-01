@@ -1,6 +1,10 @@
 package com.marecca.workoutTracker.controller;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.marecca.workoutTracker.dto.AvailabilityResponse;
+import com.marecca.workoutTracker.dto.ErrorResponse;
+import com.marecca.workoutTracker.dto.RescheduleWorkoutRequest;
+import com.marecca.workoutTracker.dto.SuccessResponse;
 import com.marecca.workoutTracker.entity.ScheduledWorkout;
 import com.marecca.workoutTracker.service.ScheduledWorkoutService;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +22,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 /**
- * Controller pentru gestionarea workout-urilor programate
- * Oferă endpoint-uri REST pentru programarea și gestionarea workout-urilor
+ * Controller for managing scheduled workouts
  */
 @RestController
 @RequestMapping("/api/scheduled-workouts")
@@ -30,7 +33,7 @@ public class ScheduledWorkoutController {
     private final ScheduledWorkoutService scheduledWorkoutService;
 
     /**
-     * Programează un workout nou
+     * Schedule a new workout
      */
     @PostMapping("/schedule")
     public ResponseEntity<?> scheduleWorkout(@Valid @RequestBody ScheduleWorkoutRequest request) {
@@ -44,7 +47,7 @@ public class ScheduledWorkoutController {
 
             ScheduleWorkoutResponse response = ScheduleWorkoutResponse.builder()
                     .scheduledWorkoutId(scheduledWorkoutId)
-                    .message("Workout programat cu succes")
+                    .message("Workout scheduled successfully")
                     .build();
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -53,7 +56,7 @@ public class ScheduledWorkoutController {
             log.error("Validation error while scheduling workout: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare de validare")
+                            .error("Validation error")
                             .message(e.getMessage())
                             .build());
 
@@ -61,15 +64,15 @@ public class ScheduledWorkoutController {
             log.error("Unexpected error while scheduling workout: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ErrorResponse.builder()
-                            .error("Eroare internă")
-                            .message("A apărut o eroare neașteptată")
+                            .error("Internal error")
+                            .message("An unexpected error occurred")
                             .build());
         }
     }
 
     /**
      * Find all scheduled workouts for a user
-*/
+     */
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<ScheduledWorkout>> getUserWorkouts(@PathVariable Long userId) {
         List<ScheduledWorkout> workouts = scheduledWorkoutService.findByUserId(userId);
@@ -77,21 +80,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Găsește workout-urile pentru o perioadă specificată
-
-    @GetMapping("/user/{userId}/period")
-    public ResponseEntity<List<ScheduledWorkout>> getUserWorkoutsBetweenDates(
-            @PathVariable Long userId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-
-        List<ScheduledWorkout> workouts = scheduledWorkoutService.findUserWorkoutsBetweenDates(
-                userId, startDate, endDate);
-        return ResponseEntity.ok(workouts);
-    }
-     */
-    /**
-     * Shows the schedueled workouts for today for a user
+     * Shows the scheduled workouts for today for a user
      */
     @GetMapping("/user/{userId}/today")
     public ResponseEntity<List<ScheduledWorkout>> getTodaysWorkouts(@PathVariable Long userId) {
@@ -100,7 +89,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Începe un workout
+     * Start a workout
      */
     @PutMapping("/{workoutId}/start")
     public ResponseEntity<?> startWorkout(@PathVariable Long workoutId) {
@@ -108,20 +97,20 @@ public class ScheduledWorkoutController {
             scheduledWorkoutService.startWorkout(workoutId);
             return ResponseEntity.ok()
                     .body(SuccessResponse.builder()
-                            .message("Workout început cu succes")
+                            .message("Workout started successfully")
                             .build());
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare de validare")
+                            .error("Validation error")
                             .message(e.getMessage())
                             .build());
         }
     }
 
     /**
-     * Finalizează un workout
+     * Complete a workout
      */
     @PutMapping("/{workoutId}/complete")
     public ResponseEntity<?> completeWorkout(
@@ -136,20 +125,20 @@ public class ScheduledWorkoutController {
 
             return ResponseEntity.ok()
                     .body(SuccessResponse.builder()
-                            .message("Workout finalizat cu succes")
+                            .message("Workout completed successfully")
                             .build());
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare de validare")
+                            .error("Validation error")
                             .message(e.getMessage())
                             .build());
         }
     }
 
     /**
-     * Anulează un workout
+     * Cancel a workout
      */
     @PutMapping("/{workoutId}/cancel")
     public ResponseEntity<?> cancelWorkout(@PathVariable Long workoutId) {
@@ -157,20 +146,20 @@ public class ScheduledWorkoutController {
             scheduledWorkoutService.cancelWorkout(workoutId);
             return ResponseEntity.ok()
                     .body(SuccessResponse.builder()
-                            .message("Workout anulat cu succes")
+                            .message("Workout cancelled successfully")
                             .build());
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare de validare")
+                            .error("Validation error")
                             .message(e.getMessage())
                             .build());
         }
     }
 
     /**
-     * Verifică dacă un utilizator poate programa un workout la o anumită dată/oră
+     * Check if a user can schedule a workout at a specific date/time
      */
     @GetMapping("/user/{userId}/availability")
     public ResponseEntity<AvailabilityResponse> checkAvailability(
@@ -184,7 +173,7 @@ public class ScheduledWorkoutController {
                 .available(available)
                 .date(date)
                 .time(time)
-                .message(available ? "Slot disponibil" : "Slot ocupat")
+                .message(available ? "Slot available" : "Slot occupied")
                 .build();
 
         return ResponseEntity.ok(response);
@@ -200,15 +189,16 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Shows how many completed workout are for a user
+     * Shows how many completed workouts are for a user
      */
     @GetMapping("/user/{userId}/statistics")
     public ResponseEntity<ScheduledWorkoutService.WorkoutStatistics> getUserStatistics(@PathVariable Long userId) {
         ScheduledWorkoutService.WorkoutStatistics stats = scheduledWorkoutService.getUserWorkoutStatistics(userId);
         return ResponseEntity.ok(stats);
     }
+
     /**
-     * Reprogramează un workout existent
+     * Reschedule an existing workout
      */
     @PutMapping("/{workoutId}/reschedule")
     public ResponseEntity<?> rescheduleWorkout(
@@ -223,34 +213,40 @@ public class ScheduledWorkoutController {
 
             return ResponseEntity.ok()
                     .body(SuccessResponse.builder()
-                            .message("Workout reprogramat cu succes")
+                            .message("Workout rescheduled successfully")
                             .build());
 
         } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare de validare")
+                            .error("Validation error")
                             .message(e.getMessage())
                             .build());
         } catch (Exception e) {
             log.error("Unexpected error while rescheduling workout: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ErrorResponse.builder()
-                            .error("Eroare internă")
-                            .message("A apărut o eroare neașteptată")
+                            .error("Internal error")
+                            .message("An unexpected error occurred")
                             .build());
         }
     }
 
 
-    // DTO Classes pentru request/response
-
     @lombok.Data
     @lombok.Builder
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
-    public static class RescheduleWorkoutRequest {
-        @NotNull(message = "Data programată este obligatorie")
+    public static class ScheduleWorkoutRequest {
+        @NotNull(message = "User ID is required")
+        @Positive(message = "User ID must be positive")
+        private Long userId;
+
+        @NotNull(message = "Workout plan ID is required")
+        @Positive(message = "Workout plan ID must be positive")
+        private Long workoutPlanId;
+
+        @NotNull(message = "Scheduled date is required")
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate scheduledDate;
 
@@ -260,30 +256,8 @@ public class ScheduledWorkoutController {
 
     @lombok.Data
     @lombok.Builder
-    @lombok.NoArgsConstructor  // Add this line
-    @lombok.AllArgsConstructor // Add this line
-    public static class ScheduleWorkoutRequest {
-        @NotNull(message = "ID-ul utilizatorului este obligatoriu")
-        @Positive(message = "ID-ul utilizatorului trebuie să fie pozitiv")
-        private Long userId;
-
-        @NotNull(message = "ID-ul planului de workout este obligatoriu")
-        @Positive(message = "ID-ul planului de workout trebuie să fie pozitiv")
-        private Long workoutPlanId;
-
-        @NotNull(message = "Data programată este obligatorie")
-        @JsonFormat(pattern = "yyyy-MM-dd") // Add this to help with date parsing
-        private LocalDate scheduledDate;
-
-        @JsonFormat(pattern = "HH:mm") // Add this to help with time parsing
-        private LocalTime scheduledTime;
-    }
-
-
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor  // Add this annotation
-    @lombok.AllArgsConstructor // Add this annotation
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
     public static class CompleteWorkoutRequest {
         private Integer caloriesBurned;
         private Integer rating;
@@ -296,25 +270,4 @@ public class ScheduledWorkoutController {
         private String message;
     }
 
-    @lombok.Data
-    @lombok.Builder
-    public static class AvailabilityResponse {
-        private boolean available;
-        private LocalDate date;
-        private LocalTime time;
-        private String message;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class SuccessResponse {
-        private String message;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    public static class ErrorResponse {
-        private String error;
-        private String message;
-    }
 }

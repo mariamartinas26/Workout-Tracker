@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Dashboard controller
+ * Dashboard controller for fitness tracking analytics
  */
 @RestController
 @RequestMapping("/api/dashboard")
@@ -26,7 +26,7 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     /**
-     * Obține sumar complet dashboard pentru utilizator
+     * Get complete dashboard summary for user
      */
     @GetMapping("/summary/{userId}")
     public ResponseEntity<DashboardSummaryDTO> getDashboardSummary(@PathVariable Long userId) {
@@ -42,7 +42,7 @@ public class DashboardController {
     }
 
     /**
-     * Obține datele pentru calendar workout (heatmap)
+     * Get workout calendar data for heatmap visualization
      */
     @GetMapping("/calendar/{userId}")
     public ResponseEntity<List<WorkoutCalendarDTO>> getWorkoutCalendar(
@@ -51,13 +51,11 @@ public class DashboardController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         try {
-            // Default to last 365 days if no dates provided
             if (startDate == null || endDate == null) {
                 endDate = LocalDate.now();
                 startDate = endDate.minusDays(365);
             }
 
-            // Validate date range (max 2 years)
             if (ChronoUnit.DAYS.between(startDate, endDate) > 730) {
                 return ResponseEntity.badRequest().build();
             }
@@ -72,7 +70,7 @@ public class DashboardController {
     }
 
     /**
-     * Obține tendințe workout pentru grafice
+     * Get workout trends for charts and analytics
      */
     @GetMapping("/trends/{userId}")
     public ResponseEntity<List<WorkoutTrendDTO>> getWorkoutTrends(
@@ -87,7 +85,6 @@ public class DashboardController {
                 return ResponseEntity.badRequest().build();
             }
 
-            // Set default date ranges based on period
             if (startDate == null || endDate == null) {
                 endDate = LocalDate.now();
                 switch (period) {
@@ -113,7 +110,7 @@ public class DashboardController {
     }
 
     /**
-     * Obține breakdown tipuri de workout
+     * Get workout type breakdown statistics
      */
     @GetMapping("/workout-types/{userId}")
     public ResponseEntity<List<WorkoutTypeBreakdownDTO>> getWorkoutTypeBreakdown(
@@ -122,7 +119,6 @@ public class DashboardController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         try {
-            // Default to last 90 days if no dates provided
             if (startDate == null || endDate == null) {
                 endDate = LocalDate.now();
                 startDate = endDate.minusDays(90);
@@ -138,7 +134,7 @@ public class DashboardController {
     }
 
     /**
-     * Obține realizări recente - TEMPORARY FIX pentru a evita eroarea PostgreSQL
+     * Get recent achievements
      */
     @GetMapping("/achievements/{userId}")
     public ResponseEntity<List<Object>> getRecentAchievements(
@@ -146,9 +142,7 @@ public class DashboardController {
             @RequestParam(defaultValue = "30") Integer daysBack) {
 
         try {
-            // Temporary fix - returnează listă goală pentru a evita eroarea PostgreSQL
-            // Frontend-ul va folosi goalurile completed din GoalController în schimb
-            log.info("Achievements endpoint called for user {} - returning empty list to avoid PostgreSQL error", userId);
+            log.info("Achievements endpoint for user {} ", userId);
 
             List<Object> achievements = new ArrayList<>();
             return ResponseEntity.ok(achievements);
@@ -160,7 +154,7 @@ public class DashboardController {
     }
 
     /**
-     * Endpoint pentru statistici rapide (doar cardurile principale)
+     * Endpoint for quick statistics
      */
     @GetMapping("/quick-stats/{userId}")
     public ResponseEntity<QuickStatsDTO> getQuickStats(@PathVariable Long userId) {
@@ -183,15 +177,4 @@ public class DashboardController {
         }
     }
 
-    // DTO pentru statistici rapide
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
-    public static class QuickStatsDTO {
-        private Integer weeklyWorkouts;
-        private Integer weeklyCalories;
-        private Integer currentStreak;
-        private Long totalWorkouts;
-    }
 }

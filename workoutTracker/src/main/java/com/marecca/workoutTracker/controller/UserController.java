@@ -34,7 +34,7 @@ public class UserController {
         try {
             log.info("Updating complete profile for user ID: {}", userId);
 
-            //checks if user exists
+            // checks if user exists
             Optional<User> existingUserOptional = userService.findById(userId);
             if (existingUserOptional.isEmpty()) {
                 return createErrorResponse("User not found", HttpStatus.NOT_FOUND);
@@ -51,7 +51,7 @@ public class UserController {
             }
 
             if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
-                //checks if email is already used
+                // checks if email is already used
                 Optional<User> userWithEmail = userService.findByEmail(request.getEmail().trim());
                 if (userWithEmail.isPresent() && !userWithEmail.get().getUserId().equals(userId)) {
                     return createErrorResponse("Email already exists", HttpStatus.BAD_REQUEST);
@@ -85,7 +85,7 @@ public class UserController {
                 existingUser.setFitnessLevel(request.getFitnessLevel());
             }
 
-            //updates user
+            // updates user
             User savedUser = userService.updateUser(userId, existingUser);
 
             Map<String, Object> response = new HashMap<>();
@@ -107,9 +107,9 @@ public class UserController {
             return createErrorResponse("Error updating profile", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
     /**
-     * gets user profile by ID
-     * GET /api/users/{userId}
+     * Get user profile by ID
      */
     @GetMapping("/{userId}")
     public ResponseEntity<?> getUserProfile(@PathVariable Long userId) {
@@ -226,17 +226,15 @@ public class UserController {
         }
     }
 
-
     /**
-     * Obține utilizatori după nivelul de fitness
-     * GET /api/users/by-fitness-level/{fitnessLevel}
+     * Get users by fitness level
      */
     @GetMapping("/by-fitness-level/{fitnessLevel}")
     public ResponseEntity<?> getUsersByFitnessLevel(@PathVariable String fitnessLevel) {
         try {
             log.debug("Getting users by fitness level: {}", fitnessLevel);
 
-            // Validare fitness level
+            // Validate fitness level
             if (!List.of("BEGINNER", "INTERMEDIATE", "ADVANCED").contains(fitnessLevel.toUpperCase())) {
                 return createErrorResponse("Invalid fitness level. Must be BEGINNER, INTERMEDIATE, or ADVANCED", HttpStatus.BAD_REQUEST);
             }
@@ -256,8 +254,7 @@ public class UserController {
     }
 
     /**
-     * Dezactivează un utilizator
-     * POST /api/users/{userId}/deactivate
+     * Deactivate a user
      */
     @PostMapping("/{userId}/deactivate")
     public ResponseEntity<?> deactivateUser(@PathVariable Long userId) {
@@ -286,8 +283,7 @@ public class UserController {
     }
 
     /**
-     * Activează un utilizator
-     * POST /api/users/{userId}/activate
+     * Activate a user
      */
     @PostMapping("/{userId}/activate")
     public ResponseEntity<?> activateUser(@PathVariable Long userId) {
@@ -316,8 +312,7 @@ public class UserController {
     }
 
     /**
-     * Obține statistici despre utilizatori
-     * GET /api/users/stats
+     * Get user statistics
      */
     @GetMapping("/stats")
     public ResponseEntity<?> getUserStats() {
@@ -354,8 +349,7 @@ public class UserController {
     }
 
     /**
-     * Caută utilizatori după username sau email
-     * GET /api/users/search?query=john
+     * Search users by username or email
      */
     @GetMapping("/search")
     public ResponseEntity<?> searchUsers(@RequestParam String query) {
@@ -369,7 +363,7 @@ public class UserController {
             String searchTerm = query.trim().toLowerCase();
             List<User> allActiveUsers = userService.findActiveUsers();
 
-            // Filtrează utilizatorii care conțin termenul de căutare în username sau email
+            // Filter users that contain the search term in username or email
             List<User> filteredUsers = allActiveUsers.stream()
                     .filter(user ->
                             user.getUsername().toLowerCase().contains(searchTerm) ||
@@ -397,8 +391,7 @@ public class UserController {
     }
 
     /**
-     * Obține utilizatori cu cel puțin un număr minim de planuri de workout
-     * GET /api/users/with-min-plans?minPlans=5
+     * Get users with at least a minimum number of workout plans
      */
     @GetMapping("/with-min-plans")
     public ResponseEntity<?> getUsersWithMinimumPlans(@RequestParam(defaultValue = "1") Long minPlans) {
@@ -429,8 +422,7 @@ public class UserController {
     }
 
     /**
-     * Obține utilizatori cu cel puțin un număr minim de workout-uri completate
-     * GET /api/users/with-min-workouts?minWorkouts=10
+     * Get users with at least a minimum number of completed workouts
      */
     @GetMapping("/with-min-workouts")
     public ResponseEntity<?> getUsersWithMinimumWorkouts(@RequestParam(defaultValue = "1") Integer minWorkouts) {
@@ -461,8 +453,7 @@ public class UserController {
     }
 
     /**
-     * Endpoint de test pentru verificarea funcționării controller-ului
-     * GET /api/users/test
+     * Test endpoint to verify controller functionality
      */
     @GetMapping("/test")
     public ResponseEntity<?> test() {
@@ -475,10 +466,9 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    // Metode utilitare private
 
     /**
-     * Creează un răspuns de eroare standardizat
+     * Create a standardized error response
      */
     private ResponseEntity<?> createErrorResponse(String message, HttpStatus status) {
         Map<String, Object> errorResponse = new HashMap<>();

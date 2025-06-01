@@ -1,6 +1,7 @@
 package com.marecca.workoutTracker.service;
 
 import com.marecca.workoutTracker.controller.WorkoutPlanController;
+import com.marecca.workoutTracker.dto.ExerciseDetailRequest;
 import com.marecca.workoutTracker.entity.Exercise;
 import com.marecca.workoutTracker.entity.User;
 import com.marecca.workoutTracker.entity.WorkoutExerciseDetail;
@@ -67,7 +68,7 @@ public class WorkoutPlanService {
      * Creează un plan de workout cu exercițiile sale
      */
     @Transactional
-    public WorkoutPlan createWorkoutPlanWithExercises(WorkoutPlan workoutPlan, List<WorkoutPlanController.ExerciseDetailRequest> exerciseRequests) {
+    public WorkoutPlan createWorkoutPlanWithExercises(WorkoutPlan workoutPlan, List<ExerciseDetailRequest> exerciseRequests) {
         log.debug("Creating workout plan with exercises: {}", workoutPlan.getPlanName());
 
         // Validează utilizatorul
@@ -81,7 +82,7 @@ public class WorkoutPlanService {
 
         // Adaugă exercițiile dacă există
         if (exerciseRequests != null && !exerciseRequests.isEmpty()) {
-            for (WorkoutPlanController.ExerciseDetailRequest exerciseRequest : exerciseRequests) {
+            for (ExerciseDetailRequest exerciseRequest : exerciseRequests) {
                 // Verifică că exercițiul există
                 Exercise exercise = exerciseRepository.findById(exerciseRequest.getExerciseId())
                         .orElseThrow(() -> new IllegalArgumentException("Exercițiul cu ID " + exerciseRequest.getExerciseId() + " nu a fost găsit"));

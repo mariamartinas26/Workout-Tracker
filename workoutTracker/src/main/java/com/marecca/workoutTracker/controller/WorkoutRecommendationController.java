@@ -104,13 +104,11 @@ public class WorkoutRecommendationController {
                         .body(createErrorResponse("Recommendations are required to save workout plan"));
             }
 
-            // Obține planName din request sau setează default
             String planName = request.getPlanName();
             if (planName == null || planName.trim().isEmpty()) {
-                planName = "Recommended Workout"; // Default simplu
+                planName = "Recommended Workout";
             }
 
-            // Apelează service-ul cu parametrul planName
             Map<String, Object> savedPlan = workoutRecommendationService
                     .saveWorkoutPlan(request.getUserId(), request.getRecommendations(), request.getGoalId(), planName);
 

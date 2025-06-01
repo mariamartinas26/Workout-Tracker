@@ -1,27 +1,21 @@
 package com.marecca.workoutTracker.controller;
 
+import com.marecca.workoutTracker.dto.*;
 import com.marecca.workoutTracker.entity.User;
 import com.marecca.workoutTracker.entity.WorkoutPlan;
-import com.marecca.workoutTracker.entity.WorkoutExerciseDetail;
 import com.marecca.workoutTracker.service.WorkoutPlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Max;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Controller pentru gestionarea planurilor de workout
- * Oferă endpoint-uri pentru crearea, actualizarea și vizualizarea planurilor
+ * Controller for managing workout plans
+ * Provides endpoints for creating, updating and viewing workout plans
  */
 @RestController
 @RequestMapping("/api/workout-plans")
@@ -32,12 +26,12 @@ public class WorkoutPlanController {
     private final WorkoutPlanService workoutPlanService;
 
     /**
-     * Creează un plan de workout nou (aceasta e cea mai importantă metodă pentru problema ta!)
+     * Create a new workout plan
      */
     @PostMapping
     public ResponseEntity<?> createWorkoutPlan(@Valid @RequestBody CreateWorkoutPlanRequest request) {
         try {
-            // Creează planul principal
+            // Create the main plan
             User user = new User();
             user.setUserId(request.getUserId());
 
@@ -53,14 +47,14 @@ public class WorkoutPlanController {
 
             WorkoutPlan savedPlan = workoutPlanService.createWorkoutPlanWithExercises(
                     workoutPlan,
-                    request.getExercises() // Trimite exercițiile la service
+                    request.getExercises()
             );
 
             CreateWorkoutPlanResponse response = CreateWorkoutPlanResponse.builder()
                     .workoutPlanId(savedPlan.getWorkoutPlanId())
                     .planName(savedPlan.getPlanName())
                     .totalExercises(request.getExercises() != null ? request.getExercises().size() : 0)
-                    .message("Plan de workout creat cu succes")
+                    .message("Workout plan created successfully")
                     .build();
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -69,15 +63,14 @@ public class WorkoutPlanController {
             log.error("Error creating workout plan: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare la crearea planului")
+                            .error("Error creating plan")
                             .message(e.getMessage())
                             .build());
         }
     }
 
-
     /**
-     * Găsește toate planurile pentru un utilizator
+     * Find all plans for a user
      */
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<WorkoutPlan>> getUserWorkoutPlans(@PathVariable Long userId) {
@@ -86,7 +79,7 @@ public class WorkoutPlanController {
     }
 
     /**
-     * Găsește un plan specific cu toate detaliile exercițiilor
+     * Find a specific plan with all exercise details
      */
     @GetMapping("/{planId}")
     public ResponseEntity<?> getWorkoutPlanDetails(@PathVariable Long planId) {
@@ -100,25 +93,25 @@ public class WorkoutPlanController {
 
         WorkoutPlanDetailsResponse response = WorkoutPlanDetailsResponse.builder()
                 .workoutPlan(plan)
-                .totalExercises(0) // Pentru moment, nu avem exercițiile
+                .totalExercises(0)
                 .build();
 
         return ResponseEntity.ok(response);
     }
 
     /**
-     * Actualizează un plan de workout
+     * Update a workout plan
      */
     @PutMapping("/{planId}")
     public ResponseEntity<?> updateWorkoutPlan(
             @PathVariable Long planId,
             @Valid @RequestBody UpdateWorkoutPlanRequest request) {
         try {
-            // Găsește planul existent
+            // Find existing plan
             WorkoutPlan existingPlan = workoutPlanService.findById(planId)
-                    .orElseThrow(() -> new IllegalArgumentException("Planul nu a fost găsit"));
+                    .orElseThrow(() -> new IllegalArgumentException("Plan not found"));
 
-            // Creează obiectul pentru actualizare
+            // Create object for update
             WorkoutPlan updatedPlan = WorkoutPlan.builder()
                     .planName(request.getPlanName())
                     .description(request.getDescription())
@@ -132,20 +125,20 @@ public class WorkoutPlanController {
 
             return ResponseEntity.ok()
                     .body(SuccessResponse.builder()
-                            .message("Plan actualizat cu succes")
+                            .message("Plan updated successfully")
                             .build());
 
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare la actualizarea planului")
+                            .error("Error updating plan")
                             .message(e.getMessage())
                             .build());
         }
     }
 
     /**
-     * Șterge un plan de workout
+     * Delete a workout plan
      */
     @DeleteMapping("/{planId}")
     public ResponseEntity<?> deleteWorkoutPlan(@PathVariable Long planId) {
@@ -154,168 +147,62 @@ public class WorkoutPlanController {
 
             return ResponseEntity.ok()
                     .body(SuccessResponse.builder()
-                            .message("Plan șters cu succes")
+                            .message("Plan deleted successfully")
                             .build());
 
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare la ștergerea planului")
+                            .error("Error deleting plan")
                             .message(e.getMessage())
                             .build());
         }
     }
 
     /**
-     * Adaugă un exercițiu la un plan existent
+     * Add an exercise to an existing plan
      */
     @PostMapping("/{planId}/exercises")
     public ResponseEntity<?> addExerciseToWorkoutPlan(
             @PathVariable Long planId,
             @Valid @RequestBody ExerciseDetailRequest request) {
         try {
-            // Pentru moment, returnează doar un mesaj de succes
-            // Această funcționalitate poate fi implementată mai târziu
+
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(SuccessResponse.builder()
-                            .message("Funcționalitatea va fi implementată în curând")
+                            .message("Functionality will be implemented soon")
                             .build());
 
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare la adăugarea exercițiului")
+                            .error("Error adding exercise")
                             .message(e.getMessage())
                             .build());
         }
     }
 
     /**
-     * Elimină un exercițiu din plan
+     * Remove an exercise from plan
      */
     @DeleteMapping("/{planId}/exercises/{detailId}")
     public ResponseEntity<?> removeExerciseFromWorkoutPlan(
             @PathVariable Long planId,
             @PathVariable Long detailId) {
         try {
-            // Pentru moment, returnează doar un mesaj de succes
-            // Această funcționalitate poate fi implementată mai târziu
+
             return ResponseEntity.ok()
                     .body(SuccessResponse.builder()
-                            .message("Funcționalitatea va fi implementată în curând")
+                            .message("Functionality will be implemented soon")
                             .build());
 
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
-                            .error("Eroare la eliminarea exercițiului")
+                            .error("Error removing exercise")
                             .message(e.getMessage())
                             .build());
         }
     }
 
-    // =============== DTO CLASSES ===============
-
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
-    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
-    public static class CreateWorkoutPlanRequest {
-        @NotNull(message = "ID-ul utilizatorului este obligatoriu")
-        private Long userId;
-
-        @NotBlank(message = "Numele planului este obligatoriu")
-        private String planName;
-
-        private String description;
-
-        @Min(value = 1, message = "Durata estimată trebuie să fie pozitivă")
-        private Integer estimatedDurationMinutes;
-
-        @Min(value = 1, message = "Nivelul de dificultate trebuie să fie între 1 și 5")
-        @Max(value = 5, message = "Nivelul de dificultate trebuie să fie între 1 și 5")
-        private Integer difficultyLevel;
-
-        private String goals;
-        private String notes;
-        private List<ExerciseDetailRequest> exercises;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
-    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
-    public static class UpdateWorkoutPlanRequest {
-        private String planName;
-        private String description;
-        private Integer estimatedDurationMinutes;
-        private Integer difficultyLevel;
-        private String goals;
-        private String notes;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
-    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
-    public static class ExerciseDetailRequest {
-        @NotNull(message = "ID-ul exercițiului este obligatoriu")
-        private Long exerciseId;
-
-        private Integer exerciseOrder;
-
-        @NotNull(message = "Numărul de seturi este obligatoriu")
-        @Min(value = 1, message = "Numărul de seturi trebuie să fie pozitiv")
-        private Integer targetSets;
-
-        @Min(value = 1, message = "Repetările minime trebuie să fie pozitive")
-        private Integer targetRepsMin;
-
-        private Integer targetRepsMax;
-        private BigDecimal targetWeightKg;
-        private Integer targetDurationSeconds;
-        private BigDecimal targetDistanceMeters;
-
-        @Min(value = 0, message = "Timpul de odihnă nu poate fi negativ")
-        private Integer restTimeSeconds = 60;
-
-        private String notes;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
-    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
-    public static class CreateWorkoutPlanResponse {
-        private Long workoutPlanId;
-        private String planName;
-        private Integer totalExercises;
-        private String message;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
-    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
-    public static class WorkoutPlanDetailsResponse {
-        private WorkoutPlan workoutPlan;
-        private Integer totalExercises;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
-    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
-    public static class SuccessResponse {
-        private String message;
-    }
-
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor    // ✅ ADAUGĂ ACEASTA
-    @lombok.AllArgsConstructor   // ✅ ȘI ACEASTA
-    public static class ErrorResponse {
-        private String error;
-        private String message;
-    }
 }
