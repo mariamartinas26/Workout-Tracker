@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import WorkoutPlanCreator from './WorkoutPlanCreator';
-import WorkoutScheduler from './WorkoutScheduler';
-import WorkoutDashboard from './WorkoutDashboard'; // Add this import
+import CreatePlan from './CreatePlan';
+import PlanWorkout from './PlanWorkout';
+import Analytics from './Analytics'; // Add this import
 
 const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals }) => {
     const [showWorkoutPopup, setShowWorkoutPopup] = useState(false);
@@ -552,19 +552,19 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
             </div>
 
             {/* Popupuri - ALL THREE COMPONENTS */}
-            <WorkoutPlanCreator
+            <CreatePlan
                 isOpen={showWorkoutPopup}
                 onClose={() => setShowWorkoutPopup(false)}
                 sampleExercises={sampleExercises}
                 currentUserId={user?.id || user?.userId || user?.user_id || 1} // Handle different ID formats
             />
-            <WorkoutScheduler
+            <PlanWorkout
                 isOpen={showSchedulerPopup}
                 onClose={() => setShowSchedulerPopup(false)}
                 currentUserId={user?.id || user?.userId || user?.user_id || 1}
             />
             {/* ADD WORKOUT DASHBOARD */}
-            <WorkoutDashboard
+            <Analytics
                 isOpen={showAnalytics}
                 onClose={() => setShowAnalytics(false)}
                 currentUserId={user?.id || user?.userId || user?.user_id || 1}

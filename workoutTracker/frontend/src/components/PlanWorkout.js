@@ -1,6 +1,6 @@
-// components/WorkoutScheduler.js
+// components/PlanWorkout.js
 import React, { useState, useEffect } from 'react';
-import WorkoutScheduleModal from './WorkoutScheduleModal';
+import WorkoutSchedule from './WorkoutSchedule';
 
 const API_BASE_URL = 'http://localhost:8082/api';
 
@@ -282,7 +282,7 @@ const ScheduledWorkoutService = {
     }
 };
 
-const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
+const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
     // State pentru workout plans (templates)
     const [workoutPlans, setWorkoutPlans] = useState([]);
     const [loadingPlans, setLoadingPlans] = useState(false);
@@ -1872,7 +1872,7 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
             </div>
 
             {/* Schedule Workout Modal */}
-            <WorkoutScheduleModal
+            <WorkoutSchedule
                 isOpen={showScheduleModal}
                 onClose={() => {
                     setShowScheduleModal(false);
@@ -1885,4 +1885,4 @@ const WorkoutScheduler = ({ isOpen, onClose, currentUserId = 1 }) => {
         </>
     );
 }
-export default WorkoutScheduler;
+export default PlanWorkout;

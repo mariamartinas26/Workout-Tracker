@@ -26,7 +26,7 @@ const WorkoutPlanService = {
     }
 };
 
-const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }) => {
+const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }) => {
     const [workoutData, setWorkoutData] = useState({
         plan_name: '',
         description: '',
@@ -873,4 +873,4 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
     );
 };
 
-export default WorkoutPlanCreator;
+export default CreatePlan;

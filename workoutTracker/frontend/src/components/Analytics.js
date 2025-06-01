@@ -1,4 +1,4 @@
-// components/WorkoutDashboard.js
+// components/Analytics.js
 import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = 'http://localhost:8082/api';
@@ -311,7 +311,7 @@ const DashboardService = {
     }
 };
 
-const WorkoutDashboard = ({ currentUserId = 1, isOpen, onClose }) => {
+const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
     // State for dashboard data
     const [dashboardData, setDashboardData] = useState(null);
     const [workoutCalendar, setWorkoutCalendar] = useState([]);
@@ -1210,4 +1210,4 @@ const WorkoutDashboard = ({ currentUserId = 1, isOpen, onClose }) => {
     );
 };
 
-export default WorkoutDashboard;
+export default Analytics;

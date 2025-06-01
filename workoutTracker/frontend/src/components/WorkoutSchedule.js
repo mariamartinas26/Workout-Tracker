@@ -1,4 +1,4 @@
-// components/WorkoutScheduleModal.js
+// components/WorkoutSchedule.js
 import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = 'http://localhost:8082/api';
@@ -96,7 +96,7 @@ const ScheduleWorkoutService = {
     }
 };
 
-const WorkoutScheduleModal = ({
+const WorkoutSchedule = ({
                                   isOpen,
                                   onClose,
                                   workoutPlan,
@@ -764,4 +764,4 @@ const WorkoutScheduleModal = ({
     );
 };
 
-export default WorkoutScheduleModal;
+export default WorkoutSchedule;
