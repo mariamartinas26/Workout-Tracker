@@ -27,18 +27,40 @@ public class WorkoutRecommendationService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    /// Custom exception classes
+    public static class UserNotFoundException extends RuntimeException {
+        public UserNotFoundException(String message) {
+            super(message);
+        }
+    }
+
+    public static class InvalidGoalTypeException extends RuntimeException {
+        public InvalidGoalTypeException(String message) {
+            super(message);
+        }
+    }
+
+    public static class InvalidUserDataException extends RuntimeException {
+        public InvalidUserDataException(String message) {
+            super(message);
+        }
+    }
+
+    public static class NoExercisesFoundException extends RuntimeException {
+        public NoExercisesFoundException(String message) {
+            super(message);
+        }
+    }
+
     /**
-     * Workout recommendation based on plsql function "recommend_workout" !!!
+     * Workout recommendation based on PL/SQL function "recommend_workout"
+     * Now properly handles exceptions thrown by the PL/SQL function
      */
     public List<WorkoutRecommendation> getRecommendations(Long userId, String goalType) {
         logger.info("Getting workout recommendations for user: {} with goal: {}", userId, goalType);
 
         try {
-            if (!userExists(userId)) {
-                throw new IllegalArgumentException("User with ID " + userId + " does not exist");
-            }
-
-            //calls plsql function
+            // Remove local validation since PL/SQL function handles all validation
             String sql = "SELECT * FROM recommend_workout(?, ?)";
 
             List<WorkoutRecommendation> recommendations = jdbcTemplate.query(
@@ -46,13 +68,159 @@ public class WorkoutRecommendationService {
                     new Object[]{userId, goalType},
                     new WorkoutRecommendationRowMapper()
             );
+
+            logger.info("Successfully retrieved {} recommendations for user: {}",
+                    recommendations.size(), userId);
             return recommendations;
 
         } catch (DataAccessException e) {
-            throw new RuntimeException("Failed to retrieve workout recommendations: " + e.getMessage(), e);
+            String errorMessage = e.getMessage();
+            String sqlState = extractSQLState(e);
+
+            logger.error("Database error for user {}: {}", userId, errorMessage);
+
+            // Handle specific PL/SQL exceptions based on error codes and messages
+            if (sqlState != null) {
+                switch (sqlState) {
+                    case "00001":
+                        // INVALID_USER_ID
+                        throw new IllegalArgumentException(
+                                extractCustomErrorMessage(errorMessage, "INVALID_USER_ID"));
+
+                    case "00002":
+                        // NULL_GOAL_TYPE
+                        throw new IllegalArgumentException(
+                                extractCustomErrorMessage(errorMessage, "NULL_GOAL_TYPE"));
+
+                    case "00003":
+                        // INVALID_GOAL_TYPE
+                        throw new InvalidGoalTypeException(
+                                extractCustomErrorMessage(errorMessage, "INVALID_GOAL_TYPE"));
+
+                    case "00004":
+                        // USER_NOT_FOUND
+                        throw new UserNotFoundException(
+                                extractCustomErrorMessage(errorMessage, "USER_NOT_FOUND"));
+
+                    case "00005":
+                    case "00006":
+                        // INVALID_USER_DATA
+                        throw new InvalidUserDataException(
+                                extractCustomErrorMessage(errorMessage, "INVALID_USER_DATA"));
+
+                    case "00007":
+                        // NO_EXERCISES_FOUND
+                        throw new NoExercisesFoundException(
+                                extractCustomErrorMessage(errorMessage, "NO_EXERCISES_FOUND"));
+
+                    case "00999":
+                        // DATABASE_ERROR
+                        throw new RuntimeException(
+                                "Database error occurred: " +
+                                        extractCustomErrorMessage(errorMessage, "DATABASE_ERROR"), e);
+
+                    default:
+                        break;
+                }
+            }
+
+            // Handle common database exceptions by message content (fallback)
+            if (errorMessage.contains("USER_NOT_FOUND")) {
+                throw new UserNotFoundException(
+                        extractUserIdFromError(errorMessage, "USER_NOT_FOUND"));
+            } else if (errorMessage.contains("INVALID_GOAL_TYPE")) {
+                throw new InvalidGoalTypeException(
+                        extractGoalTypeFromError(errorMessage, "INVALID_GOAL_TYPE"));
+            } else if (errorMessage.contains("INVALID_USER_DATA")) {
+                throw new InvalidUserDataException(
+                        extractCustomErrorMessage(errorMessage, "INVALID_USER_DATA"));
+            } else if (errorMessage.contains("NO_EXERCISES_FOUND")) {
+                throw new NoExercisesFoundException(
+                        extractCustomErrorMessage(errorMessage, "NO_EXERCISES_FOUND"));
+            }
+
+            // Generic database error
+            throw new RuntimeException("Failed to retrieve workout recommendations: " + errorMessage, e);
+
+        } catch (UserNotFoundException | InvalidGoalTypeException |
+                 InvalidUserDataException | NoExercisesFoundException e) {
+            // Re-throw custom exceptions without wrapping
+            throw e;
+
+        } catch (IllegalArgumentException e) {
+            // Re-throw validation errors
+            throw e;
+
         } catch (Exception e) {
+            logger.error("Unexpected error while getting recommendations for user {}: {}",
+                    userId, e.getMessage());
             throw new RuntimeException("An unexpected error occurred while generating recommendations", e);
         }
+    }
+
+    /**
+     * Extracts the SQL state from DataAccessException
+     */
+    private String extractSQLState(DataAccessException e) {
+        // Try to extract SQL state from the exception
+        Throwable cause = e.getCause();
+        while (cause != null) {
+            if (cause instanceof java.sql.SQLException) {
+                return ((java.sql.SQLException) cause).getSQLState();
+            }
+            cause = cause.getCause();
+        }
+        return null;
+    }
+
+    /**
+     * Extracts the custom error message from PL/SQL exception
+     */
+    private String extractCustomErrorMessage(String fullErrorMessage, String errorPrefix) {
+        if (fullErrorMessage == null) return "Unknown error";
+
+        // Look for the pattern "ERROR_CODE: actual message"
+        int prefixIndex = fullErrorMessage.indexOf(errorPrefix + ":");
+        if (prefixIndex != -1) {
+            String message = fullErrorMessage.substring(prefixIndex + errorPrefix.length() + 1).trim();
+            // Remove any trailing SQL error information
+            int whereIndex = message.indexOf(" Where:");
+            if (whereIndex != -1) {
+                message = message.substring(0, whereIndex).trim();
+            }
+            return message;
+        }
+
+        return fullErrorMessage;
+    }
+
+    /**
+     * Extracts user ID from error message
+     */
+    private String extractUserIdFromError(String errorMessage, String prefix) {
+        String cleanMessage = extractCustomErrorMessage(errorMessage, prefix);
+        // Extract the user ID using regex
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(".*ID:? (\\d+).*");
+        java.util.regex.Matcher matcher = pattern.matcher(cleanMessage);
+        if (matcher.matches()) {
+            return "User with ID " + matcher.group(1) + " does not exist";
+        }
+        return cleanMessage;
+    }
+
+    /**
+     * Extracts goal type from error message
+     */
+    private String extractGoalTypeFromError(String errorMessage, String prefix) {
+        String cleanMessage = extractCustomErrorMessage(errorMessage, prefix);
+        // Extract the goal type using regex
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(".*goal type:? ([A-Z_]+).*");
+        java.util.regex.Matcher matcher = pattern.matcher(cleanMessage);
+        if (matcher.matches()) {
+            return "Invalid goal type: " + matcher.group(1) +
+                    ". Valid options are: WEIGHT_LOSS, MUSCLE_GAIN, MAINTENANCE";
+        }
+        return cleanMessage;
     }
 
     /**
