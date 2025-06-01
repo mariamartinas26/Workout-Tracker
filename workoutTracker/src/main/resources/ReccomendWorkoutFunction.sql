@@ -1,7 +1,6 @@
 --user profile: fitness level, weight, workout history in the past 90 days
 -- based on this the alg calculates an strength-multiplier (range 0.8x begginers <=5 completed workouts,
 --1.3x expert users >=50 completed workouts)
---
 
 CREATE OR REPLACE FUNCTION recommend_workout(
     p_user_id BIGINT,
@@ -15,40 +14,73 @@ CREATE OR REPLACE FUNCTION recommend_workout(
     recommended_weight_percentage DECIMAL(5,2),
     rest_time_seconds INTEGER,
     priority_score DECIMAL(5,2)
+	--score that reflects how appropriate is an exercise
 )
+--returns a tabel with recommended workout plan for a user basen on his goals
+
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_user_fitness_level VARCHAR(20);
+v_user_fitness_level VARCHAR(20);
     v_strength_multiplier DECIMAL(3,2) := 1.0;
     v_avg_user_weight DECIMAL(6,2);
     v_workout_count INTEGER := 0;
 BEGIN
+    -- Validate input parameters
+    IF p_user_id IS NULL OR p_user_id <= 0 THEN
+        RAISE EXCEPTION 'INVALID_USER_ID: User ID must be a positive number, received: %', p_user_id
+            USING ERRCODE = '00001';
+END IF;
+
+    IF p_goal_type IS NULL THEN
+        RAISE EXCEPTION 'NULL_GOAL_TYPE: Goal type cannot be null'
+            USING ERRCODE = '00002';
+END IF;
+
+    -- Validate goal type
+    IF p_goal_type NOT IN ('WEIGHT_LOSS', 'MUSCLE_GAIN', 'MAINTENANCE') THEN
+        RAISE EXCEPTION 'INVALID_GOAL_TYPE: Invalid goal type: %. Valid options are: WEIGHT_LOSS, MUSCLE_GAIN, MAINTENANCE', p_goal_type
+            USING ERRCODE = '00003';
+END IF;
+
     --user info: weight and fitness level
-    SELECT fitness_level, weight_kg
-    INTO v_user_fitness_level, v_avg_user_weight
-    FROM users WHERE user_id = p_user_id;
-    --exception if user does not exist
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'User not found with ID: %', p_user_id;
-    END IF;
+SELECT fitness_level, weight_kg
+INTO v_user_fitness_level, v_avg_user_weight
+FROM users WHERE user_id = p_user_id;
+
+--exception if user does not exist
+IF NOT FOUND THEN
+        RAISE EXCEPTION 'USER_NOT_FOUND: User not found with ID: %', p_user_id
+            USING ERRCODE = '00004';
+END IF;
+
+    -- Validate user data integrity
+    IF v_user_fitness_level IS NULL THEN
+        RAISE EXCEPTION 'INVALID_USER_DATA: User fitness level is null for user ID: %', p_user_id
+            USING ERRCODE = '00005';
+END IF;
+
+    IF v_avg_user_weight IS NULL OR v_avg_user_weight <= 0 THEN
+        RAISE EXCEPTION 'INVALID_USER_DATA: User weight is invalid for user ID: %. Weight: %', p_user_id, v_avg_user_weight
+            USING ERRCODE = '00006';
+END IF;
 
     --counts nr of workouts done in the past 90 days
-    SELECT COUNT(DISTINCT sw.scheduled_workout_id) INTO v_workout_count
-    FROM scheduled_workouts sw
-    WHERE sw.user_id = p_user_id
-    AND sw.status = 'COMPLETED'
-    AND sw.actual_start_time >= CURRENT_DATE - INTERVAL '90 days';
+SELECT COUNT(DISTINCT sw.scheduled_workout_id) INTO v_workout_count
+FROM scheduled_workouts sw
+WHERE sw.user_id = p_user_id
+  AND sw.status = 'COMPLETED'
+  AND sw.actual_start_time >= CURRENT_DATE - INTERVAL '90 days';
 
-    --strength multiplier based on experience
-    v_strength_multiplier := CASE
+--strength multiplier based on experience
+v_strength_multiplier := CASE
         WHEN v_workout_count > 50 THEN 1.3 --very advanced
         WHEN v_workout_count > 20 THEN 1.15 --advanced
         WHEN v_workout_count > 5 THEN 1.0 --medium
         ELSE 0.8 --beginner
-    END;
+END;
 
-    RETURN QUERY
+RETURN QUERY
     WITH exercise_stats AS (
         -- Calculate stats for each exercise based on user's history
         SELECT
@@ -58,12 +90,18 @@ BEGIN
             e.primary_muscle_group,
             e.difficulty_level,
             -- Average performance metrics from user's history
-            COALESCE(AVG(wel.weight_used_kg), 0) as avg_weight_used,
-            COALESCE(AVG(wel.reps_completed), 0) as avg_reps,
-            COALESCE(AVG(wel.sets_completed), 0) as avg_sets,
-            COALESCE(AVG(wel.difficulty_rating), 3) as avg_difficulty,
-            COUNT(wel.log_id) as times_performed,
-            -- Calories estimation based on category and muscle groups
+			COALESCE(AVG(wel.weight_used_kg), 0) as avg_weight_used,
+			-- Calculates the average weight used across workout logs; defaults to 0 if no data
+			COALESCE(AVG(wel.reps_completed), 0) as avg_reps,
+			-- Calculates the average number of reps completed; defaults to 0 if no data
+			COALESCE(AVG(wel.sets_completed), 0) as avg_sets,
+			-- Calculates the average number of sets completed; defaults to 0 if no data
+			COALESCE(AVG(wel.difficulty_rating), 3) as avg_difficulty,
+			-- Calculates the average difficulty rating given by the user; defaults to 3 if no data
+			COUNT(wel.log_id) as times_performed,
+			-- Counts how many times the exercise has been performed
+
+			-- Calories estimation based on category and muscle groups
             CASE e.category
                 WHEN 'CARDIO' THEN 12.0 --12 calories per minute
                 WHEN 'STRENGTH' THEN
@@ -124,7 +162,7 @@ BEGIN
     scored_exercises AS (
         SELECT
             *,
-            -- Calculate priority score based on goal type
+            --we compute calculated_priority_score based on goal, eficency and penalty
             CASE p_goal_type
                 WHEN 'WEIGHT_LOSS' THEN
                     (cardio_effectiveness * 0.6 +
@@ -143,44 +181,44 @@ BEGIN
             END as calculated_priority_score
         FROM exercise_stats
     )
-    SELECT
-        s.exercise_id,
-        s.exercise_name,
-        -- Recommended sets based on goal and user experience
-        CASE p_goal_type
-            WHEN 'WEIGHT_LOSS' THEN
-                CASE s.category
-                    WHEN 'CARDIO' THEN 1
-                    WHEN 'STRENGTH' THEN GREATEST(2, ROUND(3 * v_strength_multiplier)::INTEGER)
-                    ELSE 2
+SELECT
+    s.exercise_id,
+    s.exercise_name,
+    -- Recommended sets based on goal and user experience
+    CASE p_goal_type
+        WHEN 'WEIGHT_LOSS' THEN
+            CASE s.category
+                WHEN 'CARDIO' THEN 1
+                WHEN 'STRENGTH' THEN GREATEST(2, ROUND(3 * v_strength_multiplier)::INTEGER)
+                ELSE 2
                 END
-            WHEN 'MUSCLE_GAIN' THEN
-                CASE s.category
-                    WHEN 'STRENGTH' THEN GREATEST(3, ROUND(4 * v_strength_multiplier)::INTEGER)
-                    WHEN 'CARDIO' THEN 1
-                    ELSE 3
+        WHEN 'MUSCLE_GAIN' THEN
+            CASE s.category
+                WHEN 'STRENGTH' THEN GREATEST(3, ROUND(4 * v_strength_multiplier)::INTEGER)
+                WHEN 'CARDIO' THEN 1
+                ELSE 3
                 END
-            ELSE 3
+        ELSE 3
         END as recommended_sets,
 
-        -- Recommended reps min (based on user's history if available)
-        CASE
-            WHEN s.times_performed > 0 AND s.avg_reps > 0 THEN
-                GREATEST(1, ROUND(s.avg_reps * 0.8)::INTEGER)
-            ELSE
-                CASE p_goal_type
-                    WHEN 'WEIGHT_LOSS' THEN
-                        CASE s.category WHEN 'CARDIO' THEN 1 WHEN 'STRENGTH' THEN 12 ELSE 10 END
-                    WHEN 'MUSCLE_GAIN' THEN
-                        CASE s.category WHEN 'STRENGTH' THEN 6 WHEN 'CARDIO' THEN 1 ELSE 8 END
-                    ELSE 10
+    -- Recommended reps min (based on user's history if available)
+    CASE
+        WHEN s.times_performed > 0 AND s.avg_reps > 0 THEN
+            GREATEST(1, ROUND(s.avg_reps * 0.8)::INTEGER)
+        ELSE
+            CASE p_goal_type
+                WHEN 'WEIGHT_LOSS' THEN
+                    CASE s.category WHEN 'CARDIO' THEN 1 WHEN 'STRENGTH' THEN 12 ELSE 10 END
+                WHEN 'MUSCLE_GAIN' THEN
+                    CASE s.category WHEN 'STRENGTH' THEN 6 WHEN 'CARDIO' THEN 1 ELSE 8 END
+                ELSE 10
                 END
         END as recommended_reps_min,
 
-        -- Recommended reps max
-        CASE
-            WHEN s.times_performed > 0 AND s.avg_reps > 0 THEN
-                ROUND(s.avg_reps * 1.2)::INTEGER
+    -- Recommended reps max
+    CASE
+        WHEN s.times_performed > 0 AND s.avg_reps > 0 THEN
+            ROUND(s.avg_reps * 1.2)::INTEGER
             ELSE
                 CASE p_goal_type
                     WHEN 'WEIGHT_LOSS' THEN
@@ -188,8 +226,8 @@ BEGIN
                     WHEN 'MUSCLE_GAIN' THEN
                         CASE s.category WHEN 'STRENGTH' THEN 12 WHEN 'CARDIO' THEN 1 ELSE 12 END
                     ELSE 15
-                END
-        END as recommended_reps_max,
+END
+END as recommended_reps_max,
 
         -- Weight percentage (based on user's history if available)
         CASE
@@ -198,14 +236,14 @@ BEGIN
                     WHEN 'MUSCLE_GAIN' THEN LEAST(100.0, (s.avg_weight_used / GREATEST(v_avg_user_weight, 50) * 100 * 1.1))
                     WHEN 'WEIGHT_LOSS' THEN LEAST(90.0, (s.avg_weight_used / GREATEST(v_avg_user_weight, 50) * 100 * 0.9))
                     ELSE LEAST(95.0, (s.avg_weight_used / GREATEST(v_avg_user_weight, 50) * 100))
-                END
-            ELSE
+END
+ELSE
                 CASE p_goal_type
                     WHEN 'MUSCLE_GAIN' THEN (80 * v_strength_multiplier)::DECIMAL(5,2)
                     WHEN 'WEIGHT_LOSS' THEN (65 * v_strength_multiplier)::DECIMAL(5,2)
                     ELSE (70 * v_strength_multiplier)::DECIMAL(5,2)
-                END
-        END as recommended_weight_percentage,
+END
+END as recommended_weight_percentage,
 
         -- Rest time
         CASE s.category
@@ -215,9 +253,9 @@ BEGIN
                     WHEN 'MUSCLE_GAIN' THEN 120
                     WHEN 'WEIGHT_LOSS' THEN 45
                     ELSE 90
-                END
-            ELSE 60
-        END as rest_time_seconds,
+END
+ELSE 60
+END as rest_time_seconds,
 
         s.calculated_priority_score as priority_score
 
@@ -225,5 +263,23 @@ BEGIN
     WHERE s.calculated_priority_score > 1.0  -- Only return exercises with good scores
     ORDER BY s.calculated_priority_score DESC, RANDOM()
     LIMIT 8;
+
+    -- Check if no exercises were found
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'NO_EXERCISES_FOUND: No suitable exercises found for user % with goal type % and fitness level %',
+            p_user_id, p_goal_type, v_user_fitness_level
+            USING ERRCODE = '00007';
+END IF;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Re-raise custom exceptions
+        IF SQLSTATE IN ('00001', '00002', '00003', '00004', '00005', '00006', '00007') THEN
+            RAISE;
+ELSE
+            -- Handle unexpected database errors
+            RAISE EXCEPTION 'DATABASE_ERROR: Unexpected database error occurred: %', SQLERRM
+                USING ERRCODE = '00999';
+END IF;
 END;
 $$;
