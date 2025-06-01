@@ -65,9 +65,19 @@ v_week_start DATE;
     v_month_start DATE;
     v_month_end DATE;
 BEGIN
-    -- Calculate date ranges
-    v_week_start := p_current_date - EXTRACT(DOW FROM p_current_date)::INTEGER + 1; -- Monday
-    v_week_end := v_week_start + 6; -- Sunday
+    -- FIXED: Calculate week properly (Monday to Sunday including current day)
+    -- PostgreSQL DOW: 0=Sunday, 1=Monday, 2=Tuesday, etc.
+
+    IF EXTRACT(DOW FROM p_current_date) = 0 THEN
+        -- If today is Sunday, week started last Monday
+        v_week_start := p_current_date - 6;
+        v_week_end := p_current_date;
+ELSE
+        -- Otherwise, calculate Monday of current week
+        v_week_start := p_current_date - (EXTRACT(DOW FROM p_current_date)::INTEGER - 1);
+        v_week_end := v_week_start + 6;
+END IF;
+
     v_month_start := DATE_TRUNC('month', p_current_date)::DATE;
     v_month_end := (DATE_TRUNC('month', p_current_date) + INTERVAL '1 month - 1 day')::DATE;
 
@@ -76,7 +86,7 @@ RETURN QUERY
         SELECT
             COUNT(*)::INTEGER as w_workouts,
             COALESCE(SUM(sw.calories_burned), 0)::INTEGER as w_calories,
-            ROUND(AVG(sw.actual_duration_minutes), 1) as w_avg_duration,
+            ROUND(AVG(NULLIF(sw.actual_duration_minutes, 0)), 1) as w_avg_duration,
             ROUND(AVG(sw.overall_rating), 1) as w_avg_rating,
             COUNT(DISTINCT sw.scheduled_date)::INTEGER as w_workout_days
         FROM scheduled_workouts sw
@@ -88,7 +98,7 @@ RETURN QUERY
         SELECT
             COUNT(*)::INTEGER as m_workouts,
             COALESCE(SUM(sw.calories_burned), 0)::INTEGER as m_calories,
-            ROUND(AVG(sw.actual_duration_minutes), 1) as m_avg_duration,
+            ROUND(AVG(NULLIF(sw.actual_duration_minutes, 0)), 1) as m_avg_duration,
             ROUND(AVG(sw.overall_rating), 1) as m_avg_rating,
             COUNT(DISTINCT sw.scheduled_date)::INTEGER as m_workout_days
         FROM scheduled_workouts sw
@@ -112,7 +122,7 @@ RETURN QUERY
             COUNT(*)::BIGINT as total_workouts,
             COALESCE(SUM(sw.calories_burned), 0)::BIGINT as total_calories,
             COUNT(DISTINCT sw.scheduled_date)::BIGINT as total_workout_days,
-            ROUND(AVG(sw.actual_duration_minutes), 1) as lifetime_avg_duration,
+            ROUND(AVG(NULLIF(sw.actual_duration_minutes, 0)), 1) as lifetime_avg_duration,
             MIN(sw.scheduled_date) as first_workout_date
         FROM scheduled_workouts sw
         WHERE sw.user_id = p_user_id
@@ -147,6 +157,7 @@ FROM weekly_stats ws
          CROSS JOIN lifetime_stats ls;
 END;
 $$;
+
 
 -- Function to update workout streaks
 CREATE OR REPLACE FUNCTION update_workout_streak(
