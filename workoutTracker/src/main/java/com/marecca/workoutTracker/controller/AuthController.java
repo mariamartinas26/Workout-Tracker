@@ -132,7 +132,6 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error during registration", e);
             return createErrorResponse("Registration failed: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -158,7 +157,6 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error during login", e);
             return createErrorResponse("Login failed: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -169,8 +167,6 @@ public class AuthController {
     @PutMapping("/complete-profile")
     public ResponseEntity<?> completeProfile(@RequestBody CompleteProfileRequest request) {
         try {
-            log.info("Complete profile request for user ID: {}", request.getUserId());
-
             if (request.getUserId() == null) {
                 return createErrorResponse("User ID is required", HttpStatus.BAD_REQUEST);
             }
