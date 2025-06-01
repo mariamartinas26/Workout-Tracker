@@ -3,10 +3,9 @@ import { toast } from 'react-toastify';
 
 const API_BASE_URL = 'http://localhost:8082/api';
 
-// Service pentru workout plans - folosește endpoint-ul corect
 const WorkoutPlanService = {
     createWorkoutPlan: async (planData) => {
-        console.log('Creez plan de workout cu datele:', planData);
+        console.log('Creating workout plan with data:', planData);
 
         const response = await fetch(`${API_BASE_URL}/workout-plans`, {
             method: 'POST',
@@ -66,7 +65,6 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
             exercises: [...prev.exercises, newExercise]
         }));
 
-        // Reset exercise details
         setSelectedExercise('');
         setExerciseDetails({
             target_sets: '',
@@ -87,14 +85,13 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
     };
 
     const handleSaveWorkout = async () => {
-        // Validări
         if (!workoutData.plan_name.trim()) {
-            setError('Numele planului este obligatoriu');
+            setError('Plan name is required');
             return;
         }
 
         if (workoutData.exercises.length === 0) {
-            setError('Adaugă cel puțin un exercițiu');
+            setError('Add at least one exercise');
             return;
         }
 
@@ -102,10 +99,9 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
         setError('');
 
         try {
-            // Formatează datele pentru backend conform cu CreateWorkoutPlanRequest
             const backendData = {
-                userId: currentUserId,                    // ✅ User ID
-                planName: workoutData.plan_name,          // ✅ Numele planului
+                userId: currentUserId,
+                planName: workoutData.plan_name,
                 description: workoutData.description || null,
                 estimatedDurationMinutes: workoutData.estimated_duration_minutes ? parseInt(workoutData.estimated_duration_minutes) : null,
                 difficultyLevel: workoutData.difficulty_level,
@@ -122,17 +118,16 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
                     restTimeSeconds: exercise.rest_time_seconds ? parseInt(exercise.rest_time_seconds) : 60,
                     notes: exercise.notes || null
                 }))
-
             };
-            const response = await WorkoutPlanService.createWorkoutPlan(backendData);
 
+            const response = await WorkoutPlanService.createWorkoutPlan(backendData);
 
             toast.success(
                 <div>
                     <div>{response.message}</div>
                     <div><strong>Plan:</strong> "{response.planName}"</div>
                     <div><strong>ID:</strong> {response.workoutPlanId}</div>
-                    <div><strong>Exercitii:</strong> {response.totalExercises}</div>
+                    <div><strong>Exercises:</strong> {response.totalExercises}</div>
                 </div>,
                 {
                     position: "top-right",
@@ -147,15 +142,14 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
             handleClosePopup();
 
         } catch (error) {
-            console.error('Eroare la salvarea planului:', error);
-            setError(error.message || 'A apărut o eroare la salvarea planului de workout');
+            console.error('Error saving plan:', error);
+            setError(error.message || 'An error occurred while saving the workout plan');
         } finally {
             setLoading(false);
         }
     };
 
     const handleClosePopup = () => {
-        // Resetează toate datele
         setWorkoutData({
             plan_name: '',
             description: '',
@@ -207,7 +201,6 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
                 boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
                 position: 'relative'
             }}>
-                {/* Close button */}
                 <button
                     onClick={handleClosePopup}
                     disabled={loading}
@@ -245,7 +238,6 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
                     Create New Workout Plan
                 </h2>
 
-                {/* Error message */}
                 {error && (
                     <div style={{
                         backgroundColor: '#fed7d7',
@@ -261,7 +253,6 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
                     </div>
                 )}
 
-                {/* Loading overlay */}
                 {loading && (
                     <div style={{
                         position: 'absolute',
@@ -285,12 +276,11 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
                                 marginBottom: '16px',
                                 animation: 'spin 1s linear infinite'
                             }}>⚡</div>
-                            <div style={{ fontWeight: '600' }}>Se creează planul de workout...</div>
+                            <div style={{ fontWeight: '600' }}>Creating workout plan...</div>
                         </div>
                     </div>
                 )}
 
-                {/* Workout Plan Details */}
                 <div style={{
                     backgroundColor: '#f7fafc',
                     padding: '24px',
@@ -485,7 +475,6 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
                     </div>
                 </div>
 
-                {/* Add Exercise Section */}
                 <div style={{
                     backgroundColor: '#f0fff4',
                     padding: '24px',
@@ -747,7 +736,6 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
                     </div>
                 </div>
 
-                {/* Added Exercises List */}
                 {workoutData.exercises.length > 0 && (
                     <div style={{
                         backgroundColor: '#fffbf0',
@@ -816,7 +804,6 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
                     </div>
                 )}
 
-                {/* Action Buttons */}
                 <div style={{
                     display: 'flex',
                     gap: '12px',
@@ -857,11 +844,10 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
                             fontWeight: '600'
                         }}
                     >
-                        {loading ? 'Se creează...' : 'Create Workout Plan'}
+                        {loading ? 'Creating...' : 'Create Workout Plan'}
                     </button>
                 </div>
 
-                {/* CSS for animations */}
                 <style jsx>{`
                     @keyframes spin {
                         0% { transform: rotate(0deg); }

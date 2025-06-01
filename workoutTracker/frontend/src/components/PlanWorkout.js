@@ -13,8 +13,6 @@ const WorkoutPlanService = {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    // Adaugă authorization header dacă e necesar
-                    // 'Authorization': `Bearer ${token}`
                 }
             });
 
@@ -32,9 +30,6 @@ const WorkoutPlanService = {
         }
     },
 
-    /**
-     * Obține un plan specific cu detaliile exercițiilor
-     */
     getWorkoutPlanById: async (workoutPlanId) => {
         try {
             const response = await fetch(`${API_BASE_URL}/workout-plans/${workoutPlanId}`, {
@@ -56,35 +51,6 @@ const WorkoutPlanService = {
         }
     },
 
-    /**
-     * Creează un plan de workout nou
-
-    createWorkoutPlan: async (planData) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/workout-plans`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(planData)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to create workout plan');
-            }
-
-            return await response.json();
-
-        } catch (error) {
-            console.error('Error creating workout plan:', error);
-            throw error;
-        }
-    },
-     */
-    /**
-     * Șterge un plan de workout
-     */
     deleteWorkoutPlan: async (workoutPlanId) => {
         try {
             const response = await fetch(`${API_BASE_URL}/workout-plans/${workoutPlanId}`, {
@@ -106,35 +72,6 @@ const WorkoutPlanService = {
         }
     },
 
-    /**
-     * Actualizează un plan de workout
-
-    updateWorkoutPlan: async (workoutPlanId, updatedData) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/workout-plans/${workoutPlanId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updatedData)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to update workout plan');
-            }
-
-            return await response.json();
-
-        } catch (error) {
-            console.error('Error updating workout plan:', error);
-            throw error;
-        }
-    },
-     */
-    /**
-     * Numără planurile utilizatorului
-     */
     countUserWorkoutPlans: async (userId) => {
         try {
             const response = await fetch(`${API_BASE_URL}/workout-plans/user/${userId}/count`, {
@@ -160,9 +97,7 @@ const WorkoutPlanService = {
 
 
 const ScheduledWorkoutService = {
-    /**
-     * Obține workout-urile PROGRAMATE ale utilizatorului
-     */
+
     getUserScheduledWorkouts: async (userId) => {
         try {
             const response = await fetch(`${API_BASE_URL}/scheduled-workouts/user/${userId}`, {
@@ -258,7 +193,6 @@ const ScheduledWorkoutService = {
         }
     },
 
-    // NEW: Cancel workout function
     cancelWorkout: async (workoutId) => {
         try {
             const response = await fetch(`${API_BASE_URL}/scheduled-workouts/${workoutId}/cancel`, {
@@ -283,11 +217,9 @@ const ScheduledWorkoutService = {
 };
 
 const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
-    // State pentru workout plans (templates)
     const [workoutPlans, setWorkoutPlans] = useState([]);
     const [loadingPlans, setLoadingPlans] = useState(false);
 
-    // State pentru scheduled workouts
     const [scheduledWorkouts, setScheduledWorkouts] = useState([]);
     const [loadingWorkouts, setLoadingWorkouts] = useState(false);
 
@@ -306,14 +238,12 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [selectedPlanForScheduling, setSelectedPlanForScheduling] = useState(null);
 
-    // NEW STATE FOR COMPLETE WORKOUT MODAL
     const [showCompleteModal, setShowCompleteModal] = useState(false);
     const [completeWorkoutData, setCompleteWorkoutData] = useState({
         caloriesBurned: '',
         rating: 5
     });
 
-    // Încarcă datele când se deschide popup-ul
     useEffect(() => {
         if (isOpen) {
             loadWorkoutPlans();
@@ -329,7 +259,6 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
         return workout.scheduledDate === today;
     };
 
-    // NEW: Get workout action button properties
     const getWorkoutActionButton = (workout) => {
         if (!isWorkoutToday(workout)) return null;
 
@@ -371,7 +300,6 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                     color: '#ef4444',
                     enabled: false
                 };
-            // Legacy status handling
             case 'scheduled':
                 return {
                     text: '▶️ Start Workout',
@@ -389,7 +317,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
         }
     };
 
-    // Încarcă planurile de workout (templates)
+
     const loadWorkoutPlans = async () => {
         setLoadingPlans(true);
         setError('');
@@ -399,13 +327,13 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
             console.log('Loaded workout plans:', plans);
         } catch (error) {
             console.error('Error loading workout plans:', error);
-            setError('Nu s-au putut încărca planurile de workout');
+            setError('Could not load workout plans');
         } finally {
             setLoadingPlans(false);
         }
     };
 
-    // Încarcă workout-urile programate
+
     const loadScheduledWorkouts = async () => {
         setLoadingWorkouts(true);
         setError('');
@@ -415,25 +343,21 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
             console.log('Loaded scheduled workouts:', workouts);
         } catch (error) {
             console.error('Error loading scheduled workouts:', error);
-            setError('Nu s-au putut încărca workout-urile programate');
+            setError('Could not load scheduled workouts');
         } finally {
             setLoadingWorkouts(false);
         }
     };
 
-    // NEW FUNCTION TO HANDLE SCHEDULING
     const handleScheduleWorkout = (plan) => {
         setSelectedPlanForScheduling(plan);
         setShowScheduleModal(true);
     };
 
-    // NEW CALLBACK FOR WHEN WORKOUT IS SCHEDULED
     const handleWorkoutScheduled = (result) => {
         console.log('Workout scheduled successfully:', result);
-        // Refresh the scheduled workouts list
         loadScheduledWorkouts();
-        // Show success message (optional)
-        setError(''); // Clear any existing errors
+        setError('');
     };
 
     const handleStartWorkout = async (workout) => {
@@ -443,9 +367,6 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
         try {
             await ScheduledWorkoutService.startWorkout(workout.scheduledWorkoutId);
 
-            alert(`Workout "${workout.workoutPlan?.planName || 'Workout'}" started successfully! 🎯`);
-
-            // Reload workouts to update status
             await loadScheduledWorkouts();
 
         } catch (error) {
@@ -456,8 +377,6 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
         }
     };
 
-
-    // NEW: Handle complete workout (show modal)
     const handleCompleteWorkoutClick = (workout) => {
         setSelectedWorkout(workout);
         setCompleteWorkoutData({
@@ -480,9 +399,6 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                 completeWorkoutData.rating
             );
 
-            alert(`Workout "${selectedWorkout.workoutPlan?.planName || 'Workout'}" completed successfully! 🎉\nCalories: ${completeWorkoutData.caloriesBurned || 'Not specified'}\nRating: ${completeWorkoutData.rating}/5 stars`);
-
-            // Close modal and reload workouts
             setShowCompleteModal(false);
             setSelectedWorkout(null);
             await loadScheduledWorkouts();
@@ -510,18 +426,12 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
     const cleanWorkoutTitle = (planName) => {
         if (!planName) return 'Workout';
 
-        // Îndepărtează "(Goal X)" și timestamp-ul din titlu
         let cleanTitle = planName
-            // Îndepărtează "(Goal [număr])"
             .replace(/\(Goal \d+\)/gi, '')
-            // Îndepărtează timestamp-urile în format "- YYYY-MM-DD HH:MM"
             .replace(/\s*-\s*\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/g, '')
-            // Îndepărtează timestamp-urile în alte formate comune
             .replace(/\s*-\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/g, '')
             .replace(/\s*-\s*\d{2}:\d{2}/g, '')
-            // Curăță spațiile extra
             .trim()
-            // Îndepărtează multiple spații consecutive
             .replace(/\s+/g, ' ');
 
         return cleanTitle || 'Workout';
@@ -529,17 +439,17 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
 
     const handleRescheduleWorkout = async () => {
         if (!selectedWorkout) {
-            setError('Selectează un workout pentru a-l reprograma');
+            setError('Select a workout to reschedule');
             return;
         }
 
         if (!scheduleData.scheduledDate) {
-            setError('Selectează o dată');
+            setError('Select a date');
             return;
         }
 
         if (!scheduleData.scheduledTime) {
-            setError('Selectează o oră');
+            setError('Select an hour');
             return;
         }
 
@@ -553,18 +463,13 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                 scheduleData.scheduledTime
             );
 
-            console.log('Workout reprogramat cu succes:', response);
-
-            // Success message
-            alert(`Workout-ul "${selectedWorkout.workoutPlan?.planName || 'Workout'}" a fost reprogramat cu succes!\nData nouă: ${scheduleData.scheduledDate}\nOra nouă: ${scheduleData.scheduledTime}`);
-
-            // Reîncarcă workout-urile și închide popup-ul
+            console.log('Workout successfully rescheduled:', response);
             await loadScheduledWorkouts();
             handleClosePopup();
 
         } catch (error) {
-            console.error('Eroare la reprogramarea workout-ului:', error);
-            setError(error.message || 'A apărut o eroare la reprogramarea workout-ului');
+            console.error('Error at rescheduling the workout:', error);
+            setError(error.message || 'Error reschedule');
         } finally {
             setLoading(false);
         }
@@ -609,7 +514,6 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                 return {bg: '#ffe6e6', border: '#e53e3e', text: '#c53030'};
             case 'missed':
                 return {bg: '#fef2f2', border: '#ef4444', text: '#dc2626'};
-            // Legacy status mappings (if your backend sometimes returns these)
             case 'scheduled':
             case 'programat':
                 return {bg: '#e6f3ff', border: '#3182ce', text: '#2c5282'};
@@ -872,7 +776,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                         </div>
                     )}
 
-                    {/* Scheduled Workouts Tab - ENHANCED with action buttons */}
+                    {/* Scheduled Workouts Tab*/}
                     {activeTab === 'scheduled' && (
                         <div style={{
                             backgroundColor: '#f7fafc',
@@ -935,7 +839,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                     position: 'relative'
                                                 }}
                                             >
-                                                {/* Action button for today's workouts - positioned at top right */}
+                                                {/* Action button for today's workouts */}
                                                 {actionButton && (
                                                     <div style={{
                                                         position: 'absolute',
@@ -971,7 +875,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                     </div>
                                                 )}
 
-                                                {/* Workout card content - adjusted to not overlap with button */}
+                                                {/* Workout card content */}
                                                 <div
                                                     onClick={() => setSelectedWorkout(workout)}
                                                     style={{
@@ -1266,7 +1170,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                         </div>
                     )}
 
-                    {/* Enhanced Reschedule section - replace your existing reschedule section */}
+                    {/* Enhanced Reschedule section*/}
                     {activeTab === 'scheduled' && selectedWorkout && (
                         <div style={{
                             backgroundColor: '#f0fff4',
@@ -1687,10 +1591,10 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                                         try {
                                             const planDetails = await WorkoutPlanService.getWorkoutPlanById(selectedPlan.workoutPlanId);
                                             console.log('Plan details with exercises:', planDetails);
-                                            alert(`Plan "${planDetails.planName}" loaded! Check console for details.`);
+
                                         } catch (error) {
                                             console.error('Error loading plan details:', error);
-                                            alert('Error loading plan details: ' + error.message);
+
                                         }
                                     }}
                                     style={{
@@ -1710,7 +1614,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                                 <button
                                     onClick={() => {
                                         console.log('Edit plan:', selectedPlan.workoutPlanId);
-                                        alert('Edit functionality - implement redirect to edit page');
+
                                     }}
                                     style={{
                                         background: 'linear-gradient(135deg, #f59e0b, #d97706)',
@@ -1731,12 +1635,12 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                                         if (window.confirm(`Are you sure you want to delete "${selectedPlan.planName}"?`)) {
                                             try {
                                                 await WorkoutPlanService.deleteWorkoutPlan(selectedPlan.workoutPlanId);
-                                                alert('Plan deleted successfully!');
+
                                                 await loadWorkoutPlans();
                                                 setSelectedPlan(null);
                                             } catch (error) {
                                                 console.error('Error deleting plan:', error);
-                                                alert('Error deleting plan: ' + error.message);
+
                                             }
                                         }
                                     }}

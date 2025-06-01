@@ -1,14 +1,8 @@
-// components/Analytics.js
 import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = 'http://localhost:8082/api';
 
-// Dashboard API Service
-// Updated DashboardService with Goals integration
 const DashboardService = {
-    /**
-     * Get complete dashboard summary
-     */
     getDashboardSummary: async (userId) => {
         try {
             const response = await fetch(`${API_BASE_URL}/dashboard/summary/${userId}`, {
@@ -30,9 +24,6 @@ const DashboardService = {
         }
     },
 
-    /**
-     * Get workout calendar data for heatmap
-     */
     getWorkoutCalendar: async (userId, startDate, endDate) => {
         try {
             let url = `${API_BASE_URL}/dashboard/calendar/${userId}`;
@@ -59,9 +50,6 @@ const DashboardService = {
         }
     },
 
-    /**
-     * Get workout trends for charts
-     */
     getWorkoutTrends: async (userId, period = 'weekly', startDate, endDate) => {
         try {
             let url = `${API_BASE_URL}/dashboard/trends/${userId}?period=${period}`;
@@ -88,9 +76,6 @@ const DashboardService = {
         }
     },
 
-    /**
-     * Get workout type breakdown
-     */
     getWorkoutTypeBreakdown: async (userId, startDate, endDate) => {
         try {
             let url = `${API_BASE_URL}/dashboard/workout-types/${userId}`;
@@ -117,16 +102,11 @@ const DashboardService = {
         }
     },
 
-    /**
-     * Get recent achievements - NEW VERSION with goals integration
-     */
     getRecentAchievements: async (userId, daysBack = 30) => {
         try {
-            // Încercăm să obținem achievements din endpoint-ul original
             let achievements = [];
             let completedGoals = [];
 
-            // Încearcă să obții achievements normale (dacă funcționează)
             try {
                 const achievementsResponse = await fetch(`${API_BASE_URL}/dashboard/achievements/${userId}?daysBack=${daysBack}`, {
                     method: 'GET',
@@ -143,7 +123,6 @@ const DashboardService = {
                 console.warn('Could not fetch regular achievements, continuing with goals only:', achievementsError);
             }
 
-            // Obține goalurile completed (dacă ai implementat endpoint-ul)
             try {
                 const goalsResponse = await fetch(`${API_BASE_URL}/goals/achievements/${userId}/completed-goals?daysBack=${daysBack}`, {
                     method: 'GET',
@@ -159,7 +138,6 @@ const DashboardService = {
             } catch (goalsError) {
                 console.warn('Could not fetch completed goals:', goalsError);
 
-                // Fallback - încearcă să obții goalurile completed dintr-un endpoint existent
                 try {
                     const allGoalsResponse = await fetch(`${API_BASE_URL}/goals/user/${userId}`, {
                         method: 'GET',
@@ -172,7 +150,6 @@ const DashboardService = {
                         const allGoalsData = await allGoalsResponse.json();
                         const allGoals = allGoalsData.goals || [];
 
-                        // Filtrează goalurile completed din ultimele X zile
                         const cutoffDate = new Date();
                         cutoffDate.setDate(cutoffDate.getDate() - daysBack);
 
@@ -196,13 +173,11 @@ const DashboardService = {
                 }
             }
 
-            // Combină achievements și goalurile completed
             const combinedAchievements = [
                 ...achievements,
                 ...completedGoals
             ];
 
-            // Sortează după dată
             combinedAchievements.sort((a, b) => {
                 const dateA = new Date(a.achievedAt || a.achievedDate || 0);
                 const dateB = new Date(b.achievedAt || b.achievedDate || 0);
@@ -213,7 +188,6 @@ const DashboardService = {
 
         } catch (error) {
             console.error('Error fetching achievements:', error);
-            // Returnează array gol în loc să arunce eroare
             return [];
         }
     },
@@ -286,9 +260,6 @@ const DashboardService = {
         return basePoints;
     },
 
-    /**
-     * Get quick stats for summary cards
-     */
     getQuickStats: async (userId) => {
         try {
             const response = await fetch(`${API_BASE_URL}/dashboard/quick-stats/${userId}`, {
@@ -312,22 +283,18 @@ const DashboardService = {
 };
 
 const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
-    // State for dashboard data
     const [dashboardData, setDashboardData] = useState(null);
     const [workoutCalendar, setWorkoutCalendar] = useState([]);
     const [workoutTrends, setWorkoutTrends] = useState([]);
     const [workoutTypes, setWorkoutTypes] = useState([]);
     const [achievements, setAchievements] = useState([]);
 
-    // Loading and error states
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // View settings
     const [selectedPeriod, setSelectedPeriod] = useState('weekly');
     const [selectedTab, setSelectedTab] = useState('overview');
 
-    // Load dashboard data when component opens
     useEffect(() => {
         if (isOpen) {
             loadDashboardData();
@@ -339,25 +306,20 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
         setError('');
 
         try {
-            // Load main dashboard summary
             const summary = await DashboardService.getDashboardSummary(currentUserId);
             setDashboardData(summary);
 
-            // Load workout calendar (last 365 days)
             const endDate = new Date().toISOString().split('T')[0];
             const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
             const calendar = await DashboardService.getWorkoutCalendar(currentUserId, startDate, endDate);
             setWorkoutCalendar(calendar);
 
-            // Load workout trends
             const trends = await DashboardService.getWorkoutTrends(currentUserId, selectedPeriod);
             setWorkoutTrends(trends);
 
-            // Load workout type breakdown
             const types = await DashboardService.getWorkoutTypeBreakdown(currentUserId);
             setWorkoutTypes(types);
 
-            // Load achievements
             const recentAchievements = await DashboardService.getRecentAchievements(currentUserId, 30);
             setAchievements(recentAchievements);
 
@@ -371,7 +333,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
         }
     };
 
-    // Handle period change for trends
     const handlePeriodChange = async (newPeriod) => {
         setSelectedPeriod(newPeriod);
         try {
@@ -382,25 +343,22 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
         }
     };
 
-    // Format numbers for display
     const formatNumber = (num) => {
         if (num === null || num === undefined) return '0';
         return num.toLocaleString();
     };
 
-    // Get intensity color for calendar heatmap
     const getIntensityColor = (level) => {
         const colors = {
-            0: '#f0f0f0',  // No workout
-            1: '#c6e48b',  // Light
-            2: '#7bc96f',  // Medium
-            3: '#239a3b',  // High
-            4: '#196127'   // Very high
+            0: '#f0f0f0',
+            1: '#c6e48b',
+            2: '#7bc96f',
+            3: '#239a3b',
+            4: '#196127'
         };
         return colors[level] || colors[0];
     };
 
-    // Get category emoji
     const getCategoryEmoji = (category) => {
         const emojis = {
             'CARDIO': '🏃',
@@ -440,7 +398,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                 boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
                 position: 'relative'
             }}>
-                {/* Close button */}
                 <button
                     onClick={onClose}
                     style={{
@@ -463,7 +420,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                     ×
                 </button>
 
-                {/* Header */}
                 <div style={{ marginBottom: '32px' }}>
                     <h1 style={{
                         color: '#000000',
@@ -484,7 +440,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                     </p>
                 </div>
 
-                {/* Tab Navigation */}
                 <div style={{
                     display: 'flex',
                     marginBottom: '32px',
@@ -515,7 +470,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                     ))}
                 </div>
 
-                {/* Loading State */}
                 {loading && (
                     <div style={{
                         textAlign: 'center',
@@ -531,7 +485,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                     </div>
                 )}
 
-                {/* Error State */}
                 {error && (
                     <div style={{
                         backgroundColor: '#fed7d7',
@@ -562,20 +515,16 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                     </div>
                 )}
 
-                {/* Dashboard Content */}
                 {!loading && !error && dashboardData && (
                     <>
-                        {/* Overview Tab */}
                         {selectedTab === 'overview' && (
                             <div>
-                                {/* Summary Cards */}
                                 <div style={{
                                     display: 'grid',
                                     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
                                     gap: '20px',
                                     marginBottom: '32px'
                                 }}>
-                                    {/* Weekly Workouts Card */}
                                     <div style={{
                                         background: 'linear-gradient(135deg, #667eea, #764ba2)',
                                         padding: '24px',
@@ -593,7 +542,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                         </div>
                                     </div>
 
-                                    {/* Monthly Progress Card */}
                                     <div style={{
                                         background: 'linear-gradient(135deg, #f093fb, #f5576c)',
                                         padding: '24px',
@@ -611,7 +559,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                         </div>
                                     </div>
 
-                                    {/* Current Streak Card */}
                                     <div style={{
                                         background: 'linear-gradient(135deg, #4facfe, #00f2fe)',
                                         padding: '24px',
@@ -629,7 +576,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                         </div>
                                     </div>
 
-                                    {/* Total Progress Card */}
                                     <div style={{
                                         background: 'linear-gradient(135deg, #fa709a, #fee140)',
                                         padding: '24px',
@@ -648,7 +594,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                     </div>
                                 </div>
 
-                                {/* Workout Types Breakdown */}
                                 {workoutTypes.length > 0 && (
                                     <div style={{
                                         backgroundColor: '#f7fafc',
@@ -708,7 +653,7 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                 )}
                             </div>
                         )}
-                        {/* Achievements Tab Component*/}
+
                         {selectedTab === 'achievements' && (
                             <div>
                                 <div style={{
@@ -748,7 +693,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                             gap: '16px'
                                         }}>
                                             {achievements.map((achievement, index) => {
-                                                // Verifică dacă este un goal completed sau achievement normal
                                                 const isGoalAchievement = achievement.type === 'COMPLETED_GOAL';
 
                                                 return (
@@ -775,7 +719,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                                             alignItems: 'flex-start',
                                                             gap: '16px'
                                                         }}>
-                                                            {/* Icon */}
                                                             <div style={{
                                                                 fontSize: '32px',
                                                                 minWidth: '40px',
@@ -784,7 +727,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                                                 {achievement.icon || (isGoalAchievement ? '🎯' : '🏆')}
                                                             </div>
 
-                                                            {/* Content */}
                                                             <div style={{ flex: 1 }}>
                                                                 <div style={{
                                                                     color: '#2d3748',
@@ -824,7 +766,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                                                     })}
                                                                     </div>
 
-                                                                    {/* Badges */}
                                                                     <div style={{
                                                                         display: 'flex',
                                                                         gap: '8px',
@@ -858,7 +799,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                                                     </div>
                                                                 </div>
 
-                                                                {/* Goal specific details */}
                                                                 {isGoalAchievement && achievement.originalGoal && (
                                                                     <div style={{
                                                                         marginTop: '12px',
@@ -929,7 +869,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                         </div>
                                     )}
 
-                                    {/* Achievement Stats Summary */}
                                     {achievements.length > 0 && (
                                         <div style={{
                                             marginTop: '24px',
@@ -1005,10 +944,9 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                 </div>
                             </div>
                         )}
-                        {/* Trends Tab */}
+
                         {selectedTab === 'trends' && (
                             <div>
-                                {/* Period Selector */}
                                 <div style={{ marginBottom: '24px' }}>
                                     <div style={{
                                         display: 'flex',
@@ -1037,7 +975,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                     </div>
                                 </div>
 
-                                {/* Trends Chart (Simple visualization) */}
                                 <div style={{
                                     backgroundColor: '#f7fafc',
                                     padding: '24px',
@@ -1114,7 +1051,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                             </div>
                         )}
 
-                        {/* Calendar Tab */}
                         {selectedTab === 'calendar' && (
                             <div>
                                 <div style={{
@@ -1131,7 +1067,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                         Workout Calendar (Last 365 Days)
                                     </h3>
 
-                                    {/* Simple Calendar Heatmap */}
                                     <div style={{
                                         display: 'grid',
                                         gridTemplateColumns: 'repeat(auto-fill, minmax(12px, 1fr))',
@@ -1153,7 +1088,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                                         ))}
                                     </div>
 
-                                    {/* Legend */}
                                     <div style={{
                                         marginTop: '20px',
                                         display: 'flex',
@@ -1182,7 +1116,6 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                     </>
                 )}
 
-                {/* Footer */}
                 <div style={{
                     marginTop: '32px',
                     padding: '20px',
@@ -1193,13 +1126,12 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
                 }}>
                 </div>
 
-                {/* CSS Animations */}
                 <style jsx>{`
                     @keyframes spin {
                         0% { transform: rotate(0deg); }
                         100% { transform: rotate(360deg); }
                     }
-                    
+
                     @keyframes fadeIn {
                         from { opacity: 0; transform: translateY(20px); }
                         to { opacity: 1; transform: translateY(0); }

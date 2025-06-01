@@ -63,7 +63,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
     const [maxExercises, setMaxExercises] = useState(8);
     const [saving, setSaving] = useState(false);
 
-    // Mapare goal type pentru backend
     const mapGoalTypeForBackend = (goalType) => {
         const goalMapping = {
             'lose_weight': 'WEIGHT_LOSS',
@@ -73,7 +72,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
         return goalMapping[goalType] || 'MAINTENANCE';
     };
 
-    // Mapare goal type pentru display
     const mapGoalTypeForDisplay = (goalType) => {
         const goalMapping = {
             'lose_weight': 'Weight Loss',
@@ -83,7 +81,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
         return goalMapping[goalType] || goalType;
     };
 
-    // Încarcă recomandările când componenta se montează
     useEffect(() => {
         if (user?.id && goal?.goalType) {
             getRecommendations();
@@ -132,7 +129,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
             setSaving(true);
             setError('');
 
-            // Trimite un titlu simplu, curat
             const response = await fetch(`http://localhost:8082/api/workouts/save-recommended-plan`, {
                 method: 'POST',
                 headers: {
@@ -188,9 +184,9 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
     };
 
     const getDifficultyColor = (score) => {
-        if (score >= 4) return '#e53e3e'; // red for hard
-        if (score >= 3) return '#f6ad55'; // orange for medium
-        return '#38a169'; // green for easy
+        if (score >= 4) return '#e53e3e';
+        if (score >= 3) return '#f6ad55';
+        return '#38a169';
     };
 
     const getDifficultyText = (score) => {
@@ -222,7 +218,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                 maxHeight: '90vh',
                 overflowY: 'auto'
             }}>
-                {/* Back button */}
                 <button
                     onClick={onBack}
                     style={{
@@ -245,7 +240,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                     ← Back to Goals
                 </button>
 
-                {/* Header */}
                 <div style={{textAlign: 'center', marginBottom: '40px', marginTop: '40px'}}>
                     <div>
                         <img
@@ -280,7 +274,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                     </p>
                 </div>
 
-                {/* Workout Settings */}
                 <div style={{
                     display: 'flex',
                     gap: '16px',
@@ -292,7 +285,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
 
                 </div>
 
-                {/* Success message */}
                 {success && (
                     <div style={{
                         background: 'linear-gradient(135deg, rgba(67, 233, 123, 0.1), rgba(67, 233, 123, 0.05))',
@@ -309,7 +301,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                     </div>
                 )}
 
-                {/* Error message */}
                 {error && (
                     <div style={{
                         background: 'linear-gradient(135deg, rgba(245, 87, 108, 0.1), rgba(245, 87, 108, 0.05))',
@@ -326,7 +317,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                     </div>
                 )}
 
-                {/* Loading state */}
                 {loading && (
                     <div style={{textAlign: 'center', padding: '40px'}}>
                         <div style={{
@@ -344,7 +334,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                     </div>
                 )}
 
-                {/* Recommendations list */}
                 {!loading && recommendations.length > 0 && (
                     <>
                         <div style={{
@@ -366,7 +355,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                                         gap: '20px'
                                     }}
                                 >
-                                    {/* Exercise icon and order */}
                                     <div style={{
                                         display: 'flex',
                                         flexDirection: 'column',
@@ -381,7 +369,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
 
                                     </div>
 
-                                    {/* Exercise details */}
                                     <div style={{flex: 1}}>
                                         <h3 style={{
                                             color: '#1a202c',
@@ -455,7 +442,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                                             </div>
                                         </div>
 
-                                        {/* Priority score */}
                                         <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                                             <span style={{fontSize: '12px', color: '#718096'}}>
                                                 Difficulty:
@@ -479,7 +465,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                             ))}
                         </div>
 
-                        {/* Save workout plan button */}
                         <div style={{textAlign: 'center'}}>
                             <button
                                 onClick={handleSaveWorkoutPlan}
@@ -503,7 +488,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                     </>
                 )}
 
-                {/* Empty state */}
                 {!loading && recommendations.length === 0 && !error && (
                     <div style={{textAlign: 'center', padding: '60px 20px'}}>
                         <div style={{fontSize: '64px', marginBottom: '24px', opacity: '0.5'}}>

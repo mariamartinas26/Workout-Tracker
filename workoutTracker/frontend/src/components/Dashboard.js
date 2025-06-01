@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import CreatePlan from './CreatePlan';
 import PlanWorkout from './PlanWorkout';
-import Analytics from './Analytics'; // Add this import
+import Analytics from './Analytics';
 
 const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals }) => {
     const [showWorkoutPopup, setShowWorkoutPopup] = useState(false);
     const [showSchedulerPopup, setShowSchedulerPopup] = useState(false);
-    const [showAnalytics, setShowAnalytics] = useState(false); // Add this state
+    const [showAnalytics, setShowAnalytics] = useState(false);
 
-    // Debug - să vedem state-ul
+
     console.log('showSchedulerPopup state:', showSchedulerPopup);
 
     return (
@@ -81,7 +81,6 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                     objectFit: 'contain'
                                 }}
                                 onError={(e) => {
-                                    // Fallback în caz că imaginea nu se poate încărca
                                     e.target.style.display = 'none';
                                     e.target.nextSibling.style.display = 'flex';
                                 }}
@@ -404,7 +403,6 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                         objectFit: 'contain'
                                     }}
                                     onError={(e) => {
-                                        // Fallback în caz că imaginea nu se poate încărca
                                         e.target.style.display = 'none';
                                         e.target.nextSibling.style.display = 'flex';
                                     }}
@@ -466,7 +464,6 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                         objectFit: 'contain'
                                     }}
                                     onError={(e) => {
-                                        // Fallback în caz că imaginea nu se poate încărca
                                         e.target.style.display = 'none';
                                         e.target.nextSibling.style.display = 'flex';
                                     }}
@@ -522,7 +519,6 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                                         objectFit: 'contain'
                                     }}
                                     onError={(e) => {
-                                        // Fallback în caz că imaginea nu se poate încărca
                                         e.target.style.display = 'none';
                                         e.target.nextSibling.style.display = 'flex';
                                     }}
@@ -551,12 +547,12 @@ const Dashboard = ({ user, sampleExercises, onLogout, onEditProfile, onGoToGoals
                 </div>
             </div>
 
-            {/* Popupuri - ALL THREE COMPONENTS */}
+            {/* Popupuri  */}
             <CreatePlan
                 isOpen={showWorkoutPopup}
                 onClose={() => setShowWorkoutPopup(false)}
                 sampleExercises={sampleExercises}
-                currentUserId={user?.id || user?.userId || user?.user_id || 1} // Handle different ID formats
+                currentUserId={user?.id || user?.userId || user?.user_id || 1}
             />
             <PlanWorkout
                 isOpen={showSchedulerPopup}

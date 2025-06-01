@@ -1,21 +1,15 @@
-// components/WorkoutSchedule.js
 import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = 'http://localhost:8082/api';
 
-// Service pentru programarea workout-urilor
 const ScheduleWorkoutService = {
-    /**
-     * Programează un workout nou
-     */
     scheduleWorkout: async (userId, workoutPlanId, scheduledDate, scheduledTime) => {
         try {
-            // Ensure proper data types and format
             const requestData = {
                 userId: parseInt(userId),
                 workoutPlanId: parseInt(workoutPlanId),
-                scheduledDate: scheduledDate, // Should be in YYYY-MM-DD format
-                scheduledTime: scheduledTime   // Should be in HH:MM format
+                scheduledDate: scheduledDate,
+                scheduledTime: scheduledTime
             };
 
             console.log('Sending schedule request:', requestData);
@@ -24,8 +18,6 @@ const ScheduleWorkoutService = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // Adaugă authorization header dacă e necesar
-                    // 'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(requestData)
             });
@@ -40,7 +32,6 @@ const ScheduleWorkoutService = {
                     errorMessage = errorData.message || errorData.error || errorMessage;
                     console.error('Error response data:', errorData);
                 } catch (parseError) {
-                    // If response is not JSON, get text
                     const errorText = await response.text();
                     console.error('Error response text:', errorText);
                     errorMessage = errorText || errorMessage;
@@ -58,9 +49,6 @@ const ScheduleWorkoutService = {
         }
     },
 
-    /**
-     * Verifică dacă utilizatorul are deja un workout programat la data și ora respectivă
-     */
     checkConflictingSchedule: async (userId, scheduledDate, scheduledTime) => {
         try {
             const response = await fetch(`${API_BASE_URL}/scheduled-workouts/user/${userId}`, {
@@ -71,12 +59,11 @@ const ScheduleWorkoutService = {
             });
 
             if (!response.ok) {
-                return false; // În caz de eroare, presupunem că nu există conflict
+                return false;
             }
 
             const scheduledWorkouts = await response.json();
 
-            // Verifică dacă există un workout la aceeași dată și oră
             const conflict = scheduledWorkouts.some(workout => {
                 const workoutDate = new Date(workout.scheduledDate).toISOString().split('T')[0];
                 const workoutTime = workout.scheduledTime ? workout.scheduledTime.substring(0, 5) : '';
@@ -84,7 +71,7 @@ const ScheduleWorkoutService = {
                 return workoutDate === scheduledDate &&
                     workoutTime === scheduledTime &&
                     workout.status !== 'cancelled' &&
-                    workout.status !== 'anulat';
+                    workout.status !== 'canceled';
             });
 
             return conflict;
@@ -97,12 +84,12 @@ const ScheduleWorkoutService = {
 };
 
 const WorkoutSchedule = ({
-                                  isOpen,
-                                  onClose,
-                                  workoutPlan,
-                                  currentUserId = 1,
-                                  onWorkoutScheduled // Callback pentru când workout-ul a fost programat cu succes
-                              }) => {
+                             isOpen,
+                             onClose,
+                             workoutPlan,
+                             currentUserId = 1,
+                             onWorkoutScheduled
+                         }) => {
     const [scheduleData, setScheduleData] = useState({
         scheduledDate: '',
         scheduledTime: '10:00'
@@ -113,7 +100,6 @@ const WorkoutSchedule = ({
     const [success, setSuccess] = useState('');
     const [hasConflict, setHasConflict] = useState(false);
 
-    // Resetează starea când se deschide modal-ul
     useEffect(() => {
         if (isOpen) {
             const today = new Date().toISOString().split('T')[0];
@@ -127,7 +113,6 @@ const WorkoutSchedule = ({
         }
     }, [isOpen]);
 
-    // Verifică conflictele când se schimbă data sau ora
     useEffect(() => {
         if (isOpen && scheduleData.scheduledDate && scheduleData.scheduledTime) {
             checkForConflicts();
@@ -149,53 +134,48 @@ const WorkoutSchedule = ({
     };
 
     const handleScheduleWorkout = async () => {
-        // Validări
         if (!workoutPlan) {
-            setError('Nu a fost selectat niciun plan de workout');
+            setError('No workout plan selected');
             return;
         }
 
         if (!scheduleData.scheduledDate) {
-            setError('Selectează o dată pentru workout');
+            setError('Please select a date for the workout');
             return;
         }
 
         if (!scheduleData.scheduledTime) {
-            setError('Selectează o oră pentru workout');
+            setError('Please select a time for the workout');
             return;
         }
 
-        // Validează formatul datei (YYYY-MM-DD)
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
         if (!dateRegex.test(scheduleData.scheduledDate)) {
-            setError('Formatul datei nu este valid (YYYY-MM-DD)');
+            setError('Invalid date format (YYYY-MM-DD)');
             return;
         }
 
-        // Validează formatul orei (HH:MM)
         const timeRegex = /^\d{2}:\d{2}$/;
         if (!timeRegex.test(scheduleData.scheduledTime)) {
-            setError('Formatul orei nu este valid (HH:MM)');
+            setError('Invalid time format (HH:MM)');
             return;
         }
 
-        // Verifică dacă data nu este în trecut
         const selectedDateTime = new Date(`${scheduleData.scheduledDate}T${scheduleData.scheduledTime}`);
         const now = new Date();
 
         if (selectedDateTime < now) {
-            setError('Nu poți programa un workout în trecut');
+            setError('Cannot schedule a workout in the past');
             return;
         }
 
-        // Validează că IDs sunt numere valide
         if (!workoutPlan.workoutPlanId || isNaN(workoutPlan.workoutPlanId)) {
-            setError('ID-ul planului de workout nu este valid');
+            setError('Invalid workout plan ID');
             return;
         }
 
         if (!currentUserId || isNaN(currentUserId)) {
-            setError('ID-ul utilizatorului nu este valid');
+            setError('Invalid user ID');
             return;
         }
 
@@ -218,34 +198,31 @@ const WorkoutSchedule = ({
                 scheduleData.scheduledTime
             );
 
-            setSuccess(`Workout-ul "${workoutPlan.planName}" a fost programat cu succes!`);
+            setSuccess(`Workout "${workoutPlan.planName}" has been scheduled successfully!`);
 
-            // Notifică componenta părinte despre succesul operației
             if (onWorkoutScheduled) {
                 onWorkoutScheduled(result);
             }
 
-            // Închide modal-ul după 2 secunde
             setTimeout(() => {
                 handleCloseModal();
             }, 2000);
 
         } catch (error) {
-            console.error('Eroare la programarea workout-ului:', error);
+            console.error('Error scheduling workout:', error);
 
-            // Afișează un mesaj de eroare mai detaliat
-            let errorMessage = 'A apărut o eroare la programarea workout-ului';
+            let errorMessage = 'An error occurred while scheduling the workout';
             if (error.message) {
                 if (error.message.includes('Type definition error')) {
-                    errorMessage = 'Eroare de validare a datelor. Verifică că toate câmpurile sunt completate corect.';
+                    errorMessage = 'Data validation error. Please check that all fields are completed correctly.';
                 } else if (error.message.includes('400')) {
-                    errorMessage = 'Datele introduse nu sunt valide. Verifică data și ora selectate.';
+                    errorMessage = 'Invalid data entered. Please check the selected date and time.';
                 } else if (error.message.includes('401')) {
-                    errorMessage = 'Nu ești autorizat să programezi workout-uri.';
+                    errorMessage = 'You are not authorized to schedule workouts.';
                 } else if (error.message.includes('404')) {
-                    errorMessage = 'Planul de workout nu a fost găsit.';
+                    errorMessage = 'Workout plan not found.';
                 } else if (error.message.includes('500')) {
-                    errorMessage = 'Eroare de server. Încearcă din nou mai târziu.';
+                    errorMessage = 'Server error. Please try again later.';
                 } else {
                     errorMessage = error.message;
                 }
@@ -281,10 +258,10 @@ const WorkoutSchedule = ({
 
     const getQuickTimeOptions = () => {
         return [
-            { label: 'Dimineața', time: '07:00' },
-            { label: 'Prânz', time: '12:00' },
-            { label: 'După-amiază', time: '17:00' },
-            { label: 'Seara', time: '19:00' }
+            { label: 'Morning', time: '07:00' },
+            { label: 'Lunch', time: '12:00' },
+            { label: 'Afternoon', time: '17:00' },
+            { label: 'Evening', time: '19:00' }
         ];
     };
 
@@ -298,15 +275,15 @@ const WorkoutSchedule = ({
 
         return [
             {
-                label: 'Astăzi',
+                label: 'Today',
                 date: today.toISOString().split('T')[0]
             },
             {
-                label: 'Mâine',
+                label: 'Tomorrow',
                 date: tomorrow.toISOString().split('T')[0]
             },
             {
-                label: 'Săptămâna viitoare',
+                label: 'Next Week',
                 date: nextWeek.toISOString().split('T')[0]
             }
         ];
@@ -339,7 +316,6 @@ const WorkoutSchedule = ({
                 boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
                 position: 'relative'
             }}>
-                {/* Close button */}
                 <button
                     onClick={handleCloseModal}
                     disabled={loading}
@@ -379,7 +355,6 @@ const WorkoutSchedule = ({
                     📅 Schedule Workout
                 </h2>
 
-                {/* Workout Plan Info */}
                 {workoutPlan && (
                     <div style={{
                         backgroundColor: '#f0fff4',
@@ -428,7 +403,6 @@ const WorkoutSchedule = ({
                     </div>
                 )}
 
-                {/* Error message */}
                 {error && (
                     <div style={{
                         backgroundColor: '#fed7d7',
@@ -444,7 +418,6 @@ const WorkoutSchedule = ({
                     </div>
                 )}
 
-                {/* Success message */}
                 {success && (
                     <div style={{
                         backgroundColor: '#c6f6d5',
@@ -460,7 +433,6 @@ const WorkoutSchedule = ({
                     </div>
                 )}
 
-                {/* Conflict warning */}
                 {hasConflict && !error && !success && (
                     <div style={{
                         backgroundColor: '#fef2e2',
@@ -472,11 +444,10 @@ const WorkoutSchedule = ({
                         fontSize: '14px',
                         fontWeight: '600'
                     }}>
-                        ⚠️ Ai deja un workout programat la această dată și oră. Poți continua dacă dorești să ai multiple workout-uri în aceeași perioadă.
+                        ⚠️ You already have a workout scheduled at this date and time. You can continue if you want to have multiple workouts in the same period.
                     </div>
                 )}
 
-                {/* Schedule Form */}
                 <div style={{
                     backgroundColor: '#f7fafc',
                     padding: '24px',
@@ -489,10 +460,9 @@ const WorkoutSchedule = ({
                         fontWeight: '700',
                         marginBottom: '20px'
                     }}>
-                        Alege data și ora
+                        Choose date and time
                     </h3>
 
-                    {/* Date and Time inputs */}
                     <div style={{
                         display: 'grid',
                         gridTemplateColumns: '1fr 1fr',
@@ -507,7 +477,7 @@ const WorkoutSchedule = ({
                                 fontWeight: '600',
                                 fontSize: '14px'
                             }}>
-                                Data *
+                                Date *
                             </label>
                             <input
                                 type="date"
@@ -538,7 +508,7 @@ const WorkoutSchedule = ({
                                 fontWeight: '600',
                                 fontSize: '14px'
                             }}>
-                                Ora *
+                                Time *
                             </label>
                             <input
                                 type="time"
@@ -561,7 +531,6 @@ const WorkoutSchedule = ({
                         </div>
                     </div>
 
-                    {/* Selected date/time preview */}
                     {scheduleData.scheduledDate && scheduleData.scheduledTime && (
                         <div style={{
                             backgroundColor: '#e6fffa',
@@ -575,18 +544,17 @@ const WorkoutSchedule = ({
                                 fontWeight: '600',
                                 marginBottom: '4px'
                             }}>
-                                Workout programat pentru:
+                                Workout scheduled for:
                             </div>
                             <div style={{
                                 color: '#4a5568',
                                 fontSize: '16px'
                             }}>
-                                📅 {formatDate(scheduleData.scheduledDate)} la 🕐 {scheduleData.scheduledTime}
+                                📅 {formatDate(scheduleData.scheduledDate)} at 🕐 {scheduleData.scheduledTime}
                             </div>
                         </div>
                     )}
 
-                    {/* Quick Date Options */}
                     <div style={{ marginBottom: '16px' }}>
                         <label style={{
                             display: 'block',
@@ -595,7 +563,7 @@ const WorkoutSchedule = ({
                             fontWeight: '600',
                             fontSize: '14px'
                         }}>
-                            Date rapide:
+                            Quick dates:
                         </label>
                         <div style={{
                             display: 'flex',
@@ -630,7 +598,6 @@ const WorkoutSchedule = ({
                         </div>
                     </div>
 
-                    {/* Quick Time Options */}
                     <div>
                         <label style={{
                             display: 'block',
@@ -639,7 +606,7 @@ const WorkoutSchedule = ({
                             fontWeight: '600',
                             fontSize: '14px'
                         }}>
-                            Ore populare:
+                            Popular times:
                         </label>
                         <div style={{
                             display: 'flex',
@@ -675,7 +642,6 @@ const WorkoutSchedule = ({
                     </div>
                 </div>
 
-                {/* Loading overlay */}
                 {loading && (
                     <div style={{
                         position: 'absolute',
@@ -700,13 +666,12 @@ const WorkoutSchedule = ({
                                 animation: 'spin 1s linear infinite'
                             }}>⚡</div>
                             <div style={{ fontWeight: '600' }}>
-                                Se programează workout-ul...
+                                Scheduling workout...
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Action Buttons */}
                 <div style={{
                     display: 'flex',
                     gap: '12px',
@@ -727,7 +692,7 @@ const WorkoutSchedule = ({
                             opacity: loading ? 0.6 : 1
                         }}
                     >
-                        Anulează
+                        Cancel
                     </button>
 
                     <button
@@ -748,11 +713,10 @@ const WorkoutSchedule = ({
                             fontWeight: '600'
                         }}
                     >
-                        {loading ? 'Se programează...' : '📅 Programează Workout'}
+                        {loading ? 'Scheduling...' : '📅 Schedule Workout'}
                     </button>
                 </div>
 
-                {/* CSS for animations */}
                 <style jsx>{`
                     @keyframes spin {
                         0% { transform: rotate(0deg); }

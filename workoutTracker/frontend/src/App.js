@@ -12,7 +12,6 @@ const App = () => {
     const [user, setUser] = useState(null);
     const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false);
 
-    // Sample exercises data
     const sampleExercises = [
         { exercise_id: 1, exercise_name: 'Push-ups', category: 'STRENGTH', primary_muscle_group: 'CHEST' },
         { exercise_id: 2, exercise_name: 'Squats', category: 'STRENGTH', primary_muscle_group: 'QUADRICEPS' },
@@ -36,14 +35,14 @@ const App = () => {
             setIsAuthenticated(true);
             setUser(parsedUser);
 
-            // Check if profile needs completion
+
             checkProfileCompletion(parsedUser);
         }
     }, []);
 
-    // Check if user profile needs completion
+
     const checkProfileCompletion = (userData) => {
-        // If any of these fields are missing, show profile completion
+
         const hasIncompleteProfile = !userData.dateOfBirth ||
             !userData.heightCm ||
             !userData.weightKg ||
@@ -71,11 +70,9 @@ const App = () => {
         setIsAuthenticated(true);
         setUser(data);
 
-        // Store user data in localStorage
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userData', JSON.stringify(data));
 
-        // Check if profile needs completion
         checkProfileCompletion(data);
     };
 
@@ -83,27 +80,23 @@ const App = () => {
         setIsAuthenticated(true);
         setUser(data);
 
-        // Store user data in localStorage
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userData', JSON.stringify(data));
 
-        // After registration, always show profile completion
         setNeedsProfileCompletion(true);
         setCurrentView('complete-profile');
     };
 
     const handleProfileComplete = (updatedUser) => {
-        // Update user data with profile information
+
         setUser(updatedUser);
         localStorage.setItem('userData', JSON.stringify(updatedUser));
 
-        // Profile is now complete
         setNeedsProfileCompletion(false);
         setCurrentView('dashboard');
     };
 
     const handleSkipProfile = () => {
-        // User chose to skip profile completion
         setNeedsProfileCompletion(false);
         setCurrentView('dashboard');
     };
@@ -119,7 +112,6 @@ const App = () => {
 
     const handleGoalSet = (goalData) => {
         console.log('Goal set:', goalData);
-        // Here you would save the goal to backend
         setCurrentView('dashboard');
     };
 
@@ -136,7 +128,6 @@ const App = () => {
         setCurrentView('complete-profile');
     };
 
-    // Show Goals page if selected
     if (isAuthenticated && currentView === 'goals') {
         return (
             <Goals
@@ -147,7 +138,6 @@ const App = () => {
         );
     }
 
-    // Show profile completion if needed
     if (isAuthenticated && needsProfileCompletion && currentView === 'complete-profile') {
         return (
             <CompleteProfile
@@ -158,7 +148,6 @@ const App = () => {
         );
     }
 
-    // If user is authenticated and profile is complete, show dashboard
     if (isAuthenticated && !needsProfileCompletion) {
         return (
             <Dashboard
@@ -171,7 +160,6 @@ const App = () => {
         );
     }
 
-    // If not authenticated, show homepage/login/register forms
     return (
         <div>
             {currentView === 'homepage' ? (

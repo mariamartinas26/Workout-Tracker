@@ -90,12 +90,12 @@ const GoalsApi = {
 };
 
 const Goals = ({ user, onBack, onGoalSet }) => {
-    const [currentStep, setCurrentStep] = useState(1); // 1: select goal, 2: goal details, 3: goals list
+    const [currentStep, setCurrentStep] = useState(1);
     const [selectedGoal, setSelectedGoal] = useState('');
     const [goalDetails, setGoalDetails] = useState({
         targetWeightLoss: '',
         targetWeightGain: '',
-        timeframe: 3, // months
+        timeframe: 3,
         currentWeight: user?.weightKg || ''
     });
     const [userGoals, setUserGoals] = useState([]);
@@ -128,7 +128,6 @@ const Goals = ({ user, onBack, onGoalSet }) => {
         }
     ];
 
-    // Load user goals when component mounts
     useEffect(() => {
         if (user?.id) {
             fetchUserGoals();
@@ -136,7 +135,6 @@ const Goals = ({ user, onBack, onGoalSet }) => {
     }, [user?.id]);
     useEffect(() => {
         return () => {
-            // Cleanup function - reset state when component unmounts
             setCurrentStep(1);
             setShowGoalsList(false);
             setSelectedGoal('');
@@ -179,13 +177,11 @@ const Goals = ({ user, onBack, onGoalSet }) => {
         setSuccess('');
     };
     const handleBackToDashboard = () => {
-        // Reset toate state-urile la valorile inițiale
         setCurrentStep(1);
         setShowGoalsList(false);
         setSelectedGoal('');
         setError('');
         setSuccess('');
-        // Apoi cheamă callback-ul pentru a merge înapoi la dashboard
         onBack();
     };
 
@@ -219,7 +215,6 @@ const Goals = ({ user, onBack, onGoalSet }) => {
             setError('');
             setSuccess('');
 
-            // Validate required fields
             if (!goalDetails.currentWeight) {
                 setError('Current weight is required');
                 return;
@@ -235,14 +230,13 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                 return;
             }
 
-            // Prepare goal data for API (matching backend DTO)
             const goalData = {
                 userId: user.id,
                 goalType: selectedGoal,
                 targetWeightLoss: selectedGoal === 'lose_weight' ? parseFloat(goalDetails.targetWeightLoss) : null,
                 targetWeightGain: selectedGoal === 'gain_muscle' ? parseFloat(goalDetails.targetWeightGain) : null,
                 currentWeight: parseFloat(goalDetails.currentWeight),
-                timeframe: parseInt(goalDetails.timeframe), // Backend expects 'timeframe' not 'timeframeMonths'
+                timeframe: parseInt(goalDetails.timeframe),
                 notes: null
             };
 
@@ -257,15 +251,14 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                 targetWeight: response.targetWeight
             });
 
-            // Refresh goals list
+
             await fetchUserGoals();
 
-            // Call parent callback if provided
+
             if (onGoalSet) {
                 onGoalSet(response);
             }
 
-            // Show success message with backend calculations
             let calculationsMessage = '';
             if (response.dailyCalorieDeficit) {
                 calculationsMessage = ` You need a ${response.dailyCalorieDeficit} calorie deficit daily.`;
@@ -356,19 +349,16 @@ const Goals = ({ user, onBack, onGoalSet }) => {
     };
     const [showWorkoutRecommendations, setShowWorkoutRecommendations] = useState(false);
     const [selectedGoalForWorkout, setSelectedGoalForWorkout] = useState(null);
-    // Funcție pentru a deschide recomandările de workout
     const handleRecommendWorkout = (goal) => {
         setSelectedGoalForWorkout(goal);
         setShowWorkoutRecommendations(true);
     };
 
-    // Funcție pentru a reveni din recomandări la lista de goals
     const handleBackFromRecommendations = () => {
         setShowWorkoutRecommendations(false);
         setSelectedGoalForWorkout(null);
     };
 
-    // Funcție pentru salvarea planului de workout
     const handleSaveWorkoutPlan = (savedPlan) => {
         console.log('Workout plan saved:', savedPlan);
     };
@@ -776,7 +766,6 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                 objectFit: 'contain'
                             }}
                             onError={(e) => {
-                                // Fallback în caz că imaginea nu se poate încărca
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.style.display = 'flex';
                             }}
@@ -1260,7 +1249,6 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                                 objectFit: 'contain'
                             }}
                             onError={(e) => {
-                                // Fallback în caz că imaginea nu se poate încărca
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.style.display = 'flex';
                             }}

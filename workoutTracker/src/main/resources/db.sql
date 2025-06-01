@@ -754,14 +754,14 @@ CREATE OR REPLACE FUNCTION get_dashboard_summary(
     p_current_date DATE DEFAULT CURRENT_DATE
 )
 RETURNS TABLE(
-    -- Weekly stats (Monday to Sunday)
+    -- Weekly stats
     weekly_workouts INTEGER,
     weekly_calories INTEGER,
     weekly_avg_duration NUMERIC,
     weekly_avg_rating NUMERIC,
     weekly_workout_days INTEGER,
 
-    -- Monthly stats (1st to end of month)
+    -- Monthly stats
     monthly_workouts INTEGER,
     monthly_calories INTEGER,
     monthly_avg_duration NUMERIC,
@@ -788,26 +788,20 @@ v_week_start DATE;
     v_month_start DATE;
     v_month_end DATE;
 BEGIN
-    -- FIXED: Calculate week properly (Monday to Sunday including current day)
-    -- PostgreSQL DOW: 0=Sunday, 1=Monday, 2=Tuesday, etc.
 
-    IF EXTRACT(DOW FROM p_current_date) = 0 THEN
-        -- If today is Sunday, week started last Monday
-        v_week_start := p_current_date - 6;
-        v_week_end := p_current_date;
-ELSE
-        -- Otherwise, calculate Monday of current week
-        v_week_start := p_current_date - (EXTRACT(DOW FROM p_current_date)::INTEGER - 1);
-        v_week_end := v_week_start + 6;
-END IF;
+    -- Fixed week calculation (Monday-Sunday)
+    v_week_start := p_current_date - (EXTRACT(DOW FROM p_current_date)::INTEGER + 6) % 7;
+    v_week_end := v_week_start + 6;
 
     v_month_start := DATE_TRUNC('month', p_current_date)::DATE;
     v_month_end := (DATE_TRUNC('month', p_current_date) + INTERVAL '1 month - 1 day')::DATE;
 
+    -- returns a set of rows
 RETURN QUERY
     WITH weekly_stats AS (
         SELECT
             COUNT(*)::INTEGER as w_workouts,
+            --if null then zero
             COALESCE(SUM(sw.calories_burned), 0)::INTEGER as w_calories,
             ROUND(AVG(NULLIF(sw.actual_duration_minutes, 0)), 1) as w_avg_duration,
             ROUND(AVG(sw.overall_rating), 1) as w_avg_rating,
@@ -836,8 +830,11 @@ RETURN QUERY
             uws.last_workout_date as last_date
         FROM user_workout_streaks uws
         WHERE uws.user_id = p_user_id
+        --fallback row
         UNION ALL
+        --if there is no data
         SELECT 0, 0, NULL::DATE
+        --gets the real one (the first row)
         LIMIT 1
     ),
     lifetime_stats AS (
@@ -880,7 +877,6 @@ FROM weekly_stats ws
          CROSS JOIN lifetime_stats ls;
 END;
 $$;
-
 
 -- Function to update workout streaks
 CREATE OR REPLACE FUNCTION update_workout_streak(
