@@ -1,5 +1,5 @@
-// src/components/Register.js - Updated cu callback pentru Complete Profile
 import React, { useState } from 'react';
+import { toast } from 'react-toastify';
 
 const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
     const [formData, setFormData] = useState({
@@ -87,12 +87,17 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
                 const data = await response.json();
                 console.log('Registration successful:', data);
 
-                // Apelează callback-ul cu token-ul pentru a naviga către complete profile
                 if (onRegisterSuccess && data.token) {
                     onRegisterSuccess(data.token);
                 } else {
-                    // Fallback dacă nu avem callback
-                    alert('Account created successfully! Please complete your profile.');
+                    toast.success('Account created successfully! Please complete your profile.', {
+                        position: "top-right",
+                        autoClose: 4000,
+                        hideProgressBar: false,
+                        closeOnClick: true,
+                        pauseOnHover: true,
+                        draggable: true
+                    });
                     onSwitchToLogin();
                 }
             } else {

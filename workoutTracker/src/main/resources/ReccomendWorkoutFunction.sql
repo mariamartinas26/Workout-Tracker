@@ -209,7 +209,7 @@ BEGIN
 
         -- Rest time
         CASE s.category
-            WHEN 'CARDIO' THEN 30
+            WHEN 'CARDIO' THEN 30 --30 sec
             WHEN 'STRENGTH' THEN
                 CASE p_goal_type
                     WHEN 'MUSCLE_GAIN' THEN 120

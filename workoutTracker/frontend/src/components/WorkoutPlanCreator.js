@@ -1,5 +1,5 @@
-// components/WorkoutPlanCreator.js
 import React, { useState } from 'react';
+import { toast } from 'react-toastify';
 
 const API_BASE_URL = 'http://localhost:8082/api';
 
@@ -124,20 +124,26 @@ const WorkoutPlanCreator = ({ isOpen, onClose, sampleExercises = [], currentUser
                 }))
 
             };
-
-            console.log('Trimit către backend:', backendData);
-
-            // Trimite către backend folosind endpoint-ul corect
             const response = await WorkoutPlanService.createWorkoutPlan(backendData);
 
-            console.log('Răspuns de la backend:', response);
 
-            // Success message în română conform cu răspunsul backend-ului
-            alert(`${response.message}\nPlan: "${response.planName}"\nID: ${response.workoutPlanId}\nExercitii: ${response.totalExercises}`);
+            toast.success(
+                <div>
+                    <div>{response.message}</div>
+                    <div><strong>Plan:</strong> "{response.planName}"</div>
+                    <div><strong>ID:</strong> {response.workoutPlanId}</div>
+                    <div><strong>Exercitii:</strong> {response.totalExercises}</div>
+                </div>,
+                {
+                    position: "top-right",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                }
+            );
 
-            console.log('Plan de workout creat cu ID:', response.workoutPlanId);
-
-            // Închide popup-ul și resetează formularul
             handleClosePopup();
 
         } catch (error) {

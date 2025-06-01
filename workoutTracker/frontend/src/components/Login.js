@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'react-toastify';
 
 const Login = ({ onSwitchToRegister, onLoginSuccess }) => {
     const [formData, setFormData] = useState({
@@ -69,7 +70,15 @@ const Login = ({ onSwitchToRegister, onLoginSuccess }) => {
                 localStorage.setItem('userData', JSON.stringify(userData));
                 localStorage.setItem('isAuthenticated', 'true');
 
-                alert('Login successful!');
+                toast.success("Login successful!", {
+                    position: "top-right",
+                    autoClose: 3000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true
+                });
+
                 if (onLoginSuccess) {
                     onLoginSuccess(userData);
                 }
