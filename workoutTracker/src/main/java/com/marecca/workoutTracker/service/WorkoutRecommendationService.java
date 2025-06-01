@@ -1,6 +1,10 @@
 package com.marecca.workoutTracker.service;
 
 import com.marecca.workoutTracker.dto.WorkoutRecommendation;
+import com.marecca.workoutTracker.service.exceptions.InvalidGoalTypeException;
+import com.marecca.workoutTracker.service.exceptions.InvalidUserDataException;
+import com.marecca.workoutTracker.service.exceptions.NoExercisesFoundException;
+import com.marecca.workoutTracker.service.exceptions.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -118,7 +122,6 @@ public class WorkoutRecommendationService {
      * Extracts the SQL state from DataAccessException
      */
     private String extractSQLState(DataAccessException e) {
-        // Try to extract SQL state from the exception
         Throwable cause = e.getCause();
         while (cause != null) {
             if (cause instanceof java.sql.SQLException) {
@@ -135,11 +138,9 @@ public class WorkoutRecommendationService {
     private String extractCustomErrorMessage(String fullErrorMessage, String errorPrefix) {
         if (fullErrorMessage == null) return "Unknown error";
 
-        // Look for the pattern "ERROR_CODE: actual message"
         int prefixIndex = fullErrorMessage.indexOf(errorPrefix + ":");
         if (prefixIndex != -1) {
             String message = fullErrorMessage.substring(prefixIndex + errorPrefix.length() + 1).trim();
-            // Remove any trailing SQL error information
             int whereIndex = message.indexOf(" Where:");
             if (whereIndex != -1) {
                 message = message.substring(0, whereIndex).trim();

@@ -1,4 +1,4 @@
-package com.marecca.workoutTracker.service;
+package com.marecca.workoutTracker.service.exceptions;
 
 public class InvalidUserDataException extends RuntimeException {
   public InvalidUserDataException(String message) {
