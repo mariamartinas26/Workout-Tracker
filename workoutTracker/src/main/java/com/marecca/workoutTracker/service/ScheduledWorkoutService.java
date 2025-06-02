@@ -355,9 +355,8 @@ public class ScheduledWorkoutService {
     }
 
     /**
-     * Marchează un workout ca ratat
-     * @param scheduledWorkoutId ID-ul workout-ului
-     * @return workout-ul actualizat
+     * Marks a workout as missed
+     * @return workout updated
      */
     public ScheduledWorkout markWorkoutAsMissed(Long scheduledWorkoutId) {
         log.info("Marking workout as missed with ID: {}", scheduledWorkoutId);
@@ -370,7 +369,6 @@ public class ScheduledWorkoutService {
 
         scheduledWorkoutRepository.updateWorkoutStatus(scheduledWorkoutId, WorkoutStatusType.MISSED);
 
-        // Reîncarcă entitatea pentru a obține datele actualizate
         workout = findScheduledWorkoutById(scheduledWorkoutId);
         log.info("Workout marked as missed successfully");
 

@@ -125,7 +125,8 @@ CREATE TABLE workout_plans (
                                CONSTRAINT uk_user_plan_name UNIQUE (user_id, plan_name)
 );
 
---workout exercise details table
+--workout exercise details table (which exercises are in which plans)
+--many to many relationship, links each workou plan to the ex it includes
 CREATE TABLE workout_exercise_details (
                                           workout_exercise_detail_id BIGSERIAL PRIMARY KEY,
                                           workout_plan_id BIGINT NOT NULL,
@@ -145,6 +146,7 @@ CREATE TABLE workout_exercise_details (
                                               FOREIGN KEY (workout_plan_id) REFERENCES workout_plans(workout_plan_id) ON DELETE CASCADE,
                                           CONSTRAINT fk_workout_exercise_details_exercise_id
                                               FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id) ON DELETE RESTRICT,
+                                            --cannot add the same ex_id more than once
                                           CONSTRAINT uk_workout_plan_exercise UNIQUE (workout_plan_id, exercise_id),
                                           CONSTRAINT ck_target_metrics CHECK (
                                               target_reps_min IS NOT NULL OR
@@ -184,6 +186,7 @@ CREATE TABLE scheduled_workouts (
 );
 
 --workout exercise logs table
+--workout diary entry
 CREATE TABLE workout_exercise_logs (
                                        log_id BIGSERIAL PRIMARY KEY,
                                        scheduled_workout_id BIGINT NOT NULL,
@@ -203,6 +206,7 @@ CREATE TABLE workout_exercise_logs (
                                            FOREIGN KEY (scheduled_workout_id) REFERENCES scheduled_workouts(scheduled_workout_id) ON DELETE CASCADE,
                                        CONSTRAINT fk_workout_exercise_logs_exercise_id
                                            FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id) ON DELETE RESTRICT,
+                                        --each ex is logged only once per workout session
                                        CONSTRAINT uk_scheduled_workout_exercise UNIQUE (scheduled_workout_id, exercise_id)
 );
 
@@ -211,26 +215,30 @@ CREATE TABLE workout_exercise_logs (
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_username ON users(username);
 
+--used in searches, filters and recommendations
 CREATE INDEX idx_exercises_category ON exercises(category);
 CREATE INDEX idx_exercises_muscle_group ON exercises(primary_muscle_group);
 CREATE INDEX idx_exercises_difficulty ON exercises(difficulty_level);
 
+--for users to view their own workout plans
 CREATE INDEX idx_workout_plans_user_id ON workout_plans(user_id);
+--for sorting
 CREATE INDEX idx_workout_plans_created_at ON workout_plans(created_at);
 
-
+--fetch ex to a specific plan
 CREATE INDEX idx_workout_exercise_details_workout_plan_id ON workout_exercise_details(workout_plan_id);
 CREATE INDEX idx_workout_exercise_details_exercise_id ON workout_exercise_details(exercise_id);
 
+--for filtering and tracking progress
 CREATE INDEX idx_scheduled_workouts_user_id ON scheduled_workouts(user_id);
 CREATE INDEX idx_scheduled_workouts_date ON scheduled_workouts(scheduled_date);
 CREATE INDEX idx_scheduled_workouts_status ON scheduled_workouts(status);
 CREATE INDEX idx_scheduled_workouts_user_date ON scheduled_workouts(user_id, scheduled_date);
 CREATE INDEX idx_scheduled_workouts_user_status ON scheduled_workouts(user_id, status);
 
+--for generating reports
 CREATE INDEX idx_workout_exercise_logs_scheduled_workout_id ON workout_exercise_logs(scheduled_workout_id);
 CREATE INDEX idx_workout_exercise_logs_exercise_id ON workout_exercise_logs(exercise_id);
-
 
 --FUNCTIONS OF TYPE TRIGGER (called by the triggers below)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -310,6 +318,7 @@ SELECT
         ROUND(AVG(sw.calories_burned), 2) as avg_calories_per_workout,
     ROUND(
             CASE
+                --percentage of workouts that are completed
                 WHEN COUNT(*) > 0 THEN
                     (COUNT(CASE WHEN sw.status = 'COMPLETED' THEN 1 END)::NUMERIC / COUNT(*)::NUMERIC) * 100
                 ELSE 0
@@ -323,8 +332,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-
---FUNCTION schedule_workout (ScheduleWorkoutService)!
 CREATE OR REPLACE FUNCTION schedule_workout(
     p_user_id BIGINT,
     p_workout_plan_id BIGINT,
@@ -332,44 +339,89 @@ CREATE OR REPLACE FUNCTION schedule_workout(
     p_scheduled_time TIME DEFAULT NULL
 ) RETURNS BIGINT AS $$
 DECLARE
-    v_scheduled_workout_id BIGINT;
+v_scheduled_workout_id BIGINT;
 BEGIN
-    --checks if user exists
-IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
-        RAISE EXCEPTION 'User with ID % does not exist', p_user_id;
+    -- Validate input parameters
+    IF p_user_id IS NULL OR p_user_id <= 0 THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '00001',
+            MESSAGE = 'INVALID_USER_ID: User ID must be a positive number';
 END IF;
-    --checks if workout plan exists and is owned by user
-IF NOT EXISTS (
+
+    IF p_workout_plan_id IS NULL OR p_workout_plan_id <= 0 THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '00002',
+            MESSAGE = 'INVALID_WORKOUT_PLAN_ID: Workout plan ID must be a positive number';
+END IF;
+
+    IF p_scheduled_date IS NULL OR p_scheduled_date < CURRENT_DATE THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '00006',
+            MESSAGE = 'INVALID_SCHEDULED_DATE: Scheduled date cannot be null or in the past';
+END IF;
+
+    -- Check if user exists
+    IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '00003',
+            MESSAGE = format('USER_NOT_FOUND: User with ID %s does not exist', p_user_id);
+END IF;
+
+    -- Check if workout plan exists
+    IF NOT EXISTS (SELECT 1 FROM workout_plans WHERE workout_plan_id = p_workout_plan_id) THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '00004',
+            MESSAGE = format('WORKOUT_PLAN_NOT_FOUND: Workout plan with ID %s does not exist', p_workout_plan_id);
+END IF;
+
+    -- Check if workout plan belongs to the user
+    IF NOT EXISTS (
         SELECT 1 FROM workout_plans
         WHERE workout_plan_id = p_workout_plan_id AND user_id = p_user_id
     ) THEN
-        RAISE EXCEPTION 'Workout plan with ID % does not exist or does not belong to user %',
-            p_workout_plan_id, p_user_id;
+        RAISE EXCEPTION USING
+            ERRCODE = '00005',
+            MESSAGE = format('WORKOUT_PLAN_NOT_OWNED: Workout plan with ID %s does not belong to user %s',
+                p_workout_plan_id, p_user_id);
 END IF;
 
-    --checks if user already has a workout scheduled at the same date and hour
+    -- Check if user already has a workout scheduled at the same date and time
     IF EXISTS (
         SELECT 1 FROM scheduled_workouts
         WHERE user_id = p_user_id
           AND scheduled_date = p_scheduled_date
-          AND (p_scheduled_time IS NULL OR scheduled_time = p_scheduled_time)
+          AND (
+              (p_scheduled_time IS NULL AND scheduled_time IS NULL) OR
+              (p_scheduled_time IS NOT NULL AND scheduled_time = p_scheduled_time)
+          )
           AND status IN ('PLANNED', 'IN_PROGRESS')
     ) THEN
-        RAISE EXCEPTION 'User already has a workout scheduled at % %',
-            p_scheduled_date, COALESCE(p_scheduled_time::TEXT, '');
+        RAISE EXCEPTION USING
+            ERRCODE = '00007',
+            MESSAGE = format('WORKOUT_ALREADY_SCHEDULED: User already has a workout scheduled at %s %s',
+                p_scheduled_date, COALESCE(p_scheduled_time::TEXT, 'no specific time'));
 END IF;
 
---creates workout
+    -- Insert the scheduled workout
 INSERT INTO scheduled_workouts (
-    user_id, workout_plan_id, scheduled_date, scheduled_time
+    user_id, workout_plan_id, scheduled_date, scheduled_time, status
 ) VALUES (
-    p_user_id, p_workout_plan_id, p_scheduled_date, p_scheduled_time
+             p_user_id, p_workout_plan_id, p_scheduled_date, p_scheduled_time, 'PLANNED'
          ) RETURNING scheduled_workout_id INTO v_scheduled_workout_id;
 
 RETURN v_scheduled_workout_id;
+
 EXCEPTION
     WHEN OTHERS THEN
-        RAISE EXCEPTION 'Error scheduling workout: %', SQLERRM;
+        -- If it's already one of our custom exceptions, re-raise it
+        IF SQLSTATE IN ('00001', '00002', '00003', '00004', '00005', '00006', '00007') THEN
+            RAISE;
+ELSE
+            -- For any other unexpected errors, use the general database error code
+            RAISE EXCEPTION USING
+                ERRCODE = '00999',
+                MESSAGE = format('DATABASE_ERROR: Unexpected error occurred while scheduling workout: %s', SQLERRM);
+END IF;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -668,6 +720,7 @@ CREATE TABLE user_workout_streaks (
 
                                       CONSTRAINT fk_user_workout_streaks_user_id
                                           FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+                                        --one user has exactly one streak record
                                       CONSTRAINT uk_user_streak UNIQUE (user_id)
 );
 
@@ -803,6 +856,7 @@ SELECT
     ls.first_workout_date
 
 FROM weekly_stats ws
+    --combines into one row for the summary
          CROSS JOIN monthly_stats ms
          CROSS JOIN streak_info si
          CROSS JOIN lifetime_stats ls;
