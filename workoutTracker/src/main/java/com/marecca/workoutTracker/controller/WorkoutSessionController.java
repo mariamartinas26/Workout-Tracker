@@ -316,48 +316,4 @@ public class WorkoutSessionController {
 
         return ResponseEntity.ok(response);
     }
-
-    /**
-     * Start a free workout (without a pre-established plan)
-     */
-    @PostMapping("/start-free")
-    public ResponseEntity<?> startFreeWorkout(@Valid @RequestBody StartFreeWorkoutRequest request) {
-        try {
-
-            User user = new User();
-            user.setUserId(request.getUserId());
-
-            ScheduledWorkout freeWorkout = ScheduledWorkout.builder()
-                    .user(user)
-                    .scheduledDate(LocalDate.now())
-                    .scheduledTime(LocalTime.now())
-                    .notes(request.getNotes())
-                    .build();
-
-            // Save the workout
-            ScheduledWorkout savedWorkout = scheduledWorkoutService.scheduleWorkout(freeWorkout);
-
-            // Start the workout immediately
-            ScheduledWorkout startedWorkout = scheduledWorkoutService.startWorkout(savedWorkout.getScheduledWorkoutId());
-
-            FreeWorkoutResponse response = FreeWorkoutResponse.builder()
-                    .workoutId(startedWorkout.getScheduledWorkoutId())
-                    .status(startedWorkout.getStatus())
-                    .startTime(startedWorkout.getActualStartTime())
-                    .message("Free workout started successfully")
-                    .nextAction("Log exercises as you perform them")
-                    .build();
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-
-        } catch (Exception e) {
-            log.error("Error starting free workout: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ErrorResponse.builder()
-                            .error("Error starting free workout")
-                            .message(e.getMessage())
-                            .build());
-        }
-    }
-
 }
