@@ -30,7 +30,6 @@ import java.util.regex.Pattern;
 /**
  * Service pentru gestionarea workout-urilor programate
  * Conține logica de business pentru operațiile cu workout-uri programate
- * Integrează funcția PostgreSQL schedule_workout cu metodele existente
  */
 @Service
 @RequiredArgsConstructor

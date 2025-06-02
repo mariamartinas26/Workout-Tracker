@@ -437,12 +437,7 @@ ORDER BY sw.scheduled_date DESC, sw.scheduled_time DESC;
 
 
 --user profile: fitness level, weight, workout history in the past 90 days
--- based on this the alg calculates an strength-multiplier (range 0.8x begginers <=5 completed workouts,
---1.3x expert users >=50 completed workouts)
---
-
---user profile: fitness level, weight, workout history in the past 90 days
--- based on this the alg calculates an strength-multiplier (range 0.8x begginers <=5 completed workouts,
+-- based on this the alg calculates a strength-multiplier (range 0.8x begginers <=5 completed workouts,
 --1.3x expert users >=50 completed workouts)
 
 CREATE OR REPLACE FUNCTION recommend_workout(
@@ -457,9 +452,9 @@ CREATE OR REPLACE FUNCTION recommend_workout(
     recommended_weight_percentage DECIMAL(5,2),
     rest_time_seconds INTEGER,
     priority_score DECIMAL(5,2)
-	--score that reflects how appropriate is an exercise
+	--score that reflects how appropriate is an exercise for a specific goal
 )
---returns a tabel with recommended workout plan for a user basen on his goals
+--returns a tabel with recommended workout plan for a user based on his goals
 
 LANGUAGE plpgsql
 AS $$
@@ -469,7 +464,7 @@ v_user_fitness_level VARCHAR(20);
     v_avg_user_weight DECIMAL(6,2);
     v_workout_count INTEGER := 0;
 BEGIN
-    -- Validate input parameters
+    --validate input parameters
     IF p_user_id IS NULL OR p_user_id <= 0 THEN
         RAISE EXCEPTION 'INVALID_USER_ID: User ID must be a positive number, received: %', p_user_id
             USING ERRCODE = '00001';
@@ -486,7 +481,7 @@ END IF;
             USING ERRCODE = '00003';
 END IF;
 
-    --user info: weight and fitness level
+--user info: weight and fitness level
 SELECT fitness_level, weight_kg
 INTO v_user_fitness_level, v_avg_user_weight
 FROM users WHERE user_id = p_user_id;
@@ -497,25 +492,22 @@ IF NOT FOUND THEN
             USING ERRCODE = '00004';
 END IF;
 
-    -- Validate user data integrity
-    IF v_user_fitness_level IS NULL THEN
+IF v_user_fitness_level IS NULL THEN
         RAISE EXCEPTION 'INVALID_USER_DATA: User fitness level is null for user ID: %', p_user_id
             USING ERRCODE = '00005';
 END IF;
 
-    IF v_avg_user_weight IS NULL OR v_avg_user_weight <= 0 THEN
+IF v_avg_user_weight IS NULL OR v_avg_user_weight <= 0 THEN
         RAISE EXCEPTION 'INVALID_USER_DATA: User weight is invalid for user ID: %. Weight: %', p_user_id, v_avg_user_weight
             USING ERRCODE = '00006';
 END IF;
 
-    --counts nr of workouts done in the past 90 days
+--counts nr of workouts done in the past 90 days
 SELECT COUNT(DISTINCT sw.scheduled_workout_id) INTO v_workout_count
 FROM scheduled_workouts sw
-WHERE sw.user_id = p_user_id
-  AND sw.status = 'COMPLETED'
-  AND sw.actual_start_time >= CURRENT_DATE - INTERVAL '90 days';
+WHERE sw.user_id = p_user_id AND sw.status = 'COMPLETED' AND sw.actual_start_time >= CURRENT_DATE - INTERVAL '90 days';
 
---strength multiplier based on experience
+--strength multiplier based on experience (reflects user experience)
 v_strength_multiplier := CASE
         WHEN v_workout_count > 50 THEN 1.3 --very advanced
         WHEN v_workout_count > 20 THEN 1.15 --advanced
@@ -533,16 +525,16 @@ RETURN QUERY
             e.primary_muscle_group,
             e.difficulty_level,
             -- Average performance metrics from user's history
+    		-- Calculates the average weight used across workout logs; defaults to 0 if no data
 			COALESCE(AVG(wel.weight_used_kg), 0) as avg_weight_used,
-			-- Calculates the average weight used across workout logs; defaults to 0 if no data
+            -- Calculates the average number of reps completed; defaults to 0 if no data
 			COALESCE(AVG(wel.reps_completed), 0) as avg_reps,
-			-- Calculates the average number of reps completed; defaults to 0 if no data
-			COALESCE(AVG(wel.sets_completed), 0) as avg_sets,
 			-- Calculates the average number of sets completed; defaults to 0 if no data
-			COALESCE(AVG(wel.difficulty_rating), 3) as avg_difficulty,
+			COALESCE(AVG(wel.sets_completed), 0) as avg_sets,
 			-- Calculates the average difficulty rating given by the user; defaults to 3 if no data
-			COUNT(wel.log_id) as times_performed,
+			COALESCE(AVG(wel.difficulty_rating), 3) as avg_difficulty,
 			-- Counts how many times the exercise has been performed
+			COUNT(wel.log_id) as times_performed,
 
 			-- Calories estimation based on category and muscle groups
             CASE e.category
@@ -605,7 +597,7 @@ RETURN QUERY
     scored_exercises AS (
         SELECT
             *,
-            --we compute calculated_priority_score based on goal, eficency and penalty
+            --we compute calculated_priority_score based on goal, efficency and penalty
             CASE p_goal_type
                 WHEN 'WEIGHT_LOSS' THEN
                     (cardio_effectiveness * 0.6 +
@@ -726,8 +718,6 @@ ELSE
 END IF;
 END;
 $$;
-
-
 
 
 

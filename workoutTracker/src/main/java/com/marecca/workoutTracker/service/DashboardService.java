@@ -18,41 +18,13 @@ public class DashboardService {
 
     private final ScheduledWorkoutRepository scheduledWorkoutRepository;
 
-    public DashboardSummaryDTO getDashboardSummary(Long userId) {
-        try {
-            List<Object[]> result = scheduledWorkoutRepository.getDashboardSummary(userId, LocalDate.now());
-
-            if (!result.isEmpty()) {
-                Object[] row = result.get(0);
-                return DashboardSummaryDTO.builder()
-                        .weeklyWorkouts(safeCastToInteger(row[0]))
-                        .weeklyCalories(safeCastToInteger(row[1]))
-                        .weeklyAvgDuration(safeCastToBigDecimal(row[2]))
-                        .weeklyAvgRating(safeCastToBigDecimal(row[3]))
-                        .weeklyWorkoutDays(safeCastToInteger(row[4]))
-                        .monthlyWorkouts(safeCastToInteger(row[5]))
-                        .monthlyCalories(safeCastToInteger(row[6]))
-                        .monthlyAvgDuration(safeCastToBigDecimal(row[7]))
-                        .monthlyAvgRating(safeCastToBigDecimal(row[8]))
-                        .monthlyWorkoutDays(safeCastToInteger(row[9]))
-                        .currentStreak(safeCastToInteger(row[10]))
-                        .longestStreak(safeCastToInteger(row[11]))
-                        .lastWorkoutDate(safeCastToLocalDate(row[12]))
-                        .totalWorkouts(safeCastToLong(row[13]))
-                        .totalCalories(safeCastToLong(row[14]))
-                        .totalWorkoutDays(safeCastToLong(row[15]))
-                        .lifetimeAvgDuration(safeCastToBigDecimal(row[16]))
-                        .firstWorkoutDate(safeCastToLocalDate(row[17]))
-                        .build();
-            }
-
-            // Return empty dashboard
-            return createEmptyDashboard();
-        } catch (Exception e) {
-            return createEmptyDashboard();
-        }
-    }
-
+    /**
+     * method for getting workout calendar
+     * @param userId
+     * @param startDate
+     * @param endDate
+     * @return
+     */
     public List<WorkoutCalendarDTO> getWorkoutCalendar(Long userId, LocalDate startDate, LocalDate endDate) {
         try {
             List<Object[]> result = scheduledWorkoutRepository.getWorkoutCalendar(userId, startDate, endDate);
@@ -76,6 +48,14 @@ public class DashboardService {
         }
     }
 
+    /**
+     * method for getting workout trends
+     * @param userId
+     * @param periodType
+     * @param startDate
+     * @param endDate
+     * @return
+     */
     public List<WorkoutTrendDTO> getWorkoutTrends(Long userId, String periodType, LocalDate startDate, LocalDate endDate) {
         try {
             List<Object[]> result = scheduledWorkoutRepository.getWorkoutTrends(userId, periodType, startDate, endDate);
@@ -116,28 +96,6 @@ public class DashboardService {
             }
 
             return breakdown;
-
-        } catch (Exception e) {
-            return new ArrayList<>();
-        }
-    }
-
-    public List<AchievementDTO> getRecentAchievements(Long userId, Integer daysBack) {
-        try {
-            List<Object[]> result = scheduledWorkoutRepository.getRecentAchievements(userId, daysBack);
-            List<AchievementDTO> achievements = new ArrayList<>();
-
-            for (Object[] row : result) {
-                achievements.add(AchievementDTO.builder()
-                        .achievementType(safeCastToString(row[0]))
-                        .achievementTitle(safeCastToString(row[1]))
-                        .achievementDescription(safeCastToString(row[2]))
-                        .achievedDate(safeCastToLocalDate(row[3]))
-                        .metricValue(safeCastToInteger(row[4]))
-                        .build());
-            }
-
-            return achievements;
 
         } catch (Exception e) {
             return new ArrayList<>();
@@ -199,5 +157,40 @@ public class DashboardService {
         if (value instanceof Date) return ((Date) value).toLocalDate();
         if (value instanceof java.util.Date) return new Date(((java.util.Date) value).getTime()).toLocalDate();
         return null;
+    }
+
+    public DashboardSummaryDTO getDashboardSummary(Long userId) {
+        try {
+            List<Object[]> result = scheduledWorkoutRepository.getDashboardSummary(userId, LocalDate.now());
+
+            if (!result.isEmpty()) {
+                Object[] row = result.get(0);
+                return DashboardSummaryDTO.builder()
+                        .weeklyWorkouts(safeCastToInteger(row[0]))
+                        .weeklyCalories(safeCastToInteger(row[1]))
+                        .weeklyAvgDuration(safeCastToBigDecimal(row[2]))
+                        .weeklyAvgRating(safeCastToBigDecimal(row[3]))
+                        .weeklyWorkoutDays(safeCastToInteger(row[4]))
+                        .monthlyWorkouts(safeCastToInteger(row[5]))
+                        .monthlyCalories(safeCastToInteger(row[6]))
+                        .monthlyAvgDuration(safeCastToBigDecimal(row[7]))
+                        .monthlyAvgRating(safeCastToBigDecimal(row[8]))
+                        .monthlyWorkoutDays(safeCastToInteger(row[9]))
+                        .currentStreak(safeCastToInteger(row[10]))
+                        .longestStreak(safeCastToInteger(row[11]))
+                        .lastWorkoutDate(safeCastToLocalDate(row[12]))
+                        .totalWorkouts(safeCastToLong(row[13]))
+                        .totalCalories(safeCastToLong(row[14]))
+                        .totalWorkoutDays(safeCastToLong(row[15]))
+                        .lifetimeAvgDuration(safeCastToBigDecimal(row[16]))
+                        .firstWorkoutDate(safeCastToLocalDate(row[17]))
+                        .build();
+            }
+
+            // Return empty dashboard
+            return createEmptyDashboard();
+        } catch (Exception e) {
+            return createEmptyDashboard();
+        }
     }
 }

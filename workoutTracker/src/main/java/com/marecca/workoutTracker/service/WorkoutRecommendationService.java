@@ -181,7 +181,25 @@ public class WorkoutRecommendationService {
     }
 
     /**
-     * Saves a workout plan based on recommendations
+     * Checks if a workout plan exists for a given user and plan name
+     */
+    private boolean workoutPlanExists(Long userId, String planName) {
+        try {
+            String sql = "SELECT COUNT(*) FROM workout_plans WHERE user_id = ? AND plan_name = ?";
+            Integer count = jdbcTemplate.queryForObject(sql, Integer.class, userId, planName);
+            return count != null && count > 0;
+        } catch (DataAccessException e) {
+            return false;
+        }
+    }
+
+    /**
+     * saves a recommended workout plan
+     * @param userId
+     * @param recommendations
+     * @param goalId
+     * @param planName
+     * @return
      */
     public Map<String, Object> saveWorkoutPlan(Long userId, List<WorkoutRecommendationDTO> recommendations, Long goalId, String planName) {
         try {
@@ -193,21 +211,27 @@ public class WorkoutRecommendationService {
                 throw new IllegalArgumentException("Cannot save workout plan without recommendations");
             }
 
-            //generates plan name based on goal type
+            // Generates plan name based on goal type
             if (planName == null || planName.trim().isEmpty()) {
                 planName = generatePlanNameFromGoal(goalId);
             }
 
-            //calculates estimated duration
+            // Check if workout plan already exists
+            if (workoutPlanExists(userId, planName)) {
+                // Update existing workout plan
+                return updateExistingWorkoutPlan(userId, planName, recommendations, goalId);
+            }
+
+            // Calculates estimated duration
             int estimatedDuration = calculateEstimatedDuration(recommendations);
 
-            //inserts workout plan into workout_plans table
+            // Inserts workout plan into workout_plans table
             String insertPlanSql = """
-        INSERT INTO workout_plans (user_id, plan_name, description, estimated_duration_minutes, 
-                                 difficulty_level, goals, notes, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        RETURNING workout_plan_id
-        """;
+    INSERT INTO workout_plans (user_id, plan_name, description, estimated_duration_minutes, 
+                             difficulty_level, goals, notes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    RETURNING workout_plan_id
+    """;
 
             String description = "Generated workout plan based on personalized recommendations";
             String goals = goalId != null ? "Goal ID: " + goalId : "General fitness improvement";
@@ -223,7 +247,7 @@ public class WorkoutRecommendationService {
                     Long.class
             );
 
-            //inserts exercises details
+            // Inserts exercises details
             insertWorkoutExerciseDetails(workoutPlanId, recommendations);
 
             Map<String, Object> result = new HashMap<>();
@@ -243,7 +267,6 @@ public class WorkoutRecommendationService {
             throw new RuntimeException("An unexpected error occurred while saving the workout plan", e);
         }
     }
-
     /**
      * Generates plan name based on goal type
      */
@@ -406,6 +429,68 @@ public class WorkoutRecommendationService {
                     rec.getRestTimeSeconds(),
                     notes
             );
+        }
+    }
+
+    /**
+     * Updates an existing workout plan with new recommendations
+     */
+    private Map<String, Object> updateExistingWorkoutPlan(Long userId, String planName, List<WorkoutRecommendationDTO> recommendations, Long goalId) {
+        try {
+            // Get the existing workout plan id
+            String getWorkoutPlanIdSql = "SELECT workout_plan_id FROM workout_plans WHERE user_id = ? AND plan_name = ?";
+            Long workoutPlanId = jdbcTemplate.queryForObject(getWorkoutPlanIdSql, Long.class, userId, planName);
+
+            // Calculate new values
+            int estimatedDuration = calculateEstimatedDuration(recommendations);
+            String description = "Updated workout plan based on personalized recommendations";
+            String goals = goalId != null ? "Goal ID: " + goalId : "General fitness improvement";
+            String notes = "Updated with " + recommendations.size() + " exercises";
+            Timestamp now = Timestamp.valueOf(LocalDateTime.now());
+
+            // Update the existing workout plan
+            String updatePlanSql = """
+            UPDATE workout_plans 
+            SET description = ?, 
+                estimated_duration_minutes = ?, 
+                difficulty_level = ?, 
+                goals = ?, 
+                notes = ?, 
+                updated_at = ?
+            WHERE workout_plan_id = ?
+            """;
+
+            jdbcTemplate.update(updatePlanSql,
+                    description,
+                    estimatedDuration,
+                    calculateAverageDifficulty(recommendations),
+                    goals,
+                    notes,
+                    now,
+                    workoutPlanId);
+
+            // Delete existing exercise details for this workout plan
+            String deleteExercisesSql = "DELETE FROM workout_exercise_details WHERE workout_plan_id = ?";
+            jdbcTemplate.update(deleteExercisesSql, workoutPlanId);
+
+            // Insert new exercise details
+            insertWorkoutExerciseDetails(workoutPlanId, recommendations);
+
+            //result
+            Map<String, Object> result = new HashMap<>();
+            result.put("workoutPlanId", workoutPlanId);
+            result.put("planName", planName);
+            result.put("description", description);
+            result.put("estimatedDurationMinutes", estimatedDuration);
+            result.put("exerciseCount", recommendations.size());
+            result.put("updatedAt", now);
+            result.put("userId", userId);
+            result.put("isUpdated", true); //flag that indicates that is an update not a creation
+
+            return result;
+
+        } catch (DataAccessException e) {
+            throw new RuntimeException("Failed to update existing workout plan: " + e.getMessage(), e);
         }
     }
 

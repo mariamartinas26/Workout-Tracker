@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- *
  * Business logic for operations with exercises
  */
 @Service
@@ -206,7 +205,7 @@ public class ExerciseService {
     }
 
     /**
-     * Find similar exrcises based on musculat group and category
+     * Find similar exrcises based on muscular group and category
      */
     @Transactional(readOnly = true)
     public List<Exercise> findSimilarExercises(Long exerciseId, int limit) {
@@ -380,9 +379,7 @@ public class ExerciseService {
         existing.setInstructions(updated.getInstructions());
     }
 
-    /**
-     * Clasa pentru statistici despre exerciții
-     */
+
     @lombok.Data
     @lombok.Builder
     public static class ExerciseStatistics {
