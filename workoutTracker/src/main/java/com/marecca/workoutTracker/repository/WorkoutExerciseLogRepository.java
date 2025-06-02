@@ -56,10 +56,6 @@ public interface WorkoutExerciseLogRepository extends JpaRepository<WorkoutExerc
             @Param("limit") int limit);
 
 
-    @Modifying
-    @Query("DELETE FROM WorkoutExerciseLog wel WHERE wel.scheduledWorkout.scheduledWorkoutId = :scheduledWorkoutId")
-    void deleteByScheduledWorkoutId(@Param("scheduledWorkoutId") Long scheduledWorkoutId);
-
     @Query("SELECT MAX(wel.weightUsedKg) FROM WorkoutExerciseLog wel " +
             "JOIN wel.scheduledWorkout sw " +
             "WHERE sw.user.userId = :userId AND wel.exercise.exerciseId = :exerciseId")

@@ -31,12 +31,6 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
     List<ScheduledWorkout> findTodaysWorkoutsForUser(@Param("userId") Long userId);
 
 
-    @Query("SELECT COUNT(sw) FROM ScheduledWorkout sw WHERE sw.user.userId = :userId AND sw.status = com.marecca.workoutTracker.entity.enums.WorkoutStatusType.COMPLETED")
-
-    List<ScheduledWorkout> findMissedWorkoutsForUser(@Param("userId") Long userId);
-
-    List<ScheduledWorkout> findByWorkoutPlanWorkoutPlanId(Long workoutPlanId);
-
     @Query("SELECT COUNT(sw) FROM ScheduledWorkout sw WHERE sw.user.userId = :userId AND sw.status = 'COMPLETED'")
     Long countCompletedWorkoutsForUser(@Param("userId") Long userId);
 
@@ -44,9 +38,6 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             "WHERE sw.user.userId = :userId AND sw.status = 'COMPLETED'")
     Double getAverageWorkoutDurationForUser(@Param("userId") Long userId);
 
-
-    List<ScheduledWorkout> findByUserUserIdAndStatusOrderByOverallRatingDesc(
-            Long userId, WorkoutStatusType status);
 
     @Modifying
     @Query("UPDATE ScheduledWorkout sw SET sw.status = :status WHERE sw.scheduledWorkoutId = :workoutId")
@@ -107,10 +98,7 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             @Param("activeStatuses") List<WorkoutStatusType> activeStatuses
     );
 
-    /**
-     * Varianta 1: Apelare directă a funcției PostgreSQL
-     * Folosește funcția schedule_workout creată în PostgreSQL
-     */
+
     @Query(value = "SELECT schedule_workout(:userId, :workoutPlanId, :scheduledDate, :scheduledTime)",
             nativeQuery = true)
     Long scheduleWorkoutWithFunction(
@@ -119,10 +107,6 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             @Param("scheduledDate") LocalDate scheduledDate,
             @Param("scheduledTime") LocalTime scheduledTime);
 
-    /**
-     * Varianta 2: Apelare funcție cu parametru opțional pentru timp
-     * Pentru cazurile când scheduled_time este null
-     */
     @Query(value = "SELECT schedule_workout(:userId, :workoutPlanId, :scheduledDate)",
             nativeQuery = true)
     Long scheduleWorkoutWithoutTime(
@@ -130,9 +114,7 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             @Param("workoutPlanId") Long workoutPlanId,
             @Param("scheduledDate") LocalDate scheduledDate);
 
-    /**
-     * Verificare pentru cazul când scheduled_time este specificat
-     */
+
     @Query("SELECT COUNT(sw) > 0 FROM ScheduledWorkout sw " +
             "WHERE sw.user.userId = :userId " +
             "AND sw.scheduledDate = :scheduledDate " +
@@ -145,9 +127,7 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             @Param("statuses") List<WorkoutStatusType> statuses
     );
 
-    /**
-     * Verificare pentru cazul când scheduled_time este null (oricând în ziua respectivă)
-     */
+
     @Query("SELECT COUNT(sw) > 0 FROM ScheduledWorkout sw " +
             "WHERE sw.user.userId = :userId " +
             "AND sw.scheduledDate = :scheduledDate " +
@@ -158,16 +138,6 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             @Param("statuses") List<WorkoutStatusType> statuses
     );
 
-
-    /**
-     * Varianta 4: Verificare dacă workout plan aparține utilizatorului
-     * (pentru validare suplimentară în Java)
-     */
-    @Query("SELECT COUNT(wp) > 0 FROM WorkoutPlan wp " +
-            "WHERE wp.workoutPlanId = :workoutPlanId AND wp.user.userId = :userId")
-    boolean isWorkoutPlanOwnedByUser(
-            @Param("workoutPlanId") Long workoutPlanId,
-            @Param("userId") Long userId);
 
     // Dashboard Summary
     @Query(value = "SELECT * FROM get_dashboard_summary(:userId, :currentDate)", nativeQuery = true)
@@ -193,7 +163,5 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
                                            @Param("endDate") LocalDate endDate);
 
 
-    // Update Streak (called after workout completion)
-    @Query(value = "SELECT * FROM update_workout_streak(:userId, :workoutDate)", nativeQuery = true)
-    List<Object[]> updateWorkoutStreak(@Param("userId") Long userId, @Param("workoutDate") LocalDate workoutDate);
+
 }
