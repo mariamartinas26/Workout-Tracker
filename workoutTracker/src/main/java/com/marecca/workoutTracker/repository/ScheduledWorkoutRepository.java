@@ -173,7 +173,7 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
     @Query(value = "SELECT * FROM get_dashboard_summary(:userId, :currentDate)", nativeQuery = true)
     List<Object[]> getDashboardSummary(@Param("userId") Long userId, @Param("currentDate") LocalDate currentDate);
 
-    // Workout Calendar (for heatmap)
+    // Workout Calendar
     @Query(value = "SELECT * FROM get_workout_calendar(:userId, :startDate, :endDate)", nativeQuery = true)
     List<Object[]> getWorkoutCalendar(@Param("userId") Long userId,
                                       @Param("startDate") LocalDate startDate,
@@ -192,9 +192,6 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
                                            @Param("startDate") LocalDate startDate,
                                            @Param("endDate") LocalDate endDate);
 
-    // Recent Achievements
-    @Query(value = "SELECT * FROM get_recent_achievements(:userId, :daysBack)", nativeQuery = true)
-    List<Object[]> getRecentAchievements(@Param("userId") Long userId, @Param("daysBack") Integer daysBack);
 
     // Update Streak (called after workout completion)
     @Query(value = "SELECT * FROM update_workout_streak(:userId, :workoutDate)", nativeQuery = true)

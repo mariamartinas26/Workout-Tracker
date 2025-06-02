@@ -45,7 +45,7 @@ public class WorkoutRecommendationService {
             String errorMessage = e.getMessage();
             String sqlState = extractSQLState(e);
 
-            // Handle specific PL/SQL exceptions based on error codes and messages
+            //hadle exceptions
             if (sqlState != null) {
                 switch (sqlState) {
                     case "00001":
@@ -170,7 +170,6 @@ public class WorkoutRecommendationService {
      */
     private String extractGoalTypeFromError(String errorMessage, String prefix) {
         String cleanMessage = extractCustomErrorMessage(errorMessage, prefix);
-        // Extract the goal type using regex
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(".*goal type:? ([A-Z_]+).*");
         java.util.regex.Matcher matcher = pattern.matcher(cleanMessage);
         if (matcher.matches()) {

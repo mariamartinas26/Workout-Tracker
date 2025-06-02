@@ -150,7 +150,7 @@ CREATE TABLE workout_exercise_details (
                                               target_reps_min IS NOT NULL OR
                                               target_duration_seconds IS NOT NULL OR
                                               target_distance_meters IS NOT NULL
-                                              )
+                                         )
 );
 
 --scheduled workots table
@@ -207,6 +207,7 @@ CREATE TABLE workout_exercise_logs (
 );
 
 
+--efficient search after email/username
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_username ON users(username);
 
@@ -231,7 +232,7 @@ CREATE INDEX idx_workout_exercise_logs_scheduled_workout_id ON workout_exercise_
 CREATE INDEX idx_workout_exercise_logs_exercise_id ON workout_exercise_logs(exercise_id);
 
 
---TRIGGERE
+--FUNCTIONS OF TYPE TRIGGER (called by the triggers below)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -244,7 +245,6 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION calculate_workout_duration()
 RETURNS TRIGGER AS $$
 BEGIN
-
     IF NEW.status = 'COMPLETED' AND
        NEW.actual_start_time IS NOT NULL AND
        NEW.actual_end_time IS NOT NULL THEN
@@ -261,6 +261,30 @@ RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+
+--TRIGGERS THAT INVOKE FUNCTIONS update_updated_at_column() and calculate_workout_duration()
+CREATE TRIGGER trigger_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_workout_plans_updated_at
+    BEFORE UPDATE ON workout_plans
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_scheduled_workouts_updated_at
+    BEFORE UPDATE ON scheduled_workouts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_calculate_workout_duration
+    BEFORE INSERT OR UPDATE ON scheduled_workouts
+    FOR EACH ROW
+    EXECUTE FUNCTION calculate_workout_duration();
+
+
+--FUNCTION get_user_workout_stats
 CREATE OR REPLACE FUNCTION get_user_workout_stats(
     p_user_id BIGINT,
     p_start_date DATE DEFAULT NULL,
@@ -298,7 +322,9 @@ WHERE sw.user_id = p_user_id
 END;
 $$ LANGUAGE plpgsql;
 
---Schedule workout function (ScheduleWorkoutService)!
+
+
+--FUNCTION schedule_workout (ScheduleWorkoutService)!
 CREATE OR REPLACE FUNCTION schedule_workout(
     p_user_id BIGINT,
     p_workout_plan_id BIGINT,
@@ -306,15 +332,14 @@ CREATE OR REPLACE FUNCTION schedule_workout(
     p_scheduled_time TIME DEFAULT NULL
 ) RETURNS BIGINT AS $$
 DECLARE
-v_scheduled_workout_id BIGINT;
+    v_scheduled_workout_id BIGINT;
 BEGIN
     --checks if user exists
-    IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
+IF NOT EXISTS (SELECT 1 FROM users WHERE user_id = p_user_id) THEN
         RAISE EXCEPTION 'User with ID % does not exist', p_user_id;
 END IF;
-
     --checks if workout plan exists and is owned by user
-    IF NOT EXISTS (
+IF NOT EXISTS (
         SELECT 1 FROM workout_plans
         WHERE workout_plan_id = p_workout_plan_id AND user_id = p_user_id
     ) THEN
@@ -334,11 +359,11 @@ END IF;
             p_scheduled_date, COALESCE(p_scheduled_time::TEXT, '');
 END IF;
 
-    --creates workout
+--creates workout
 INSERT INTO scheduled_workouts (
     user_id, workout_plan_id, scheduled_date, scheduled_time
 ) VALUES (
-             p_user_id, p_workout_plan_id, p_scheduled_date, p_scheduled_time
+    p_user_id, p_workout_plan_id, p_scheduled_date, p_scheduled_time
          ) RETURNING scheduled_workout_id INTO v_scheduled_workout_id;
 
 RETURN v_scheduled_workout_id;
@@ -348,31 +373,11 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger pentru actualizare automată timestamp updated_at
-CREATE TRIGGER trigger_users_updated_at
-    BEFORE UPDATE ON users
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER trigger_workout_plans_updated_at
-    BEFORE UPDATE ON workout_plans
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER trigger_scheduled_workouts_updated_at
-    BEFORE UPDATE ON scheduled_workouts
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER trigger_calculate_workout_duration
-    BEFORE INSERT OR UPDATE ON scheduled_workouts
-                         FOR EACH ROW
-                         EXECUTE FUNCTION calculate_workout_duration();
 
 --user profile: fitness level, weight, workout history in the past 90 days
--- based on this the alg calculates a strength-multiplier (range 0.8x begginers <=5 completed workouts,
+-- based on this the alg calculates a strength-multiplier (range 0.8x beginners <=5 completed workouts,
 --1.3x expert users >=50 completed workouts)
-
+--FUNCTION recommend_workout
 CREATE OR REPLACE FUNCTION recommend_workout(
     p_user_id BIGINT,
     p_goal_type VARCHAR(50)
@@ -415,8 +420,7 @@ END IF;
 END IF;
 
 --user info: weight and fitness level
-SELECT fitness_level, weight_kg
-INTO v_user_fitness_level, v_avg_user_weight
+SELECT fitness_level, weight_kg INTO v_user_fitness_level, v_avg_user_weight
 FROM users WHERE user_id = p_user_id;
 
 --exception if user does not exist
@@ -440,7 +444,7 @@ SELECT COUNT(DISTINCT sw.scheduled_workout_id) INTO v_workout_count
 FROM scheduled_workouts sw
 WHERE sw.user_id = p_user_id AND sw.status = 'COMPLETED' AND sw.actual_start_time >= CURRENT_DATE - INTERVAL '90 days';
 
---strength multiplier based on experience (reflects user experience)
+--strength multiplier based on v_workout_count (reflects user experience)
 v_strength_multiplier := CASE
         WHEN v_workout_count > 50 THEN 1.3 --very advanced
         WHEN v_workout_count > 20 THEN 1.15 --advanced
@@ -457,7 +461,6 @@ RETURN QUERY
             e.category,
             e.primary_muscle_group,
             e.difficulty_level,
-            -- Average performance metrics from user's history
     		-- Calculates the average weight used across workout logs; defaults to 0 if no data
 			COALESCE(AVG(wel.weight_used_kg), 0) as avg_weight_used,
             -- Calculates the average number of reps completed; defaults to 0 if no data
@@ -469,9 +472,9 @@ RETURN QUERY
 			-- Counts how many times the exercise has been performed
 			COUNT(wel.log_id) as times_performed,
 
-			-- Calories estimation based on category and muscle groups
+			--Estimated calories per minute
             CASE e.category
-                WHEN 'CARDIO' THEN 12.0 --12 calories per minute
+                WHEN 'CARDIO' THEN 12.0 --12 calories per minute (cardio exercises are the best)
                 WHEN 'STRENGTH' THEN
                     CASE
                         WHEN e.primary_muscle_group = 'FULL_BODY' THEN 8.0 --8 cal/min
@@ -491,7 +494,7 @@ RETURN QUERY
                     END
                 ELSE 2 --minimal impact
             END as muscle_building_potential,
-            -- Cardio effectiveness
+            -- Cardio effectiveness (cardiovascular health)
             CASE e.category
                 WHEN 'CARDIO' THEN 5
                 WHEN 'STRENGTH' THEN
@@ -499,7 +502,7 @@ RETURN QUERY
                         WHEN e.primary_muscle_group = 'FULL_BODY' THEN 3
                         ELSE 2
                     END
-                ELSE 3
+                ELSE 3 --general exercises(streching)
             END as cardio_effectiveness,
             -- Recently performed penalty
             -- if the exercise was done in the las 7 days->-1points
@@ -572,7 +575,7 @@ SELECT
     -- Recommended reps min (based on user's history if available)
     CASE
         WHEN s.times_performed > 0 AND s.avg_reps > 0 THEN
-            GREATEST(1, ROUND(s.avg_reps * 0.8)::INTEGER)
+            GREATEST(1, ROUND(s.avg_reps * 0.8))
         ELSE
             CASE p_goal_type
                 WHEN 'WEIGHT_LOSS' THEN
@@ -586,7 +589,7 @@ SELECT
     -- Recommended reps max
     CASE
         WHEN s.times_performed > 0 AND s.avg_reps > 0 THEN
-            ROUND(s.avg_reps * 1.2)::INTEGER
+            ROUND(s.avg_reps * 1.2)
             ELSE
                 CASE p_goal_type
                     WHEN 'WEIGHT_LOSS' THEN
@@ -624,9 +627,7 @@ END as recommended_weight_percentage,
 END
 ELSE 60
 END as rest_time_seconds,
-
-        s.calculated_priority_score as priority_score
-
+s.calculated_priority_score as priority_score
     FROM scored_exercises s
     WHERE s.calculated_priority_score > 1.0  -- Only return exercises with good scores
     ORDER BY s.calculated_priority_score DESC, RANDOM()
@@ -679,6 +680,8 @@ CREATE TRIGGER trigger_user_workout_streaks_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+
+--FUNCTION get_dashboard_summary
 CREATE OR REPLACE FUNCTION get_dashboard_summary(
     p_user_id BIGINT,
     p_current_date DATE DEFAULT CURRENT_DATE
@@ -806,7 +809,7 @@ FROM weekly_stats ws
 END;
 $$;
 
-
+--FUNCTION update_workout_streak
 CREATE OR REPLACE FUNCTION update_workout_streak(
     p_user_id BIGINT,
     p_workout_date DATE
@@ -878,6 +881,8 @@ END;
 $$;
 
 
+
+--FUNCTION get_workout_calendar
 CREATE OR REPLACE FUNCTION get_workout_calendar(
     p_user_id BIGINT,
     p_start_date DATE,
@@ -932,6 +937,8 @@ END;
 $$;
 
 
+
+--FUNCTION get_workout_trends
 CREATE OR REPLACE FUNCTION get_workout_trends(
     p_user_id BIGINT,
     p_period_type VARCHAR(10), -- 'daily', 'weekly', 'monthly'
@@ -1000,6 +1007,8 @@ END IF;
 END;
 $$;
 
+
+--FUNCTION get_workout_type_breakdown
 CREATE OR REPLACE FUNCTION get_workout_type_breakdown(
     p_user_id BIGINT,
     p_start_date DATE DEFAULT NULL,
@@ -1070,81 +1079,6 @@ CREATE TRIGGER trigger_workout_completion_streak_update
                         FOR EACH ROW
                         EXECUTE FUNCTION trigger_update_streak_on_workout_completion();
 
-
-CREATE OR REPLACE FUNCTION get_recent_achievements(
-    p_user_id BIGINT,
-    p_days_back INTEGER DEFAULT 30
-)
-RETURNS TABLE(
-    achievement_type VARCHAR(50),
-    achievement_title VARCHAR(100),
-    achievement_description TEXT,
-    achieved_date DATE,
-    metric_value INTEGER
-)
-LANGUAGE plpgsql
-AS $$
-DECLARE
-v_start_date DATE;
-    v_total_workouts INTEGER;
-    v_current_streak INTEGER;
-    v_total_calories INTEGER;
-BEGIN
-    v_start_date := CURRENT_DATE - p_days_back;
-
-SELECT
-    COUNT(*),
-    COALESCE(SUM(calories_burned), 0)
-INTO v_total_workouts, v_total_calories
-FROM scheduled_workouts
-WHERE user_id = p_user_id AND status = 'COMPLETED';
-
-SELECT COALESCE(current_streak, 0)
-INTO v_current_streak
-FROM user_workout_streaks
-WHERE user_id = p_user_id;
-
-RETURN QUERY
--- Streak achievements
-SELECT
-    'STREAK'::VARCHAR(50),
-        (v_current_streak || ' Day Streak!')::VARCHAR(100),
-        ('You have completed workouts for ' || v_current_streak || ' consecutive days!')::TEXT,
-        CURRENT_DATE,
-    v_current_streak
-    WHERE v_current_streak >= 7 AND v_current_streak % 7 = 0
-
-UNION ALL
-
--- Workout milestones
-SELECT
-    'WORKOUT_COUNT'::VARCHAR(50),
-        ('v_total_workouts || ' Workouts Completed!')::VARCHAR(100),
-        ('Congratulations on completing ' || v_total_workouts || ' workouts!')::TEXT,
-        CURRENT_DATE,
-    v_total_workouts
-    WHERE v_total_workouts > 0 AND (
-        v_total_workouts IN (1, 5, 10, 25, 50, 100, 250, 500) OR
-        v_total_workouts % 100 = 0
-    )
-
-UNION ALL
-
--- Calorie milestones
-SELECT
-    'CALORIES'::VARCHAR(50),
-        ('v_total_calories || ' Calories Burned!')::VARCHAR(100),
-        ('You have burned a total of ' || v_total_calories || ' calories!')::TEXT,
-        CURRENT_DATE,
-    v_total_calories
-    WHERE v_total_calories > 0 AND (
-        v_total_calories >= 1000 AND
-        (v_total_calories % 5000 = 0 OR v_total_calories IN (1000, 2500))
-    )
-
-ORDER BY achieved_date DESC, metric_value DESC;
-END;
-$$;
 COMMIT;
 
 
@@ -1248,42 +1182,3 @@ INSERT INTO workout_exercise_logs (scheduled_workout_id, exercise_id, exercise_o
 -- when a workout status changes to 'COMPLETED'
 
 COMMIT;
-
--- VERIFICATION QUERIES
--- Check record counts for each table
-SELECT 'users' as table_name, COUNT(*) as record_count FROM users
-UNION ALL
-SELECT 'goals', COUNT(*) FROM goals
-UNION ALL
-SELECT 'exercises', COUNT(*) FROM exercises
-UNION ALL
-SELECT 'workout_plans', COUNT(*) FROM workout_plans
-UNION ALL
-SELECT 'workout_exercise_details', COUNT(*) FROM workout_exercise_details
-UNION ALL
-SELECT 'scheduled_workouts', COUNT(*) FROM scheduled_workouts
-UNION ALL
-SELECT 'workout_exercise_logs', COUNT(*) FROM workout_exercise_logs
-UNION ALL
-SELECT 'user_workout_streaks', COUNT(*) FROM user_workout_streaks
-ORDER BY table_name;
-
--- Test some of the custom functions
-SELECT 'Dashboard Summary for John Doe:' as test_description;
-SELECT * FROM get_dashboard_summary(1, '2025-06-01');
-
-SELECT 'Workout Stats for Sarah Smith:' as test_description;
-SELECT * FROM get_user_workout_stats(2, '2025-05-01', '2025-06-01');
-
--- Show sample data from views
-SELECT 'Sample from workout_plan_details view:' as test_description;
-SELECT * FROM workout_plan_details WHERE user_id = 1 LIMIT 3;
-
-SELECT 'Sample from user_workout_history view:' as test_description;
-SELECT username, plan_name, scheduled_date, status, calories_burned, overall_rating
-FROM user_workout_history
-WHERE status = 'COMPLETED'
-ORDER BY scheduled_date DESC
-    LIMIT 3;
-
-SELECT 'Database populated successfully with sample data!' as status;
