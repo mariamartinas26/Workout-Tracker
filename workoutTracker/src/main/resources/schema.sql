@@ -1159,17 +1159,14 @@ INSERT INTO scheduled_workouts (user_id, workout_plan_id, scheduled_date, schedu
                                                                                                              (2, 2, '2025-06-02', '19:00:00', 'PLANNED', 'Evening cardio session planned');
 
 -- POPULATE WORKOUT_EXERCISE_LOGS TABLE
--- Logs for John's completed workout (scheduled_workout_id 1)
 INSERT INTO workout_exercise_logs (scheduled_workout_id, exercise_id, exercise_order, sets_completed, reps_completed, calories_burned, difficulty_rating, notes) VALUES
                                                                                                                                                                      (1, 1, 1, 3, 10, 80, 3, 'Did full push-ups, form was good'),
                                                                                                                                                                      (1, 2, 2, 3, 12, 120, 3, 'Squats felt comfortable'),
                                                                                                                                                                      (1, 5, 3, 2, NULL, 40, 2, 'Held plank for 45 seconds each set');
--- Logs for Sarah's completed workout (scheduled_workout_id 2)
 INSERT INTO workout_exercise_logs (scheduled_workout_id, exercise_id, exercise_order, sets_completed, duration_seconds, calories_burned, difficulty_rating, notes) VALUES
                                                                                                                                                                        (2, 3, 1, 1, 1200, 200, 4, 'Maintained good pace throughout'),
                                                                                                                                                                        (2, 1, 2, 3, NULL, 80, 3, 'Quick push-up sets between running');
 
--- Logs for Mike's completed workout (scheduled_workout_id 3)
 INSERT INTO workout_exercise_logs (scheduled_workout_id, exercise_id, exercise_order, sets_completed, reps_completed, weight_used_kg, calories_burned, difficulty_rating, notes) VALUES
                                                                                                                                                                                      (3, 4, 1, 4, 6, 100.0, 250, 4, 'Hit target weight, form was solid'),
                                                                                                                                                                                      (3, 2, 2, 4, 10, 80.0, 200, 3, 'Back squats went to parallel depth');
