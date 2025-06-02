@@ -1,6 +1,9 @@
 package com.marecca.workoutTracker.controller;
 
 import com.marecca.workoutTracker.dto.*;
+import com.marecca.workoutTracker.dto.request.BatchLogExercisesRequest;
+import com.marecca.workoutTracker.dto.request.LogExerciseRequest;
+import com.marecca.workoutTracker.dto.response.*;
 import com.marecca.workoutTracker.entity.WorkoutExerciseLog;
 import com.marecca.workoutTracker.entity.ScheduledWorkout;
 import com.marecca.workoutTracker.service.WorkoutExerciseLogService;
@@ -13,14 +16,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Min;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 /**
  * Controller for logging and viewing workouts
@@ -304,7 +303,7 @@ public class WorkoutLogController {
      * General statistics for user
      */
     @GetMapping("/user/{userId}/statistics")
-    public ResponseEntity<UserWorkoutStatistics> getUserStatistics(@PathVariable Long userId) {
+    public ResponseEntity<UserWorkoutStatisticsDTO> getUserStatistics(@PathVariable Long userId) {
         // Find all completed workouts
         List<ScheduledWorkout> completedWorkouts = scheduledWorkoutService
                 .findByUserIdAndStatus(userId, com.marecca.workoutTracker.entity.enums.WorkoutStatusType.COMPLETED);
@@ -325,7 +324,7 @@ public class WorkoutLogController {
                 .distinct()
                 .count();
 
-        UserWorkoutStatistics stats = UserWorkoutStatistics.builder()
+        UserWorkoutStatisticsDTO stats = UserWorkoutStatisticsDTO.builder()
                 .totalCompletedWorkouts(totalWorkouts != null ? totalWorkouts : 0L)
                 .averageDurationMinutes(averageDuration != null ? averageDuration : 0.0)
                 .totalCaloriesBurned(totalCalories)

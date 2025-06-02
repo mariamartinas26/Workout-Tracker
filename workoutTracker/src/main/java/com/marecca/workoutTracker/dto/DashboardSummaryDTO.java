@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @Builder
@@ -59,5 +60,7 @@ public class DashboardSummaryDTO {
     public String getCurrentStreakFormatted() {
         return currentStreak != null ? currentStreak + " days" : "0 days";
     }
+
+
 }
 

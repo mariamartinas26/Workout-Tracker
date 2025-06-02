@@ -1,6 +1,6 @@
 package com.marecca.workoutTracker.controller;
 
-import com.marecca.workoutTracker.dto.CreateGoalRequest;
+import com.marecca.workoutTracker.dto.request.CreateGoalRequest;
 import com.marecca.workoutTracker.entity.Goal;
 import com.marecca.workoutTracker.service.GoalService;
 import lombok.RequiredArgsConstructor;

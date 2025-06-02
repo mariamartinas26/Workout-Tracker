@@ -1,6 +1,10 @@
 package com.marecca.workoutTracker.controller;
 
-import com.marecca.workoutTracker.dto.*;
+import com.marecca.workoutTracker.dto.request.CompleteWorkoutRequest;
+import com.marecca.workoutTracker.dto.request.ScheduleWorkoutRequest;
+import com.marecca.workoutTracker.dto.request.SessionExerciseLogRequest;
+import com.marecca.workoutTracker.dto.request.StartFreeWorkoutRequest;
+import com.marecca.workoutTracker.dto.response.*;
 import com.marecca.workoutTracker.entity.ScheduledWorkout;
 import com.marecca.workoutTracker.entity.User;
 import com.marecca.workoutTracker.entity.WorkoutExerciseLog;

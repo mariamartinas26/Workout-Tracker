@@ -1,6 +1,12 @@
 package com.marecca.workoutTracker.controller;
 
-import com.marecca.workoutTracker.dto.*;
+import com.marecca.workoutTracker.dto.request.CreateWorkoutPlanRequest;
+import com.marecca.workoutTracker.dto.request.ExerciseDetailRequest;
+import com.marecca.workoutTracker.dto.request.UpdateWorkoutPlanRequest;
+import com.marecca.workoutTracker.dto.response.CreateWorkoutPlanResponse;
+import com.marecca.workoutTracker.dto.response.ErrorResponse;
+import com.marecca.workoutTracker.dto.response.SuccessResponse;
+import com.marecca.workoutTracker.dto.response.WorkoutPlanDetailsResponse;
 import com.marecca.workoutTracker.entity.User;
 import com.marecca.workoutTracker.entity.WorkoutPlan;
 import com.marecca.workoutTracker.service.WorkoutPlanService;

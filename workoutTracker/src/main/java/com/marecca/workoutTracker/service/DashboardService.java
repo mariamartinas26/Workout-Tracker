@@ -46,11 +46,9 @@ public class DashboardService {
                         .build();
             }
 
-            // Return empty dashboard with zero values
+            // Return empty dashboard
             return createEmptyDashboard();
-
         } catch (Exception e) {
-            log.error("Error getting dashboard summary for user {}: {}", userId, e.getMessage());
             return createEmptyDashboard();
         }
     }
@@ -74,7 +72,6 @@ public class DashboardService {
             return calendar;
 
         } catch (Exception e) {
-            log.error("Error getting workout calendar for user {}: {}", userId, e.getMessage());
             return new ArrayList<>();
         }
     }
@@ -98,7 +95,6 @@ public class DashboardService {
             return trends;
 
         } catch (Exception e) {
-            log.error("Error getting workout trends for user {}: {}", userId, e.getMessage());
             return new ArrayList<>();
         }
     }
@@ -122,7 +118,6 @@ public class DashboardService {
             return breakdown;
 
         } catch (Exception e) {
-            log.error("Error getting workout type breakdown for user {}: {}", userId, e.getMessage());
             return new ArrayList<>();
         }
     }
@@ -145,12 +140,11 @@ public class DashboardService {
             return achievements;
 
         } catch (Exception e) {
-            log.error("Error getting recent achievements for user {}: {}", userId, e.getMessage());
             return new ArrayList<>();
         }
     }
 
-    // Helper method to create empty dashboard
+    //method to create empty dashboard
     private DashboardSummaryDTO createEmptyDashboard() {
         return DashboardSummaryDTO.builder()
                 .weeklyWorkouts(0)
@@ -174,7 +168,6 @@ public class DashboardService {
                 .build();
     }
 
-    // Safe casting helper methods to handle database null values and type conversions
     private Integer safeCastToInteger(Object value) {
         if (value == null) return 0;
         if (value instanceof Integer) return (Integer) value;

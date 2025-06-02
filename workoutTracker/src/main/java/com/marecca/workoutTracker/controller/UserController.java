@@ -1,8 +1,7 @@
 package com.marecca.workoutTracker.controller;
 
-import com.marecca.workoutTracker.dto.ChangePasswordRequest;
-import com.marecca.workoutTracker.dto.DetailedUserResponse;
-import com.marecca.workoutTracker.dto.UpdateProfileRequest;
+import com.marecca.workoutTracker.dto.response.DetailedUserResponse;
+import com.marecca.workoutTracker.dto.request.UpdateProfileRequest;
 import com.marecca.workoutTracker.entity.User;
 import com.marecca.workoutTracker.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -451,21 +450,6 @@ public class UserController {
             return createErrorResponse("Error retrieving users with minimum workouts", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
-    /**
-     * Test endpoint to verify controller functionality
-     */
-    @GetMapping("/test")
-    public ResponseEntity<?> test() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "User controller is working!");
-        response.put("timestamp", LocalDateTime.now());
-        response.put("service", "WorkoutTracker User Management API");
-        response.put("version", "1.0.0");
-
-        return ResponseEntity.ok(response);
-    }
-
 
     /**
      * Create a standardized error response

@@ -1,6 +1,6 @@
 package com.marecca.workoutTracker.service;
 
-import com.marecca.workoutTracker.dto.WorkoutRecommendation;
+import com.marecca.workoutTracker.dto.WorkoutRecommendationDTO;
 import com.marecca.workoutTracker.service.exceptions.InvalidGoalTypeException;
 import com.marecca.workoutTracker.service.exceptions.InvalidUserDataException;
 import com.marecca.workoutTracker.service.exceptions.NoExercisesFoundException;
@@ -29,11 +29,11 @@ public class WorkoutRecommendationService {
     /**
      * Workout recommendation based on PL/SQL function "recommend_workout"
      */
-    public List<WorkoutRecommendation> getRecommendations(Long userId, String goalType) {
+    public List<WorkoutRecommendationDTO> getRecommendations(Long userId, String goalType) {
         try {
             String sql = "SELECT * FROM recommend_workout(?, ?)";
 
-            List<WorkoutRecommendation> recommendations = jdbcTemplate.query(
+            List<WorkoutRecommendationDTO> recommendations = jdbcTemplate.query(
                     sql,
                     new Object[]{userId, goalType},
                     new WorkoutRecommendationRowMapper()
@@ -183,7 +183,7 @@ public class WorkoutRecommendationService {
     /**
      * Saves a workout plan based on recommendations
      */
-    public Map<String, Object> saveWorkoutPlan(Long userId, List<WorkoutRecommendation> recommendations, Long goalId, String planName) {
+    public Map<String, Object> saveWorkoutPlan(Long userId, List<WorkoutRecommendationDTO> recommendations, Long goalId, String planName) {
         try {
             if (!userExists(userId)) {
                 throw new IllegalArgumentException("User with ID " + userId + " does not exist");
@@ -344,10 +344,10 @@ public class WorkoutRecommendationService {
     /**
      * Calculates duration of workout
      */
-    private int calculateEstimatedDuration(List<WorkoutRecommendation> recommendations) {
+    private int calculateEstimatedDuration(List<WorkoutRecommendationDTO> recommendations) {
         int totalMinutes = 0;
 
-        for (WorkoutRecommendation rec : recommendations) {
+        for (WorkoutRecommendationDTO rec : recommendations) {
             //2 minutes for set + rest time
             int setsTime = (rec.getRecommendedSets() != null ? rec.getRecommendedSets() : 3) * 2;
             int restTime = (rec.getRestTimeSeconds() != null ? rec.getRestTimeSeconds() : 60)
@@ -362,7 +362,7 @@ public class WorkoutRecommendationService {
     /**
      * Calculates difficulty
      */
-    private int calculateAverageDifficulty(List<WorkoutRecommendation> recommendations) {
+    private int calculateAverageDifficulty(List<WorkoutRecommendationDTO> recommendations) {
         if (recommendations.isEmpty()) return 3;
 
         double avgScore = recommendations.stream()
@@ -380,7 +380,7 @@ public class WorkoutRecommendationService {
     /**
      * Inserts exercise details into workout plan
      */
-    private void insertWorkoutExerciseDetails(Long workoutPlanId, List<WorkoutRecommendation> recommendations) {
+    private void insertWorkoutExerciseDetails(Long workoutPlanId, List<WorkoutRecommendationDTO> recommendations) {
         String sql = """
             INSERT INTO workout_exercise_details 
             (workout_plan_id, exercise_id, exercise_order, target_sets, target_reps_min, 
@@ -389,7 +389,7 @@ public class WorkoutRecommendationService {
             """;
 
         for (int i = 0; i < recommendations.size(); i++) {
-            WorkoutRecommendation rec = recommendations.get(i);
+            WorkoutRecommendationDTO rec = recommendations.get(i);
 
             String notes = String.format("Recommendation - Priority Score: %.2f, Weight: %s%%",
                     rec.getPriorityScore() != null ? rec.getPriorityScore().doubleValue() : 0.0,
@@ -420,10 +420,10 @@ public class WorkoutRecommendationService {
     /**
      * RowMapper for WorkoutRecommendation
      */
-    private static class WorkoutRecommendationRowMapper implements RowMapper<WorkoutRecommendation> {
+    private static class WorkoutRecommendationRowMapper implements RowMapper<WorkoutRecommendationDTO> {
         @Override
-        public WorkoutRecommendation mapRow(ResultSet rs, int rowNum) throws SQLException {
-            WorkoutRecommendation recommendation = new WorkoutRecommendation();
+        public WorkoutRecommendationDTO mapRow(ResultSet rs, int rowNum) throws SQLException {
+            WorkoutRecommendationDTO recommendation = new WorkoutRecommendationDTO();
 
             recommendation.setExerciseId(rs.getLong("exercise_id"));
             recommendation.setExerciseName(rs.getString("exercise_name"));

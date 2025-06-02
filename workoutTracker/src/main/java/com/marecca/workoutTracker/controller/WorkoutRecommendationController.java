@@ -1,8 +1,8 @@
 package com.marecca.workoutTracker.controller;
 
-import com.marecca.workoutTracker.dto.SaveWorkoutPlanRequest;
-import com.marecca.workoutTracker.dto.WorkoutRecommendation;
-import com.marecca.workoutTracker.dto.WorkoutRecommendationRequest;
+import com.marecca.workoutTracker.dto.request.SaveWorkoutPlanRequest;
+import com.marecca.workoutTracker.dto.WorkoutRecommendationDTO;
+import com.marecca.workoutTracker.dto.request.WorkoutRecommendationRequest;
 import com.marecca.workoutTracker.service.WorkoutRecommendationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +51,7 @@ public class WorkoutRecommendationController {
                         .body(createErrorResponse("Invalid goal type. Valid values: WEIGHT_LOSS, MUSCLE_GAIN, MAINTENANCE"));
             }
 
-            List<WorkoutRecommendation> recommendations = workoutRecommendationService
+            List<WorkoutRecommendationDTO> recommendations = workoutRecommendationService
                     .getRecommendations(request.getUserId(), request.getGoalType());
 
             logger.info("Generated {} recommendations for user {}",

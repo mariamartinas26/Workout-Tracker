@@ -1,10 +1,10 @@
 package com.marecca.workoutTracker.controller;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.marecca.workoutTracker.dto.AvailabilityResponse;
-import com.marecca.workoutTracker.dto.ErrorResponse;
-import com.marecca.workoutTracker.dto.RescheduleWorkoutRequest;
-import com.marecca.workoutTracker.dto.SuccessResponse;
+import com.marecca.workoutTracker.dto.response.AvailabilityResponse;
+import com.marecca.workoutTracker.dto.response.ErrorResponse;
+import com.marecca.workoutTracker.dto.request.RescheduleWorkoutRequest;
+import com.marecca.workoutTracker.dto.response.SuccessResponse;
 import com.marecca.workoutTracker.entity.ScheduledWorkout;
 import com.marecca.workoutTracker.service.ScheduledWorkoutService;
 import lombok.RequiredArgsConstructor;

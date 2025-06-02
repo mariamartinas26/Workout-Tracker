@@ -56,16 +56,7 @@ CREATE TYPE workout_status_type AS ENUM (
     'MISSED'
 );
 
-
--- =================================================================
--- CRITICAL FIXES FOR DATABASE SCRIPT
--- =================================================================
-
--- 1. FIX: Table Creation Order Problem
--- The goals table is created BEFORE users table, but references users(user_id)
--- You need to move the tables in this order:
-
--- STEP 1: Create users table FIRST
+--user table
 CREATE TABLE users (
                        user_id BIGSERIAL PRIMARY KEY,
                        username VARCHAR(50) NOT NULL UNIQUE,
@@ -82,7 +73,7 @@ CREATE TABLE users (
                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- STEP 2: Create exercises table SECOND
+--exercises table
 CREATE TABLE exercises (
                            exercise_id BIGSERIAL PRIMARY KEY,
                            exercise_name VARCHAR(100) NOT NULL UNIQUE,
@@ -96,7 +87,7 @@ CREATE TABLE exercises (
                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- STEP 3: Create goals table THIRD (now users exists for foreign key)
+--goals table
 CREATE TABLE goals (
                        goal_id BIGSERIAL PRIMARY KEY,
                        user_id BIGINT NOT NULL,
@@ -119,7 +110,7 @@ CREATE TABLE goals (
                            FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
-
+--workout plans table
 CREATE TABLE workout_plans (
                                workout_plan_id BIGSERIAL PRIMARY KEY,
                                user_id BIGINT NOT NULL,
@@ -137,6 +128,7 @@ CREATE TABLE workout_plans (
                                CONSTRAINT uk_user_plan_name UNIQUE (user_id, plan_name)
 );
 
+--workout exercise details table
 CREATE TABLE workout_exercise_details (
                                           workout_exercise_detail_id BIGSERIAL PRIMARY KEY,
                                           workout_plan_id BIGINT NOT NULL,
@@ -164,6 +156,7 @@ CREATE TABLE workout_exercise_details (
                                               )
 );
 
+--scheduled workots table
 CREATE TABLE scheduled_workouts (
                                     scheduled_workout_id BIGSERIAL PRIMARY KEY,
                                     user_id BIGINT NOT NULL,
@@ -193,6 +186,7 @@ CREATE TABLE scheduled_workouts (
                                         )
 );
 
+--workout exercise logs table
 CREATE TABLE workout_exercise_logs (
                                        log_id BIGSERIAL PRIMARY KEY,
                                        scheduled_workout_id BIGINT NOT NULL,
@@ -1254,59 +1248,52 @@ END;
 $$;
 COMMIT;
 
--- =================================================================
--- FITNESS DATABASE POPULATION SCRIPT
--- =================================================================
+
+
+-- workoutTracker DATABASE POPULATION SCRIPT
 
 BEGIN;
 
--- =================================================================
--- POPULATE USERS TABLE
--- =================================================================
+--populate user tables
 
-INSERT INTO users (username, email, password_hash, first_name, last_name, date_of_birth, height_cm, weight_kg, fitness_level, is_active) VALUES
-                                                                                                                                             ('john_doe', 'john.doe@email.com', '$2b$12$K8nzQ2rJ5X7vL9wP3mA4sO.hF6gT8nY2kM1pR7vB9cX4jL3qS8uE6', 'John', 'Doe', '1990-05-15', 180, 75.5, 'INTERMEDIATE', true),
-                                                                                                                                             ('sarah_smith', 'sarah.smith@email.com', '$2b$12$L9oA3rK6Y8wQ0nP4mB5tP.iG7hU9oZ3lN2qS8wC0dY5kM4rT9vF7', 'Sarah', 'Smith', '1988-03-22', 165, 62.0, 'BEGINNER', true),
-                                                                                                                                             ('mike_wilson', 'mike.wilson@email.com', '$2b$12$M0pB4sL7Z9xR1oQ5nC6uQ.jH8iV0pA4mO3rT9xD1eZ6lN5sU0wG8', 'Mike', 'Wilson', '1985-11-08', 190, 85.0, 'ADVANCED', true);
+INSERT INTO users (username, email, password_hash, first_name, last_name,
+                   date_of_birth, height_cm, weight_kg, fitness_level, is_active) VALUES
+                   ('john_doe', 'john.doe@email.com', '$2b$12$K8nzQ2rJ5X7vL9wP3mA4sO.hF6gT8nY2kM1pR7vB9cX4jL3qS8uE6', 'John', 'Doe', '1990-05-15', 180, 75.5, 'INTERMEDIATE', true),
+                   ('sarah_smith', 'sarah.smith@email.com', '$2b$12$L9oA3rK6Y8wQ0nP4mB5tP.iG7hU9oZ3lN2qS8wC0dY5kM4rT9vF7', 'Sarah', 'Smith', '1988-03-22', 165, 62.0, 'BEGINNER', true),
+                   ('mike_wilson', 'mike.wilson@email.com', '$2b$12$M0pB4sL7Z9xR1oQ5nC6uQ.jH8iV0pA4mO3rT9xD1eZ6lN5sU0wG8', 'Mike', 'Wilson', '1985-11-08', 190, 85.0, 'ADVANCED', true);
 
 
--- =================================================================
 -- POPULATE GOALS TABLE
--- =================================================================
+INSERT INTO goals (user_id, goal_type, target_weight_loss, current_weight, timeframe_months,
+                   daily_calorie_deficit, target_weight, status, notes) VALUES
+                   (1, 'WEIGHT_LOSS', 8.0, 75.5, 4, 500, 67.5, 'ACTIVE', 'Goal is to lose weight for summer beach season'),
+                   (2, 'FITNESS_IMPROVEMENT', NULL, 62.0, 6, NULL, NULL, 'ACTIVE', 'Focus on building strength and endurance'),
+                   (3, 'MUSCLE_GAIN', NULL, 85.0, 8, NULL, 90.0, 'ACTIVE', 'Bulk phase - increase muscle mass and strength');
 
-INSERT INTO goals (user_id, goal_type, target_weight_loss, current_weight, timeframe_months, daily_calorie_deficit, target_weight, status, notes) VALUES
-                                                                                                                                                      (1, 'WEIGHT_LOSS', 8.0, 75.5, 4, 500, 67.5, 'ACTIVE', 'Goal is to lose weight for summer beach season'),
-                                                                                                                                                      (2, 'FITNESS_IMPROVEMENT', NULL, 62.0, 6, NULL, NULL, 'ACTIVE', 'Focus on building strength and endurance'),
-                                                                                                                                                      (3, 'MUSCLE_GAIN', NULL, 85.0, 8, NULL, 90.0, 'ACTIVE', 'Bulk phase - increase muscle mass and strength');
+INSERT INTO goals (user_id, goal_type, target_weight_gain, current_weight,
+                   timeframe_months, daily_calorie_surplus, target_weight, status, notes) VALUES
+                    (3, 'WEIGHT_GAIN', 5.0, 85.0, 6, 300, 90.0, 'ACTIVE', 'Clean bulk with focus on lean muscle mass');
 
-INSERT INTO goals (user_id, goal_type, target_weight_gain, current_weight, timeframe_months, daily_calorie_surplus, target_weight, status, notes) VALUES
-    (3, 'WEIGHT_GAIN', 5.0, 85.0, 6, 300, 90.0, 'ACTIVE', 'Clean bulk with focus on lean muscle mass');
 
--- =================================================================
 -- POPULATE EXERCISES TABLE
--- =================================================================
 
-INSERT INTO exercises (exercise_name, description, category, primary_muscle_group, secondary_muscle_groups, equipment_needed, difficulty_level, instructions) VALUES
-                                                                                                                                                                  ('Push-ups', 'Classic bodyweight chest exercise', 'STRENGTH', 'CHEST', ARRAY['TRICEPS', 'SHOULDERS']::muscle_group_type[], 'None', 2, 'Start in plank position, lower body until chest nearly touches floor, push back up'),
-                                                                                                                                                                  ('Squats', 'Fundamental lower body compound movement', 'STRENGTH', 'QUADRICEPS', ARRAY['GLUTES', 'HAMSTRINGS']::muscle_group_type[], 'None or Barbell', 2, 'Stand with feet shoulder-width apart, lower hips back and down, return to standing'),
-                                                                                                                                                                  ('Running', 'Cardiovascular endurance exercise', 'CARDIO', 'CARDIO', ARRAY['CALVES', 'QUADRICEPS']::muscle_group_type[], 'Running shoes', 1, 'Maintain steady pace, focus on breathing rhythm and proper form');
+INSERT INTO exercises (exercise_name, description, category, primary_muscle_group, secondary_muscle_groups,
+                       equipment_needed, difficulty_level, instructions) VALUES
+                    ('Push-ups', 'Classic bodyweight chest exercise', 'STRENGTH', 'CHEST', ARRAY['TRICEPS', 'SHOULDERS']::muscle_group_type[], 'None', 2, 'Start in plank position, lower body until chest nearly touches floor, push back up'),
+                    ('Squats', 'Fundamental lower body compound movement', 'STRENGTH', 'QUADRICEPS', ARRAY['GLUTES', 'HAMSTRINGS']::muscle_group_type[], 'None or Barbell', 2, 'Stand with feet shoulder-width apart, lower hips back and down, return to standing'),
+                    ('Running', 'Cardiovascular endurance exercise', 'CARDIO', 'CARDIO', ARRAY['CALVES', 'QUADRICEPS']::muscle_group_type[], 'Running shoes', 1, 'Maintain steady pace, focus on breathing rhythm and proper form');
 
 INSERT INTO exercises (exercise_name, description, category, primary_muscle_group, secondary_muscle_groups, equipment_needed, difficulty_level, instructions) VALUES
                                                                                                                                                                   ('Deadlift', 'Compound movement targeting posterior chain', 'STRENGTH', 'BACK', ARRAY['GLUTES', 'HAMSTRINGS']::muscle_group_type[], 'Barbell', 4, 'Hip hinge movement, keep bar close to body, drive through heels'),
                                                                                                                                                                   ('Plank', 'Isometric core strengthening exercise', 'STRENGTH', 'ABS', ARRAY['SHOULDERS', 'BACK']::muscle_group_type[], 'None', 2, 'Hold straight line from head to heels, engage core muscles'),
                                                                                                                                                                   ('Yoga Flow', 'Flexibility and balance practice', 'FLEXIBILITY', 'FULL_BODY', NULL, 'Yoga mat', 3, 'Flow through various poses focusing on breath and flexibility');
--- =================================================================
 -- POPULATE WORKOUT_PLANS TABLE
--- =================================================================
-
 INSERT INTO workout_plans (user_id, plan_name, description, estimated_duration_minutes, difficulty_level, goals, notes) VALUES
                                                                                                                             (1, 'Beginner Full Body', 'Complete full body workout for beginners', 45, 2, 'Build strength and lose weight', 'Perfect for starting fitness journey'),
                                                                                                                             (2, 'Cardio Blast', 'High intensity cardio focused workout', 30, 3, 'Improve cardiovascular health', 'Great for burning calories quickly'),
                                                                                                                             (3, 'Strength Builder', 'Advanced strength training program', 60, 4, 'Build muscle mass and strength', 'Focus on compound movements with progressive overload');
 
--- =================================================================
 -- POPULATE WORKOUT_EXERCISE_DETAILS TABLE
--- =================================================================
 
 -- Beginner Full Body Plan (Plan ID 1)
 INSERT INTO workout_exercise_details (workout_plan_id, exercise_id, exercise_order, target_sets, target_reps_min, target_reps_max, rest_time_seconds, notes) VALUES
@@ -1327,10 +1314,7 @@ INSERT INTO workout_exercise_details (workout_plan_id, exercise_id, exercise_ord
 INSERT INTO workout_exercise_details (workout_plan_id, exercise_id, exercise_order, target_sets, target_reps_min, target_reps_max, target_weight_kg, rest_time_seconds, notes) VALUES
                                                                                                                                                                                    (3, 4, 1, 4, 5, 8, 100.0, 180, 'Progressive overload each week'),
                                                                                                                                                                                    (3, 2, 2, 4, 8, 12, 80.0, 120, 'Back squats with proper depth');
-
--- =================================================================
 -- POPULATE SCHEDULED_WORKOUTS TABLE
--- =================================================================
 
 INSERT INTO scheduled_workouts (user_id, workout_plan_id, scheduled_date, scheduled_time, status, actual_start_time, actual_end_time, calories_burned, overall_rating, energy_level_before, energy_level_after, notes) VALUES
                                                                                                                                                                                                                            (1, 1, '2025-05-28', '08:00:00', 'COMPLETED', '2025-05-28 08:05:00', '2025-05-28 08:50:00', 320, 4, 3, 4, 'Great first workout, felt energized'),
@@ -1341,16 +1325,12 @@ INSERT INTO scheduled_workouts (user_id, workout_plan_id, scheduled_date, schedu
                                                                                                              (1, 1, '2025-06-02', '08:00:00', 'PLANNED', 'Looking forward to second workout'),
                                                                                                              (2, 2, '2025-06-02', '19:00:00', 'PLANNED', 'Evening cardio session planned');
 
--- =================================================================
 -- POPULATE WORKOUT_EXERCISE_LOGS TABLE
--- =================================================================
-
 -- Logs for John's completed workout (scheduled_workout_id 1)
 INSERT INTO workout_exercise_logs (scheduled_workout_id, exercise_id, exercise_order, sets_completed, reps_completed, calories_burned, difficulty_rating, notes) VALUES
                                                                                                                                                                      (1, 1, 1, 3, 10, 80, 3, 'Did full push-ups, form was good'),
                                                                                                                                                                      (1, 2, 2, 3, 12, 120, 3, 'Squats felt comfortable'),
                                                                                                                                                                      (1, 5, 3, 2, NULL, 40, 2, 'Held plank for 45 seconds each set');
-
 -- Logs for Sarah's completed workout (scheduled_workout_id 2)
 INSERT INTO workout_exercise_logs (scheduled_workout_id, exercise_id, exercise_order, sets_completed, duration_seconds, calories_burned, difficulty_rating, notes) VALUES
                                                                                                                                                                        (2, 3, 1, 1, 1200, 200, 4, 'Maintained good pace throughout'),
@@ -1361,19 +1341,16 @@ INSERT INTO workout_exercise_logs (scheduled_workout_id, exercise_id, exercise_o
                                                                                                                                                                                      (3, 4, 1, 4, 6, 100.0, 250, 4, 'Hit target weight, form was solid'),
                                                                                                                                                                                      (3, 2, 2, 4, 10, 80.0, 200, 3, 'Back squats went to parallel depth');
 
--- =================================================================
+
 -- USER_WORKOUT_STREAKS TABLE
--- =================================================================
+
 -- Note: This table is automatically populated by triggers when workouts are completed
 -- The trigger 'trigger_workout_completion_streak_update' calls update_workout_streak()
 -- when a workout status changes to 'COMPLETED'
 
 COMMIT;
 
--- =================================================================
 -- VERIFICATION QUERIES
--- =================================================================
-
 -- Check record counts for each table
 SELECT 'users' as table_name, COUNT(*) as record_count FROM users
 UNION ALL
