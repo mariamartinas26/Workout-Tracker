@@ -33,38 +33,6 @@ public class WorkoutSessionController {
     private final WorkoutExerciseLogService workoutExerciseLogService;
 
     /**
-     * 1. Schedule a new workout (starting point)
-     */
-    @PostMapping("/schedule")
-    public ResponseEntity<?> scheduleWorkout(@Valid @RequestBody ScheduleWorkoutRequest request) {
-        try {
-            Long scheduledWorkoutId = scheduledWorkoutService.scheduleWorkoutWithValidation(
-                    request.getUserId(),
-                    request.getWorkoutPlanId(),
-                    request.getScheduledDate(),
-                    request.getScheduledTime()
-            );
-
-            ScheduleWorkoutResponse response = ScheduleWorkoutResponse.builder()
-                    .scheduledWorkoutId(scheduledWorkoutId)
-                    .status(WorkoutStatusType.PLANNED)
-                    .message("Workout scheduled successfully")
-                    .nextAction("Start workout when you're ready")
-                    .build();
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-
-        } catch (Exception e) {
-            log.error("Error scheduling workout: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ErrorResponse.builder()
-                            .error("Scheduling error")
-                            .message(e.getMessage())
-                            .build());
-        }
-    }
-
-    /**
      * 2. Start a scheduled workout
      */
     @PostMapping("/{workoutId}/start")

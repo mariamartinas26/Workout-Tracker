@@ -7,6 +7,9 @@ import com.marecca.workoutTracker.dto.RescheduleWorkoutRequest;
 import com.marecca.workoutTracker.dto.SuccessResponse;
 import com.marecca.workoutTracker.entity.ScheduledWorkout;
 import com.marecca.workoutTracker.service.ScheduledWorkoutService;
+import com.marecca.workoutTracker.service.exceptions.UserNotFoundException;
+import com.marecca.workoutTracker.service.exceptions.WorkoutAlreadyScheduledException;
+import com.marecca.workoutTracker.service.exceptions.WorkoutPlanNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -38,7 +41,7 @@ public class ScheduledWorkoutController {
     @PostMapping("/schedule")
     public ResponseEntity<?> scheduleWorkout(@Valid @RequestBody ScheduleWorkoutRequest request) {
         try {
-            Long scheduledWorkoutId = scheduledWorkoutService.scheduleWorkoutWithValidation(
+            Long scheduledWorkoutId = scheduledWorkoutService.scheduleWorkoutWithFunction(
                     request.getUserId(),
                     request.getWorkoutPlanId(),
                     request.getScheduledDate(),
@@ -52,11 +55,43 @@ public class ScheduledWorkoutController {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
-        } catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (UserNotFoundException e) {
+            log.error("User not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ErrorResponse.builder()
+                            .error("User not found")
+                            .message(e.getMessage())
+                            .build());
+
+        } catch (WorkoutPlanNotFoundException e) {
+            log.error("Workout plan not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ErrorResponse.builder()
+                            .error("Workout plan not found")
+                            .message(e.getMessage())
+                            .build());
+
+        } catch (WorkoutAlreadyScheduledException e) {
+            log.error("Workout already scheduled: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ErrorResponse.builder()
+                            .error("Workout already scheduled")
+                            .message(e.getMessage())
+                            .build());
+
+        } catch (IllegalArgumentException e) {
             log.error("Validation error while scheduling workout: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(ErrorResponse.builder()
                             .error("Validation error")
+                            .message(e.getMessage())
+                            .build());
+
+        } catch (RuntimeException e) {
+            log.error("Database error while scheduling workout: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ErrorResponse.builder()
+                            .error("Database error")
                             .message(e.getMessage())
                             .build());
 
