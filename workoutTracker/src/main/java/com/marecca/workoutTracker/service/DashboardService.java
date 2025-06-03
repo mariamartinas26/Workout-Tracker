@@ -26,15 +26,12 @@ public class DashboardService {
     private final ScheduledWorkoutRepository scheduledWorkoutRepository;
     private final UserWorkoutStreakRepository userWorkoutStreakRepository;
 
-    /**
-     * Get dashboard summary using pure Java instead of PL/SQL function
-     */
     public DashboardSummaryDTO getDashboardSummary(Long userId) {
         return getDashboardSummary(userId, LocalDate.now());
     }
 
     /**
-     * Get dashboard summary for a specific date using pure Java
+     * Get dashboard summary for a specific date
      */
     public DashboardSummaryDTO getDashboardSummary(Long userId, LocalDate currentDate) {
         try {
@@ -181,7 +178,6 @@ public class DashboardService {
         }
     }
 
-    // Helper method to round BigDecimal values like the PL/SQL function does
     private BigDecimal roundToBigDecimal(Object value, int scale) {
         if (value == null) return BigDecimal.ZERO;
 
@@ -191,7 +187,6 @@ public class DashboardService {
         return bd.setScale(scale, RoundingMode.HALF_UP);
     }
 
-    //method to create empty dashboard
     private DashboardSummaryDTO createEmptyDashboard() {
         return DashboardSummaryDTO.builder()
                 .weeklyWorkouts(0)

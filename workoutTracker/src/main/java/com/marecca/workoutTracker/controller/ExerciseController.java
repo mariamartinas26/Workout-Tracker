@@ -211,32 +211,6 @@ public class ExerciseController {
     }
 
     /**
-     * Find exercises without equipment
-     * GET /api/exercises/no-equipment
-     */
-    @GetMapping("/no-equipment")
-    public ResponseEntity<List<Exercise>> getExercisesWithoutEquipment() {
-        log.debug("REST request to get exercises without equipment");
-
-        List<Exercise> exercises = exerciseService.findExercisesWithoutEquipment();
-        return ResponseEntity.ok(exercises);
-    }
-
-    /**
-     * Find exercises by equipment
-     * GET /api/exercises/equipment/{equipment}
-     */
-    @GetMapping("/equipment/{equipment}")
-    public ResponseEntity<List<Exercise>> getExercisesByEquipment(
-            @PathVariable String equipment) {
-
-        log.debug("REST request to get exercises by equipment: {}", equipment);
-
-        List<Exercise> exercises = exerciseService.findByEquipment(equipment);
-        return ResponseEntity.ok(exercises);
-    }
-
-    /**
      * Find similar exercises
      * GET /api/exercises/{id}/similar
      */
@@ -309,25 +283,6 @@ public class ExerciseController {
     }
 
     /**
-     * Find recently created exercises
-     * GET /api/exercises/recent
-     */
-    @GetMapping("/recent")
-    public ResponseEntity<List<Exercise>> getRecentExercises(
-            @RequestParam(defaultValue = "30") int days) {
-
-        log.debug("REST request to get exercises created in the last {} days", days);
-
-        try {
-            List<Exercise> exercises = exerciseService.findRecentExercises(days);
-            return ResponseEntity.ok(exercises);
-        } catch (IllegalArgumentException e) {
-            log.error("Error getting recent exercises: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    /**
      * Find unused exercises
      * GET /api/exercises/unused
      */
@@ -380,18 +335,6 @@ public class ExerciseController {
     }
 
     /**
-     * Check if exercise name is available
-     * GET /api/exercises/check-name/{name}
-     */
-    @GetMapping("/check-name/{name}")
-    public ResponseEntity<Boolean> isExerciseNameAvailable(@PathVariable String name) {
-        log.debug("REST request to check if exercise name is available: {}", name);
-
-        boolean available = exerciseService.isExerciseNameAvailable(name);
-        return ResponseEntity.ok(available);
-    }
-
-    /**
      * Count exercises by category
      * GET /api/exercises/count/category/{category}
      */
@@ -432,17 +375,6 @@ public class ExerciseController {
         }
     }
 
-    /**
-     * Get exercise statistics
-     * GET /api/exercises/statistics
-     */
-    @GetMapping("/statistics")
-    public ResponseEntity<ExerciseService.ExerciseStatistics> getExerciseStatistics() {
-        log.debug("REST request to get exercise statistics");
-
-        ExerciseService.ExerciseStatistics statistics = exerciseService.getExerciseStatistics();
-        return ResponseEntity.ok(statistics);
-    }
 
     /**
      * Find exercises by secondary muscle groups

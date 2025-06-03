@@ -34,8 +34,6 @@ public class WorkoutPlanService {
     private final UserRepository userRepository;
     private final ExerciseRepository exerciseRepository;
     private final WorkoutExerciseDetailRepository workoutExerciseDetailRepository;
-
-
     /**
      * creates a workout plan with exercises
      */

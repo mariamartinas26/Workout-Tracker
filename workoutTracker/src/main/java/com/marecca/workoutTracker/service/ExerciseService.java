@@ -50,14 +50,6 @@ public class ExerciseService {
         return exerciseRepository.findById(exerciseId);
     }
 
-    /**
-     * finds exercise by name
-    */
-    @Transactional(readOnly = true)
-    public Optional<Exercise> findByName(String exerciseName) {
-        return exerciseRepository.findByExerciseName(exerciseName);
-    }
-
 
     @Transactional(readOnly = true)
     public Page<Exercise> findAll(Pageable pageable) {
@@ -126,41 +118,6 @@ public class ExerciseService {
                 pageable);
     }
 
-    /**
-     * find exercises by required equipment
-     */
-    @Transactional(readOnly = true)
-    public List<Exercise> findByEquipment(String equipment) {
-        if (!StringUtils.hasText(equipment)) {
-            return List.of();
-        }
-
-        return exerciseRepository.findByEquipmentContainingIgnoreCase(equipment.trim());
-    }
-
-    /**
-     * finds exercises that don't require equipment
-     * @return lista exercițiilor fără echipament
-     */
-    @Transactional(readOnly = true)
-    public List<Exercise> findExercisesWithoutEquipment() {
-        return exerciseRepository.findExercisesWithoutEquipment();
-    }
-
-
-    public Exercise updateExercise(Long exerciseId, Exercise updatedExercise) {
-        Exercise existingExercise = findExerciseById(exerciseId);
-        validateExerciseData(updatedExercise);
-
-        if (!existingExercise.getExerciseName().equals(updatedExercise.getExerciseName())) {
-            validateUniqueExerciseName(updatedExercise.getExerciseName());
-        }
-
-        updateExerciseFields(existingExercise, updatedExercise);
-
-        Exercise savedExercise = exerciseRepository.save(existingExercise);
-        return savedExercise;
-    }
 
     public void deleteExercise(Long exerciseId) {
         validateExerciseExists(exerciseId);
@@ -221,11 +178,6 @@ public class ExerciseService {
     }
 
     @Transactional(readOnly = true)
-    public boolean isExerciseNameAvailable(String exerciseName) {
-        return !exerciseRepository.existsByExerciseName(exerciseName);
-    }
-
-    @Transactional(readOnly = true)
     public List<Exercise> findMostPopularExercises(int limit) {
         if (limit <= 0) {
             throw new IllegalArgumentException("Limit should be positive!");
@@ -247,17 +199,6 @@ public class ExerciseService {
 
         return exerciseRepository.findMostLoggedExercises(limit);
     }
-
-    @Transactional(readOnly = true)
-    public List<Exercise> findRecentExercises(int days) {
-        if (days <= 0) {
-            throw new IllegalArgumentException("Number of days should be positive!");
-        }
-
-        LocalDateTime since = LocalDateTime.now().minusDays(days);
-        return exerciseRepository.findRecentExercises(since);
-    }
-
     /**
      * finds unused exercises in plans
      */
@@ -294,27 +235,6 @@ public class ExerciseService {
                 .toArray(String[]::new);
 
         return exerciseRepository.findBySecondaryMuscleGroupsIn(muscleGroupNames);
-    }
-
-    /**
-     * statistics of exercises
-     * @return
-     */
-    @Transactional(readOnly = true)
-    public ExerciseStatistics getExerciseStatistics() {
-        long totalExercises = exerciseRepository.count();
-        long beginnerExercises = exerciseRepository.findByDifficultyLevelLessThanEqual(2).size();
-        long advancedExercises = exerciseRepository.findByDifficultyLevelGreaterThanEqual(4).size();
-        long exercisesWithoutEquipment = exerciseRepository.findExercisesWithoutEquipment().size();
-        long unusedExercises = exerciseRepository.findUnusedExercises().size();
-
-        return ExerciseStatistics.builder()
-                .totalExercises(totalExercises)
-                .beginnerExercises(beginnerExercises)
-                .advancedExercises(advancedExercises)
-                .exercisesWithoutEquipment(exercisesWithoutEquipment)
-                .unusedExercises(unusedExercises)
-                .build();
     }
 
 
@@ -379,30 +299,4 @@ public class ExerciseService {
         existing.setInstructions(updated.getInstructions());
     }
 
-
-    @lombok.Data
-    @lombok.Builder
-    public static class ExerciseStatistics {
-        private long totalExercises;
-        private long beginnerExercises;
-        private long advancedExercises;
-        private long exercisesWithoutEquipment;
-        private long unusedExercises;
-
-        public double getBeginnerPercentage() {
-            return totalExercises > 0 ? (beginnerExercises * 100.0) / totalExercises : 0.0;
-        }
-
-        public double getAdvancedPercentage() {
-            return totalExercises > 0 ? (advancedExercises * 100.0) / totalExercises : 0.0;
-        }
-
-        public double getNoEquipmentPercentage() {
-            return totalExercises > 0 ? (exercisesWithoutEquipment * 100.0) / totalExercises : 0.0;
-        }
-
-        public double getUnusedPercentage() {
-            return totalExercises > 0 ? (unusedExercises * 100.0) / totalExercises : 0.0;
-        }
-    }
 }

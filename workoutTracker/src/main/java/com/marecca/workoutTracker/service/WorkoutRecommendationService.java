@@ -27,7 +27,7 @@ public class WorkoutRecommendationService {
     private JdbcTemplate jdbcTemplate;
 
     /**
-     * Workout recommendation based on PL/SQL function "recommend_workout"
+     * Workout recommendation
      */
     public List<WorkoutRecommendationDTO> getRecommendations(Long userId, String goalType) {
         try {
