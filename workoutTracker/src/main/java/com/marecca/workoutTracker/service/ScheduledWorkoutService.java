@@ -10,7 +10,6 @@ import com.marecca.workoutTracker.repository.WorkoutPlanRepository;
 import com.marecca.workoutTracker.service.exceptions.UserNotFoundException;
 import com.marecca.workoutTracker.service.exceptions.WorkoutAlreadyScheduledException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +29,6 @@ import java.util.Optional;
  */
 @Service
 @RequiredArgsConstructor
-@Slf4j
 @Transactional
 public class ScheduledWorkoutService {
 
@@ -40,8 +38,6 @@ public class ScheduledWorkoutService {
 
     @Transactional
     public Long scheduleWorkout(Long userId, Long workoutPlanId, LocalDate scheduledDate, LocalTime scheduledTime) {
-        log.info("Scheduling workout for user {} with plan {} on {} at {}", userId, workoutPlanId, scheduledDate, scheduledTime);
-
         try {
             // Validate input parameters - following exact PL/SQL function logic
 
@@ -114,23 +110,17 @@ public class ScheduledWorkoutService {
 
             ScheduledWorkout savedWorkout = scheduledWorkoutRepository.save(scheduledWorkout);
 
-            log.info("Successfully scheduled workout with ID: {}", savedWorkout.getScheduledWorkoutId());
             return savedWorkout.getScheduledWorkoutId();
 
         } catch (UserNotFoundException e) {
-            log.error("User not found error: {}", e.getMessage());
-            throw e;
+            throw new UserNotFoundException("User not found: " + e.getMessage());
         } catch (WorkoutPlanNotFoundException e) {
-            log.error("Workout plan not found error: {}", e.getMessage());
-            throw e;
+            throw new WorkoutPlanNotFoundException("Workout plan not found: " + e.getMessage());
         } catch (WorkoutAlreadyScheduledException e) {
-            log.error("Workout already scheduled error: {}", e.getMessage());
-            throw e;
+            throw new WorkoutAlreadyScheduledException("Workout already scheduled: " + e.getMessage());
         } catch (IllegalArgumentException e) {
-            log.error("Validation error: {}", e.getMessage());
-            throw e;
+            throw new IllegalArgumentException("Validation error: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error while scheduling workout", e);
             // Following PL/SQL function logic for unexpected errors
             throw new RuntimeException("DATABASE_ERROR: Unexpected error occurred while scheduling workout: " + e.getMessage(), e);
         }
@@ -207,7 +197,7 @@ public class ScheduledWorkoutService {
 
         // Check for missed workouts and mark them
         LocalTime currentTime = LocalTime.now();
-        boolean hasUpdates = false;
+        int missedWorkoutsCount = 0;
 
         for (ScheduledWorkout workout : workouts) {
             if (workout.getStatus() == WorkoutStatusType.PLANNED &&
@@ -215,25 +205,17 @@ public class ScheduledWorkoutService {
                     currentTime.isAfter(workout.getScheduledTime())) {
 
                 try {
-                    log.info("Marking workout {} as missed - scheduled time {} has passed (current time: {})",
-                            workout.getScheduledWorkoutId(), workout.getScheduledTime(), currentTime);
-
                     // Update status directly in repository
                     scheduledWorkoutRepository.updateWorkoutStatus(workout.getScheduledWorkoutId(), WorkoutStatusType.MISSED);
 
                     // Update the workout object status for the response
                     workout.setStatus(WorkoutStatusType.MISSED);
-                    hasUpdates = true;
+                    missedWorkoutsCount++;
 
                 } catch (Exception e) {
-                    log.warn("Failed to mark workout {} as missed: {}", workout.getScheduledWorkoutId(), e.getMessage());
+                    // Silently continue if marking as missed fails
                 }
             }
-        }
-
-        if (hasUpdates) {
-            log.info("Automatically marked {} planned workouts as missed for user {}",
-                    workouts.stream().mapToLong(w -> w.getStatus() == WorkoutStatusType.MISSED ? 1 : 0).sum(), userId);
         }
 
         return workouts;
@@ -309,20 +291,15 @@ public class ScheduledWorkoutService {
      * @return workout updated
      */
     public ScheduledWorkout markWorkoutAsMissed(Long scheduledWorkoutId) {
-        log.info("Marking workout as missed with ID: {}", scheduledWorkoutId);
-
         ScheduledWorkout workout = findScheduledWorkoutById(scheduledWorkoutId);
 
         if (workout.getStatus() != WorkoutStatusType.PLANNED) {
-            throw new IllegalStateException("Doar workout-urile planificate pot fi marcate ca ratate");
+            throw new IllegalStateException("Only planned workouts can be marked as missed");
         }
 
         scheduledWorkoutRepository.updateWorkoutStatus(scheduledWorkoutId, WorkoutStatusType.MISSED);
 
-        workout = findScheduledWorkoutById(scheduledWorkoutId);
-        log.info("Workout marked as missed successfully");
-
-        return workout;
+        return findScheduledWorkoutById(scheduledWorkoutId);
     }
 
     @Transactional(readOnly = true)

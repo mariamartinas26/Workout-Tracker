@@ -35,7 +35,7 @@ public class DashboardService {
      */
     public DashboardSummaryDTO getDashboardSummary(Long userId, LocalDate currentDate) {
         try {
-            log.info("Getting dashboard summary for user {} on date {}", userId, currentDate);
+
 
             // Calculate week boundaries (Monday to Sunday)
             LocalDate weekStart, weekEnd;
