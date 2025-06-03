@@ -68,7 +68,10 @@ const Login = ({ onSwitchToRegister, onLoginSuccess }) => {
 
                 // Store user data in localStorage
                 localStorage.setItem('userData', JSON.stringify(userData));
+                localStorage.setItem('workout_tracker_token', userData.token);
                 localStorage.setItem('isAuthenticated', 'true');
+
+                console.log('Token saved:', localStorage.getItem('workout_tracker_token'));
 
                 toast.success("Login successful!", {
                     position: "top-right",

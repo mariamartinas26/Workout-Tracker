@@ -2,21 +2,51 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = 'http://localhost:8082/api';
 
+const getAuthToken = () => {
+    const token = localStorage.getItem('workout_tracker_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('authToken');
+    console.log('Getting token:', token ? 'Found' : 'Not found'); // Debug
+    return token;
+};
+
+// Helper function to create authenticated headers
+const getAuthHeaders = () => {
+    const authToken = getAuthToken();
+    if (!authToken) {
+        throw new Error('No authentication token found. Please login again.');
+    }
+
+    console.log('Creating headers with token:', authToken.substring(0, 20) + '...'); // Debug
+
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+    };
+};
+
 const DashboardService = {
-    getDashboardSummary: async (userId) => {
+    getDashboardSummary: async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/dashboard/summary/${userId}`, {
+            console.log('🔍 Fetching dashboard summary...');
+
+            const response = await fetch(`${API_BASE_URL}/dashboard/summary`, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
+            console.log('📡 Response status:', response.status);
+
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
                 throw new Error(`Failed to fetch dashboard summary: ${response.status}`);
             }
 
-            return await response.json();
+            const data = await response.json();
+            console.log('Dashboard data received:', data);
+            return data;
 
         } catch (error) {
             console.error('Error fetching dashboard summary:', error);
@@ -24,18 +54,16 @@ const DashboardService = {
         }
     },
 
-    getWorkoutCalendar: async (userId, startDate, endDate) => {
+    getWorkoutCalendar: async (startDate, endDate) => {
         try {
-            let url = `${API_BASE_URL}/dashboard/calendar/${userId}`;
+            let url = `${API_BASE_URL}/dashboard/calendar`;
             if (startDate && endDate) {
                 url += `?startDate=${startDate}&endDate=${endDate}`;
             }
 
             const response = await fetch(url, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
@@ -50,18 +78,17 @@ const DashboardService = {
         }
     },
 
-    getWorkoutTrends: async (userId, period = 'weekly', startDate, endDate) => {
+
+    getWorkoutTrends: async (period = 'weekly', startDate, endDate) => {
         try {
-            let url = `${API_BASE_URL}/dashboard/trends/${userId}?period=${period}`;
+            let url = `${API_BASE_URL}/dashboard/trends?period=${period}`;
             if (startDate && endDate) {
                 url += `&startDate=${startDate}&endDate=${endDate}`;
             }
 
             const response = await fetch(url, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
@@ -76,18 +103,16 @@ const DashboardService = {
         }
     },
 
-    getWorkoutTypeBreakdown: async (userId, startDate, endDate) => {
+    getWorkoutTypeBreakdown: async (startDate, endDate) => {
         try {
-            let url = `${API_BASE_URL}/dashboard/workout-types/${userId}`;
+            let url = `${API_BASE_URL}/dashboard/workout-types`;
             if (startDate && endDate) {
                 url += `?startDate=${startDate}&endDate=${endDate}`;
             }
 
             const response = await fetch(url, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
@@ -102,17 +127,15 @@ const DashboardService = {
         }
     },
 
-    getRecentAchievements: async (userId, daysBack = 30) => {
+    getRecentAchievements: async (daysBack = 30) => {
         try {
             let achievements = [];
             let completedGoals = [];
 
             try {
-                const achievementsResponse = await fetch(`${API_BASE_URL}/dashboard/achievements/${userId}?daysBack=${daysBack}`, {
+                const achievementsResponse = await fetch(`${API_BASE_URL}/dashboard/achievements?daysBack=${daysBack}`, {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
+                    headers: getAuthHeaders()
                 });
 
                 if (achievementsResponse.ok) {
@@ -124,11 +147,9 @@ const DashboardService = {
             }
 
             try {
-                const goalsResponse = await fetch(`${API_BASE_URL}/goals/achievements/${userId}/completed-goals?daysBack=${daysBack}`, {
+                const goalsResponse = await fetch(`${API_BASE_URL}/goals/achievements/completed-goals?daysBack=${daysBack}`, {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
+                    headers: getAuthHeaders()
                 });
 
                 if (goalsResponse.ok) {
@@ -139,11 +160,9 @@ const DashboardService = {
                 console.warn('Could not fetch completed goals:', goalsError);
 
                 try {
-                    const allGoalsResponse = await fetch(`${API_BASE_URL}/goals/user/${userId}`, {
+                    const allGoalsResponse = await fetch(`${API_BASE_URL}/goals/user`, {
                         method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
+                        headers: getAuthHeaders()
                     });
 
                     if (allGoalsResponse.ok) {
@@ -260,13 +279,11 @@ const DashboardService = {
         return basePoints;
     },
 
-    getQuickStats: async (userId) => {
+    getQuickStats: async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/dashboard/quick-stats/${userId}`, {
+            const response = await fetch(`${API_BASE_URL}/dashboard/quick-stats`, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
@@ -282,7 +299,7 @@ const DashboardService = {
     }
 };
 
-const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
+const Analytics = ({ isOpen, onClose }) => {
     const [dashboardData, setDashboardData] = useState(null);
     const [workoutCalendar, setWorkoutCalendar] = useState([]);
     const [workoutTrends, setWorkoutTrends] = useState([]);
@@ -299,28 +316,28 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
         if (isOpen) {
             loadDashboardData();
         }
-    }, [isOpen, currentUserId]);
+    }, [isOpen]);
 
     const loadDashboardData = async () => {
         setLoading(true);
         setError('');
 
         try {
-            const summary = await DashboardService.getDashboardSummary(currentUserId);
+            const summary = await DashboardService.getDashboardSummary();
             setDashboardData(summary);
 
             const endDate = new Date().toISOString().split('T')[0];
             const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-            const calendar = await DashboardService.getWorkoutCalendar(currentUserId, startDate, endDate);
+            const calendar = await DashboardService.getWorkoutCalendar(startDate, endDate);
             setWorkoutCalendar(calendar);
 
-            const trends = await DashboardService.getWorkoutTrends(currentUserId, selectedPeriod);
+            const trends = await DashboardService.getWorkoutTrends(selectedPeriod);
             setWorkoutTrends(trends);
 
-            const types = await DashboardService.getWorkoutTypeBreakdown(currentUserId);
+            const types = await DashboardService.getWorkoutTypeBreakdown();
             setWorkoutTypes(types);
 
-            const recentAchievements = await DashboardService.getRecentAchievements(currentUserId, 30);
+            const recentAchievements = await DashboardService.getRecentAchievements(30);
             setAchievements(recentAchievements);
 
             console.log('Dashboard data loaded successfully');
@@ -336,7 +353,7 @@ const Analytics = ({ currentUserId = 1, isOpen, onClose }) => {
     const handlePeriodChange = async (newPeriod) => {
         setSelectedPeriod(newPeriod);
         try {
-            const trends = await DashboardService.getWorkoutTrends(currentUserId, newPeriod);
+            const trends = await DashboardService.getWorkoutTrends(newPeriod);
             setWorkoutTrends(trends);
         } catch (error) {
             console.error('Error updating trends:', error);
