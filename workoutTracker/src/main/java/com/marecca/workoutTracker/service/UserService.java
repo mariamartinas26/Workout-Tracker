@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * business logic for operations with users
+ * Business logic for operations with users
  */
 @Service
 @RequiredArgsConstructor
@@ -29,16 +29,15 @@ public class UserService {
         return userRepository.findById(id);
     }
 
-
     /**
-     * finds user by email
+     * Finds user by email
      * @param email
      * @return
      */
     @Transactional(readOnly = true)
     public Optional<User> findByEmail(String email) {
         log.debug("Finding user by email: {}", email);
-        return userRepository.findByEmail(email);
+        return userRepository.findByEmail(email.toLowerCase());
     }
 
     /**
@@ -46,7 +45,7 @@ public class UserService {
      * @param userId
      * @param updatedUser
      * @return
-     * @throws IllegalArgumentException if user does not exist or invalid data
+     * @throws RuntimeException if user does not exist
      */
     public User updateUser(Long userId, User updatedUser) {
         User existingUser = userRepository.findById(userId)
@@ -65,7 +64,7 @@ public class UserService {
             existingUser.setFitnessLevel(updatedUser.getFitnessLevel());
         }
 
-        existingUser.setUpdatedAt(LocalDateTime.now());
+        // updatedAt is set automatically by @PreUpdate
         return userRepository.save(existingUser);
     }
 
@@ -85,78 +84,40 @@ public class UserService {
 
     /**
      * Activates user
+     * @param userId
      */
     public void activateUser(Long userId) {
         log.info("Activating user with ID: {}", userId);
 
         User user = findUserById(userId);
-        // user.setActive(true);
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setIsActive(true);
+        // updatedAt is set automatically by @PreUpdate
 
         userRepository.save(user);
         log.info("User activated successfully: {}", userId);
     }
 
     /**
-     * finds all active users
-     */
-    @Transactional(readOnly = true)
-    public List<User> findActiveUsers() {
-        return userRepository.findByIsActiveTrue();
-    }
-
-    /**
-     * finds user by fitness level
-     */
-    @Transactional(readOnly = true)
-    public List<User> findByFitnessLevel(String fitnessLevel) {
-        return userRepository.findByFitnessLevel(fitnessLevel);
-    }
-
-    /**
-     * find Users With Minimum workout Plans
-     */
-    @Transactional(readOnly = true)
-    public List<User> findUsersWithMinimumPlans(Long minPlans) {
-        return userRepository.findUsersWithAtLeastMinPlans(minPlans);
-    }
-
-    /**
-     * find Users With Minimum Completed Workouts
-     */
-    @Transactional(readOnly = true)
-    public List<User> findUsersWithMinimumCompletedWorkouts(Integer minWorkouts) {
-        return userRepository.findUsersWithMinimumCompletedWorkouts(minWorkouts);
-    }
-
-
-    /**
-     * checks if a user exists with a given email
-     */
-    public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email.toLowerCase());
-    }
-
-    public boolean existsByUsername(String username) {
-        return userRepository.existsByUsername(username);
-    }
-
-    /**
-     * register a new user with encrpited password
+     * Register a new user with encrypted password
+     * @param user
+     * @param plainPassword
+     * @return
      */
     @Transactional
     public User registerUser(User user, String plainPassword) {
-        //encripts password
+        // Encrypt password
         user.setPasswordHash(passwordEncoder.encode(plainPassword));
         user.setIsActive(true);
-        user.setCreatedAt(LocalDateTime.now());
-        user.setUpdatedAt(LocalDateTime.now());
+        // Note: createdAt and updatedAt are set automatically by @PrePersist
 
         return userRepository.save(user);
     }
 
     /**
-     * Logs and user based on email and password
+     * Authenticates user based on email and password
+     * @param email
+     * @param plainPassword
+     * @return
      */
     public Optional<User> authenticateUser(String email, String plainPassword) {
         Optional<User> userOptional = userRepository.findByEmail(email.toLowerCase());
@@ -164,13 +125,59 @@ public class UserService {
         if (userOptional.isPresent()) {
             User user = userOptional.get();
 
-            //checks password
+            // Check password
             if (passwordEncoder.matches(plainPassword, user.getPasswordHash())) {
                 return Optional.of(user);
             }
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Finds all active users
+     */
+    @Transactional(readOnly = true)
+    public List<User> findActiveUsers() {
+        return userRepository.findByIsActiveTrue();
+    }
+
+    /**
+     * Finds user by fitness level
+     */
+    @Transactional(readOnly = true)
+    public List<User> findByFitnessLevel(String fitnessLevel) {
+        return userRepository.findByFitnessLevel(fitnessLevel);
+    }
+
+    /**
+     * Find Users With Minimum workout Plans
+     */
+    @Transactional(readOnly = true)
+    public List<User> findUsersWithMinimumPlans(Long minPlans) {
+        return userRepository.findUsersWithAtLeastMinPlans(minPlans);
+    }
+
+    /**
+     * Find Users With Minimum Completed Workouts
+     */
+    @Transactional(readOnly = true)
+    public List<User> findUsersWithMinimumCompletedWorkouts(Integer minWorkouts) {
+        return userRepository.findUsersWithMinimumCompletedWorkouts(minWorkouts);
+    }
+
+    /**
+     * Checks if a user exists with a given email
+     */
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email.toLowerCase());
+    }
+
+    /**
+     * Checks if a user exists with a given username
+     */
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
     }
 
     private User findUserById(Long userId) {
