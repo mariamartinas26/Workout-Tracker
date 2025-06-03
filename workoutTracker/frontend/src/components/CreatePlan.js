@@ -3,29 +3,79 @@ import { toast } from 'react-toastify';
 
 const API_BASE_URL = 'http://localhost:8082/api';
 
-const WorkoutPlanService = {
-    createWorkoutPlan: async (planData) => {
-        console.log('Creating workout plan with data:', planData);
+const getAuthToken = () => {
+    const token = localStorage.getItem('workout_tracker_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('authToken');
+    console.log('Getting token:', token ? 'Found' : 'Not found');
+    return token;
+};
 
-        const response = await fetch(`${API_BASE_URL}/workout-plans`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(planData)
-        });
+// Helper function to create authenticated headers
+const getAuthHeaders = () => {
+    const authToken = getAuthToken();
+    if (!authToken) {
+        throw new Error('No authentication token found. Please login again.');
+    }
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to create workout plan');
+    console.log('Creating headers with token:', authToken.substring(0, 20) + '...');
+
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+    };
+};
+
+// Get current user from JWT token in localStorage
+const getCurrentUserId = () => {
+    try {
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+            const user = JSON.parse(userData);
+            return user.userId || user.id;
         }
-
-        const result = await response.json();
-        return result;
+        return null;
+    } catch (error) {
+        console.error('Error parsing user data:', error);
+        return null;
     }
 };
 
-const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }) => {
+
+const WorkoutPlanService = {
+    createWorkoutPlan: async (planData) => {
+        try {
+            console.log('Creating workout plan with data:', planData);
+
+            const response = await fetch(`${API_BASE_URL}/workout-plans`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(planData)
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
+
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to create workout plan');
+            }
+
+            const result = await response.json();
+            return result;
+
+        } catch (error) {
+            console.error('Error creating workout plan:', error);
+            throw error;
+        }
+    }
+};
+
+const CreatePlan = ({ isOpen, onClose, sampleExercises = [] }) => {
     const [workoutData, setWorkoutData] = useState({
         plan_name: '',
         description: '',
@@ -95,12 +145,18 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
             return;
         }
 
+        const userId = getCurrentUserId();
+        if (!userId) {
+            setError('User not found. Please login again.');
+            return;
+        }
+
         setLoading(true);
         setError('');
 
         try {
             const backendData = {
-                userId: currentUserId,
+                userId: userId,
                 planName: workoutData.plan_name,
                 description: workoutData.description || null,
                 estimatedDurationMinutes: workoutData.estimated_duration_minutes ? parseInt(workoutData.estimated_duration_minutes) : null,
@@ -143,7 +199,18 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [], currentUserId = 1 }
 
         } catch (error) {
             console.error('Error saving plan:', error);
-            setError(error.message || 'An error occurred while saving the workout plan');
+
+            let errorMessage = error.message || 'An error occurred while saving the workout plan';
+
+            // Handle authentication errors
+            if (error.message.includes('Authentication failed') || error.message.includes('User not found')) {
+                localStorage.removeItem('workout_tracker_token');
+                localStorage.removeItem('userData');
+                localStorage.removeItem('isAuthenticated');
+                errorMessage = 'Session expired. Please login again.';
+            }
+
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
