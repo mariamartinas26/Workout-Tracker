@@ -41,7 +41,8 @@ public class ScheduledWorkoutController {
     @PostMapping("/schedule")
     public ResponseEntity<?> scheduleWorkout(@Valid @RequestBody ScheduleWorkoutRequest request) {
         try {
-            Long scheduledWorkoutId = scheduledWorkoutService.scheduleWorkoutWithFunction(
+            // Changed from scheduleWorkoutWithFunction to scheduleWorkout
+            Long scheduledWorkoutId = scheduledWorkoutService.scheduleWorkout(
                     request.getUserId(),
                     request.getWorkoutPlanId(),
                     request.getScheduledDate(),
@@ -267,7 +268,6 @@ public class ScheduledWorkoutController {
         }
     }
 
-
     @lombok.Data
     @lombok.Builder
     @lombok.NoArgsConstructor
@@ -304,5 +304,4 @@ public class ScheduledWorkoutController {
         private Long scheduledWorkoutId;
         private String message;
     }
-
 }

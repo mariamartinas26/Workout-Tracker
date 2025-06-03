@@ -21,13 +21,23 @@ public class UserWorkoutStreak {
     @Column(name = "streak_id")
     private Long streakId;
 
-    @Column(name = "user_id", nullable = false)
+    // Option 1: Keep it simple with just userId (recommended for your existing code)
+    @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 
+    // Option 2: If you want JPA relationship (comment out userId above and uncomment below)
+    /*
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private User user;
+    */
+
     @Column(name = "current_streak")
+    @Builder.Default
     private Integer currentStreak = 0;
 
     @Column(name = "longest_streak")
+    @Builder.Default
     private Integer longestStreak = 0;
 
     @Column(name = "last_workout_date")

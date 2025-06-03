@@ -24,8 +24,6 @@ import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Business logic for operations with scheduled workout
@@ -40,121 +38,120 @@ public class ScheduledWorkoutService {
     private final UserRepository userRepository;
     private final WorkoutPlanRepository workoutPlanRepository;
 
-
     @Transactional
-    public Long scheduleWorkoutWithFunction(Long userId, Long workoutPlanId,LocalDate scheduledDate, LocalTime scheduledTime) {
+    public Long scheduleWorkout(Long userId, Long workoutPlanId, LocalDate scheduledDate, LocalTime scheduledTime) {
+        log.info("Scheduling workout for user {} with plan {} on {} at {}", userId, workoutPlanId, scheduledDate, scheduledTime);
+
         try {
-            Long scheduledWorkoutId;
+            // Validate input parameters - following exact PL/SQL function logic
 
-            if (scheduledTime != null) {
-                scheduledWorkoutId = scheduledWorkoutRepository.scheduleWorkoutWithFunction(
-                        userId, workoutPlanId, scheduledDate, scheduledTime);
+            // Check: p_user_id IS NULL OR p_user_id <= 0
+            if (userId == null || userId <= 0) {
+                throw new IllegalArgumentException("INVALID_USER_ID: User ID must be a positive number");
+            }
+
+            // Check: p_workout_plan_id IS NULL OR p_workout_plan_id <= 0
+            if (workoutPlanId == null || workoutPlanId <= 0) {
+                throw new IllegalArgumentException("INVALID_WORKOUT_PLAN_ID: Workout plan ID must be a positive number");
+            }
+
+            // Check: p_scheduled_date IS NULL OR p_scheduled_date < CURRENT_DATE
+            if (scheduledDate == null || scheduledDate.isBefore(LocalDate.now())) {
+                throw new IllegalArgumentException("INVALID_SCHEDULED_DATE: Scheduled date cannot be null or in the past");
+            }
+
+            // Check if user exists - following exact PL/SQL function logic
+            if (!userRepository.existsById(userId)) {
+                throw new UserNotFoundException(String.format("USER_NOT_FOUND: User with ID %s does not exist", userId));
+            }
+
+            // Check if workout plan exists - following exact PL/SQL function logic
+            if (!workoutPlanRepository.existsById(workoutPlanId)) {
+                throw new WorkoutPlanNotFoundException(String.format("WORKOUT_PLAN_NOT_FOUND: Workout plan with ID %s does not exist", workoutPlanId));
+            }
+
+            // Check if workout plan belongs to the user - following exact PL/SQL function logic
+            Optional<WorkoutPlan> workoutPlanOpt = workoutPlanRepository.findById(workoutPlanId);
+            if (workoutPlanOpt.isPresent() && !workoutPlanOpt.get().getUser().getUserId().equals(userId)) {
+                throw new IllegalArgumentException(String.format("WORKOUT_PLAN_NOT_OWNED: Workout plan with ID %s does not belong to user %s", workoutPlanId, userId));
+            }
+
+            // Check if user already has a workout scheduled at the same date and time - following exact PL/SQL function logic
+            List<WorkoutStatusType> activeStatuses = Arrays.asList(WorkoutStatusType.PLANNED, WorkoutStatusType.IN_PROGRESS);
+
+            // Use the exact same logic as the PL/SQL function, but split into two cases for better JPA handling
+            boolean hasConflict = false;
+
+            if (scheduledTime == null) {
+                // When scheduledTime is NULL, check for other workouts with NULL scheduledTime on same date
+                hasConflict = scheduledWorkoutRepository.hasWorkoutScheduledOnDate(userId, scheduledDate, activeStatuses);
             } else {
-                scheduledWorkoutId = scheduledWorkoutRepository.scheduleWorkoutWithoutTime(
-                        userId, workoutPlanId, scheduledDate);
-            }
-            return scheduledWorkoutId;
-
-        } catch (DataAccessException e) {
-            String errorMessage = e.getMessage();
-            String sqlState = extractSQLState(e);
-
-            // Handle specific PL/SQL exceptions based on error codes and messages
-            if (sqlState != null) {
-                switch (sqlState) {
-                    case "00001":
-                        // INVALID_USER_ID
-                        throw new IllegalArgumentException(
-                                extractCustomErrorMessage(errorMessage, "INVALID_USER_ID"));
-
-                    case "00002":
-                        // INVALID_WORKOUT_PLAN_ID
-                        throw new IllegalArgumentException(
-                                extractCustomErrorMessage(errorMessage, "INVALID_WORKOUT_PLAN_ID"));
-
-                    case "00003":
-                        // USER_NOT_FOUND
-                        throw new UserNotFoundException(
-                                extractCustomErrorMessage(errorMessage, "USER_NOT_FOUND"));
-
-                    case "00004":
-                        // WORKOUT_PLAN_NOT_FOUND
-                        throw new WorkoutPlanNotFoundException(
-                                extractCustomErrorMessage(errorMessage, "WORKOUT_PLAN_NOT_FOUND"));
-
-                    case "00005":
-                        // WORKOUT_PLAN_NOT_OWNED
-                        throw new IllegalArgumentException(
-                                extractCustomErrorMessage(errorMessage, "WORKOUT_PLAN_NOT_OWNED"));
-
-                    case "00006":
-                        // INVALID_SCHEDULED_DATE
-                        throw new IllegalArgumentException(
-                                extractCustomErrorMessage(errorMessage, "INVALID_SCHEDULED_DATE"));
-
-                    case "00007":
-                        // WORKOUT_ALREADY_SCHEDULED
-                        throw new WorkoutAlreadyScheduledException(
-                                extractCustomErrorMessage(errorMessage, "WORKOUT_ALREADY_SCHEDULED"));
-
-                    case "00999":
-                        // DATABASE_ERROR
-                        throw new RuntimeException(
-                                "Database error occurred: " +
-                                        extractCustomErrorMessage(errorMessage, "DATABASE_ERROR"), e);
-
-                    default:
-                        break;
-                }
+                // When scheduledTime is NOT NULL, check for workouts at the exact same time
+                hasConflict = scheduledWorkoutRepository.hasWorkoutScheduledAtSpecificTime(userId, scheduledDate, scheduledTime, activeStatuses);
             }
 
-            if (errorMessage.contains("User with ID") && errorMessage.contains("does not exist")) {
-                throw new UserNotFoundException("The specified user does not exist");
-            }
-            if (errorMessage.contains("Workout plan with ID") && errorMessage.contains("does not exist")) {
-                throw new WorkoutPlanNotFoundException("The specified workout plan does not exist");
-            }
-            if (errorMessage.contains("already has a workout scheduled")) {
-                throw new WorkoutAlreadyScheduledException("The user already has a workout scheduled at this date and time");
-            }
-            if (errorMessage.contains("WORKOUT_PLAN_NOT_OWNED")) {
-                throw new IllegalArgumentException("The workout plan does not belong to this user");
-            }
-            if (errorMessage.contains("INVALID_SCHEDULED_DATE")) {
-                throw new IllegalArgumentException("The scheduled date cannot be in the past");
+            if (hasConflict) {
+                String timeInfo = scheduledTime != null ? scheduledTime.toString() : "no specific time";
+                throw new WorkoutAlreadyScheduledException(
+                        String.format("WORKOUT_ALREADY_SCHEDULED: User already has a workout scheduled at %s %s",
+                                scheduledDate, timeInfo));
             }
 
-            throw new RuntimeException("Error while scheduling the workout: " + errorMessage, e);
+            // Get the entities for saving
+            User user = userRepository.findById(userId).get(); // We already validated it exists
+            WorkoutPlan workoutPlan = workoutPlanRepository.findById(workoutPlanId).get(); // We already validated it exists
 
-        } catch (UserNotFoundException | WorkoutPlanNotFoundException |
-                 WorkoutAlreadyScheduledException e) {
+            // Insert the scheduled workout - following exact PL/SQL function logic
+            ScheduledWorkout scheduledWorkout = ScheduledWorkout.builder()
+                    .user(user)
+                    .workoutPlan(workoutPlan)
+                    .scheduledDate(scheduledDate)
+                    .scheduledTime(scheduledTime)
+                    .status(WorkoutStatusType.PLANNED)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+
+            ScheduledWorkout savedWorkout = scheduledWorkoutRepository.save(scheduledWorkout);
+
+            log.info("Successfully scheduled workout with ID: {}", savedWorkout.getScheduledWorkoutId());
+            return savedWorkout.getScheduledWorkoutId();
+
+        } catch (UserNotFoundException e) {
+            log.error("User not found error: {}", e.getMessage());
+            throw e;
+        } catch (WorkoutPlanNotFoundException e) {
+            log.error("Workout plan not found error: {}", e.getMessage());
+            throw e;
+        } catch (WorkoutAlreadyScheduledException e) {
+            log.error("Workout already scheduled error: {}", e.getMessage());
             throw e;
         } catch (IllegalArgumentException e) {
+            log.error("Validation error: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            throw new RuntimeException("An unexpected error occurred while scheduling the workout", e);
+            log.error("Unexpected error while scheduling workout", e);
+            // Following PL/SQL function logic for unexpected errors
+            throw new RuntimeException("DATABASE_ERROR: Unexpected error occurred while scheduling workout: " + e.getMessage(), e);
         }
     }
 
-
     /**
      * checks if a user can schedule a workout at a specific hour/date
-     * @param userId
-     * @param scheduledDate
-     * @param scheduledTime
-     * @return
+     * Uses the same logic as the PL/SQL schedule_workout function
      */
     @Transactional(readOnly = true)
     public boolean canScheduleWorkoutAt(Long userId, LocalDate scheduledDate, LocalTime scheduledTime) {
         try {
             List<WorkoutStatusType> activeStatuses = Arrays.asList(WorkoutStatusType.PLANNED, WorkoutStatusType.IN_PROGRESS);
 
-            if (scheduledTime != null) {
-                return !scheduledWorkoutRepository.hasWorkoutScheduledAtSpecificTime(
-                        userId, scheduledDate, scheduledTime, activeStatuses);
+            // Use the exact same conflict checking logic as the PL/SQL function, split into two cases
+            if (scheduledTime == null) {
+                // When scheduledTime is NULL, check for other workouts with NULL scheduledTime on same date
+                return !scheduledWorkoutRepository.hasWorkoutScheduledOnDate(userId, scheduledDate, activeStatuses);
             } else {
-                return !scheduledWorkoutRepository.hasWorkoutScheduledOnDate(
-                        userId, scheduledDate, activeStatuses);
+                // When scheduledTime is NOT NULL, check for workouts at the exact same time
+                return !scheduledWorkoutRepository.hasWorkoutScheduledAtSpecificTime(userId, scheduledDate, scheduledTime, activeStatuses);
             }
         } catch (Exception e) {
             return false;
@@ -174,8 +171,6 @@ public class ScheduledWorkoutService {
 
     /**
      * finds a scheduled workout by id
-     * @param scheduledWorkoutId
-     * @return
      */
     @Transactional(readOnly = true)
     public Optional<ScheduledWorkout> findById(Long scheduledWorkoutId) {
@@ -188,7 +183,6 @@ public class ScheduledWorkoutService {
         return scheduledWorkoutRepository.findByUserUserIdOrderByScheduledDateDesc(userId);
     }
 
-
     @Transactional(readOnly = true)
     public List<ScheduledWorkout> findByUserIdAndDateRange(Long userId, LocalDate startDate, LocalDate endDate) {
         validateUserExists(userId);
@@ -197,7 +191,6 @@ public class ScheduledWorkoutService {
         return scheduledWorkoutRepository.findByUserUserIdAndScheduledDateBetweenOrderByScheduledDate(
                 userId, startDate, endDate);
     }
-
 
     @Transactional(readOnly = true)
     public List<ScheduledWorkout> findByUserIdAndStatus(Long userId, WorkoutStatusType status) {
@@ -216,46 +209,16 @@ public class ScheduledWorkoutService {
      */
     public ScheduledWorkout startWorkout(Long scheduledWorkoutId) {
         try {
-            LocalDateTime startTime = LocalDateTime.now();
-            scheduledWorkoutRepository.startWorkout(scheduledWorkoutId, startTime);
-
             ScheduledWorkout workout = findScheduledWorkoutById(scheduledWorkoutId);
-            return workout;
 
-        } catch (DataAccessException e) {
-            String errorMessage = e.getMessage();
-            String sqlState = extractSQLState(e);
-            if (sqlState != null) {
-                switch (sqlState) {
-                    case "00001":
-                        // WORKOUT_NOT_FOUND
-                        throw new WorkoutNotFoundException(
-                                extractCustomErrorMessage(errorMessage, "WORKOUT_NOT_FOUND"));
-
-                    case "00002":
-                        // INVALID_WORKOUT_STATUS
-                        throw new InvalidWorkoutStatusException(
-                                extractCustomErrorMessage(errorMessage, "INVALID_WORKOUT_STATUS"));
-
-                    case "00999":
-                        // DATABASE_ERROR
-                        throw new RuntimeException(
-                                "Database error occurred: " +
-                                        extractCustomErrorMessage(errorMessage, "DATABASE_ERROR"), e);
-
-                    default:
-                        break;
-                }
-            }
-
-            if (errorMessage.contains("WORKOUT_NOT_FOUND")) {
-                throw new WorkoutNotFoundException("The workout was not found");
-            }
-            if (errorMessage.contains("INVALID_WORKOUT_STATUS")) {
+            if (workout.getStatus() != WorkoutStatusType.PLANNED) {
                 throw new InvalidWorkoutStatusException("The workout can only be started if it is scheduled");
             }
 
-            throw new RuntimeException("Error while starting the workout: " + errorMessage, e);
+            LocalDateTime startTime = LocalDateTime.now();
+            scheduledWorkoutRepository.startWorkout(scheduledWorkoutId, startTime);
+
+            return findScheduledWorkoutById(scheduledWorkoutId);
 
         } catch (WorkoutNotFoundException | InvalidWorkoutStatusException e) {
             throw e;
@@ -264,70 +227,23 @@ public class ScheduledWorkoutService {
         }
     }
 
-
     /**
      * Complete a workout
      */
     public ScheduledWorkout completeWorkout(Long scheduledWorkoutId, Integer caloriesBurned, Integer rating) {
         try {
+            ScheduledWorkout workout = findScheduledWorkoutById(scheduledWorkoutId);
+
+            if (workout.getStatus() != WorkoutStatusType.IN_PROGRESS) {
+                throw new InvalidWorkoutStatusException("The workout can only be completed if it is in progress");
+            }
+
             validateCompletionData(caloriesBurned, rating);
 
             LocalDateTime endTime = LocalDateTime.now();
             scheduledWorkoutRepository.completeWorkout(scheduledWorkoutId, endTime, caloriesBurned, rating);
 
-            ScheduledWorkout workout = findScheduledWorkoutById(scheduledWorkoutId);
-            return workout;
-
-        } catch (DataAccessException e) {
-            String errorMessage = e.getMessage();
-            String sqlState = extractSQLState(e);
-
-            if (sqlState != null) {
-                switch (sqlState) {
-                    case "00001":
-                        // WORKOUT_NOT_FOUND
-                        throw new WorkoutNotFoundException(
-                                extractCustomErrorMessage(errorMessage, "WORKOUT_NOT_FOUND"));
-
-                    case "00002":
-                        // INVALID_WORKOUT_STATUS
-                        throw new InvalidWorkoutStatusException(
-                                extractCustomErrorMessage(errorMessage, "INVALID_WORKOUT_STATUS"));
-
-                    case "00003":
-                        // INVALID_CALORIES
-                        throw new IllegalArgumentException(
-                                extractCustomErrorMessage(errorMessage, "INVALID_CALORIES"));
-
-                    case "00004":
-                        // INVALID_RATING
-                        throw new IllegalArgumentException(
-                                extractCustomErrorMessage(errorMessage, "INVALID_RATING"));
-
-                    case "00999":
-                        // DATABASE_ERROR
-                        throw new RuntimeException(
-                                "Database error occurred: " +
-                                        extractCustomErrorMessage(errorMessage, "DATABASE_ERROR"), e);
-
-                    default:
-                        break;
-                }
-            }
-            if (errorMessage.contains("WORKOUT_NOT_FOUND")) {
-                throw new WorkoutNotFoundException("The workout was not found");
-            }
-            if (errorMessage.contains("INVALID_WORKOUT_STATUS")) {
-                throw new InvalidWorkoutStatusException("The workout can only be completed if it is in progress");
-            }
-            if (errorMessage.contains("INVALID_CALORIES")) {
-                throw new IllegalArgumentException("Burned calories cannot be negative");
-            }
-            if (errorMessage.contains("INVALID_RATING")) {
-                throw new IllegalArgumentException("The rating must be between 1 and 5");
-            }
-
-            throw new RuntimeException("Error while completing the workout: " + errorMessage, e);
+            return findScheduledWorkoutById(scheduledWorkoutId);
 
         } catch (WorkoutNotFoundException | InvalidWorkoutStatusException e) {
             throw e;
@@ -350,8 +266,7 @@ public class ScheduledWorkoutService {
 
         scheduledWorkoutRepository.updateWorkoutStatus(scheduledWorkoutId, WorkoutStatusType.CANCELLED);
 
-        workout = findScheduledWorkoutById(scheduledWorkoutId);
-        return workout;
+        return findScheduledWorkoutById(scheduledWorkoutId);
     }
 
     /**
@@ -386,7 +301,6 @@ public class ScheduledWorkoutService {
         validateUserExists(userId);
         return scheduledWorkoutRepository.getAverageWorkoutDurationForUser(userId);
     }
-
 
     @Transactional(readOnly = true)
     public List<ScheduledWorkout> findRecentCompletedWorkouts(Long userId) {
@@ -454,7 +368,6 @@ public class ScheduledWorkoutService {
         }
     }
 
-
     private boolean isTimeSlotAvailable(Long userId, LocalDate date, LocalTime time, Long excludeWorkoutId) {
         List<WorkoutStatusType> activeStatuses = Arrays.asList(
                 WorkoutStatusType.PLANNED,
@@ -467,7 +380,6 @@ public class ScheduledWorkoutService {
                         .findWorkoutsForDateExcluding(userId, date, excludeWorkoutId, activeStatuses);
                 return dayWorkouts.isEmpty();
             }
-
 
             List<ScheduledWorkout> exactConflicts = scheduledWorkoutRepository
                     .findExactTimeConflictsForReschedule(userId, date, time, excludeWorkoutId, activeStatuses);
@@ -508,7 +420,6 @@ public class ScheduledWorkoutService {
         }
     }
 
-
     private void validateDateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
             throw new IllegalArgumentException("Start date and end date are required");
@@ -537,77 +448,7 @@ public class ScheduledWorkoutService {
 
     private ScheduledWorkout findScheduledWorkoutById(Long scheduledWorkoutId) {
         return scheduledWorkoutRepository.findById(scheduledWorkoutId)
-                .orElseThrow(() -> new IllegalArgumentException("Scheduled workout not found with ID: " + scheduledWorkoutId));
-    }
-
-
-    private String extractSQLState(DataAccessException e) {
-        try {
-            if (e.getCause() != null && e.getCause().getCause() != null) {
-                String message = e.getCause().getCause().getMessage();
-                if (message != null && message.contains("ERROR:")) {
-                    Pattern pattern = Pattern.compile("ERROR:\\s*(\\d{5})");
-                    Matcher matcher = pattern.matcher(message);
-                    if (matcher.find()) {
-                        return matcher.group(1);
-                    }
-                }
-            }
-        } catch (Exception ex) {
-            log.warn("Failed to extract SQL state: {}", ex.getMessage());
-        }
-        return null;
-    }
-
-
-    private String extractCustomErrorMessage(String errorMessage, String errorType) {
-        try {
-            Pattern pattern = Pattern.compile(errorType + ":\\s*([^\\n\\r]+)");
-            Matcher matcher = pattern.matcher(errorMessage);
-            if (matcher.find()) {
-                return matcher.group(1).trim();
-            }
-
-            if (errorMessage.contains(errorType)) {
-                return getDefaultErrorMessage(errorType);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to extract custom error message for {}: {}", errorType, e.getMessage());
-        }
-
-        return getDefaultErrorMessage(errorType);
-    }
-
-
-    private String getDefaultErrorMessage(String errorType) {
-        switch (errorType) {
-            case "INVALID_USER_ID":
-                return "The user ID is invalid";
-            case "INVALID_WORKOUT_PLAN_ID":
-                return "The workout plan ID is invalid";
-            case "USER_NOT_FOUND":
-                return "The user was not found";
-            case "WORKOUT_PLAN_NOT_FOUND":
-                return "The workout plan was not found";
-            case "WORKOUT_PLAN_NOT_OWNED":
-                return "The workout plan does not belong to this user";
-            case "INVALID_SCHEDULED_DATE":
-                return "The scheduled date is invalid";
-            case "WORKOUT_ALREADY_SCHEDULED":
-                return "A workout is already scheduled at this date and time";
-            case "WORKOUT_NOT_FOUND":
-                return "The workout was not found";
-            case "INVALID_WORKOUT_STATUS":
-                return "The workout status does not allow this operation";
-            case "INVALID_CALORIES":
-                return "Burned calories value is invalid";
-            case "INVALID_RATING":
-                return "The rating is invalid";
-            case "DATABASE_ERROR":
-                return "A database error occurred";
-            default:
-                return "An unexpected error occurred";
-        }
+                .orElseThrow(() -> new WorkoutNotFoundException("Scheduled workout not found with ID: " + scheduledWorkoutId));
     }
 
     @lombok.Builder

@@ -1,15 +1,22 @@
 package com.marecca.workoutTracker.service;
+
 import com.marecca.workoutTracker.dto.*;
+import com.marecca.workoutTracker.entity.UserWorkoutStreak;
 import com.marecca.workoutTracker.repository.ScheduledWorkoutRepository;
+import com.marecca.workoutTracker.repository.UserWorkoutStreakRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Date;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -17,13 +24,87 @@ import java.util.List;
 public class DashboardService {
 
     private final ScheduledWorkoutRepository scheduledWorkoutRepository;
+    private final UserWorkoutStreakRepository userWorkoutStreakRepository;
+
+    /**
+     * Get dashboard summary using pure Java instead of PL/SQL function
+     */
+    public DashboardSummaryDTO getDashboardSummary(Long userId) {
+        return getDashboardSummary(userId, LocalDate.now());
+    }
+
+    /**
+     * Get dashboard summary for a specific date using pure Java
+     */
+    public DashboardSummaryDTO getDashboardSummary(Long userId, LocalDate currentDate) {
+        try {
+            log.info("Getting dashboard summary for user {} on date {}", userId, currentDate);
+
+            // Calculate week boundaries (Monday to Sunday)
+            LocalDate weekStart, weekEnd;
+            if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+                weekStart = currentDate.minusDays(6);
+                weekEnd = currentDate;
+            } else {
+                weekStart = currentDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+                weekEnd = weekStart.plusDays(6);
+            }
+
+            // Calculate month boundaries
+            LocalDate monthStart = currentDate.with(TemporalAdjusters.firstDayOfMonth());
+            LocalDate monthEnd = currentDate.with(TemporalAdjusters.lastDayOfMonth());
+
+            // Get weekly stats
+            List<Object[]> weeklyResult = scheduledWorkoutRepository.getWorkoutStatsForPeriod(userId, weekStart, weekEnd);
+            Object[] weeklyStats = !weeklyResult.isEmpty() ? weeklyResult.get(0) : new Object[5];
+
+            // Get monthly stats
+            List<Object[]> monthlyResult = scheduledWorkoutRepository.getWorkoutStatsForPeriod(userId, monthStart, monthEnd);
+            Object[] monthlyStats = !monthlyResult.isEmpty() ? monthlyResult.get(0) : new Object[5];
+
+            // Get streak info
+            Optional<UserWorkoutStreak> streakInfo = userWorkoutStreakRepository.findByUserId(userId);
+
+            // Get lifetime stats
+            List<Object[]> lifetimeResult = scheduledWorkoutRepository.getLifetimeWorkoutStats(userId);
+            Object[] lifetimeStats = !lifetimeResult.isEmpty() ? lifetimeResult.get(0) : new Object[5];
+
+            return DashboardSummaryDTO.builder()
+                    // Weekly stats
+                    .weeklyWorkouts(safeCastToInteger(weeklyStats[0]))
+                    .weeklyCalories(safeCastToInteger(weeklyStats[1]))
+                    .weeklyAvgDuration(roundToBigDecimal(weeklyStats[2], 1))
+                    .weeklyAvgRating(roundToBigDecimal(weeklyStats[3], 1))
+                    .weeklyWorkoutDays(safeCastToInteger(weeklyStats[4]))
+
+                    // Monthly stats
+                    .monthlyWorkouts(safeCastToInteger(monthlyStats[0]))
+                    .monthlyCalories(safeCastToInteger(monthlyStats[1]))
+                    .monthlyAvgDuration(roundToBigDecimal(monthlyStats[2], 1))
+                    .monthlyAvgRating(roundToBigDecimal(monthlyStats[3], 1))
+                    .monthlyWorkoutDays(safeCastToInteger(monthlyStats[4]))
+
+                    // Streak info
+                    .currentStreak(streakInfo.map(UserWorkoutStreak::getCurrentStreak).orElse(0))
+                    .longestStreak(streakInfo.map(UserWorkoutStreak::getLongestStreak).orElse(0))
+                    .lastWorkoutDate(streakInfo.map(UserWorkoutStreak::getLastWorkoutDate).orElse(null))
+
+                    // Lifetime stats
+                    .totalWorkouts(safeCastToLong(lifetimeStats[0]))
+                    .totalCalories(safeCastToLong(lifetimeStats[1]))
+                    .totalWorkoutDays(safeCastToLong(lifetimeStats[2]))
+                    .lifetimeAvgDuration(roundToBigDecimal(lifetimeStats[3], 1))
+                    .firstWorkoutDate(safeCastToLocalDate(lifetimeStats[4]))
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error getting dashboard summary for user {}: {}", userId, e.getMessage(), e);
+            return createEmptyDashboard();
+        }
+    }
 
     /**
      * method for getting workout calendar
-     * @param userId
-     * @param startDate
-     * @param endDate
-     * @return
      */
     public List<WorkoutCalendarDTO> getWorkoutCalendar(Long userId, LocalDate startDate, LocalDate endDate) {
         try {
@@ -44,17 +125,13 @@ public class DashboardService {
             return calendar;
 
         } catch (Exception e) {
+            log.error("Error getting workout calendar for user {}: {}", userId, e.getMessage());
             return new ArrayList<>();
         }
     }
 
     /**
      * method for getting workout trends
-     * @param userId
-     * @param periodType
-     * @param startDate
-     * @param endDate
-     * @return
      */
     public List<WorkoutTrendDTO> getWorkoutTrends(Long userId, String periodType, LocalDate startDate, LocalDate endDate) {
         try {
@@ -75,6 +152,7 @@ public class DashboardService {
             return trends;
 
         } catch (Exception e) {
+            log.error("Error getting workout trends for user {}: {}", userId, e.getMessage());
             return new ArrayList<>();
         }
     }
@@ -98,8 +176,19 @@ public class DashboardService {
             return breakdown;
 
         } catch (Exception e) {
+            log.error("Error getting workout type breakdown for user {}: {}", userId, e.getMessage());
             return new ArrayList<>();
         }
+    }
+
+    // Helper method to round BigDecimal values like the PL/SQL function does
+    private BigDecimal roundToBigDecimal(Object value, int scale) {
+        if (value == null) return BigDecimal.ZERO;
+
+        BigDecimal bd = safeCastToBigDecimal(value);
+        if (bd.equals(BigDecimal.ZERO)) return BigDecimal.ZERO;
+
+        return bd.setScale(scale, RoundingMode.HALF_UP);
     }
 
     //method to create empty dashboard
@@ -157,40 +246,5 @@ public class DashboardService {
         if (value instanceof Date) return ((Date) value).toLocalDate();
         if (value instanceof java.util.Date) return new Date(((java.util.Date) value).getTime()).toLocalDate();
         return null;
-    }
-
-    public DashboardSummaryDTO getDashboardSummary(Long userId) {
-        try {
-            List<Object[]> result = scheduledWorkoutRepository.getDashboardSummary(userId, LocalDate.now());
-
-            if (!result.isEmpty()) {
-                Object[] row = result.get(0);
-                return DashboardSummaryDTO.builder()
-                        .weeklyWorkouts(safeCastToInteger(row[0]))
-                        .weeklyCalories(safeCastToInteger(row[1]))
-                        .weeklyAvgDuration(safeCastToBigDecimal(row[2]))
-                        .weeklyAvgRating(safeCastToBigDecimal(row[3]))
-                        .weeklyWorkoutDays(safeCastToInteger(row[4]))
-                        .monthlyWorkouts(safeCastToInteger(row[5]))
-                        .monthlyCalories(safeCastToInteger(row[6]))
-                        .monthlyAvgDuration(safeCastToBigDecimal(row[7]))
-                        .monthlyAvgRating(safeCastToBigDecimal(row[8]))
-                        .monthlyWorkoutDays(safeCastToInteger(row[9]))
-                        .currentStreak(safeCastToInteger(row[10]))
-                        .longestStreak(safeCastToInteger(row[11]))
-                        .lastWorkoutDate(safeCastToLocalDate(row[12]))
-                        .totalWorkouts(safeCastToLong(row[13]))
-                        .totalCalories(safeCastToLong(row[14]))
-                        .totalWorkoutDays(safeCastToLong(row[15]))
-                        .lifetimeAvgDuration(safeCastToBigDecimal(row[16]))
-                        .firstWorkoutDate(safeCastToLocalDate(row[17]))
-                        .build();
-            }
-
-            // Return empty dashboard
-            return createEmptyDashboard();
-        } catch (Exception e) {
-            return createEmptyDashboard();
-        }
     }
 }

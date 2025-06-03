@@ -126,7 +126,7 @@ CREATE TABLE workout_plans (
 );
 
 --workout exercise details table (which exercises are in which plans)
---many to many relationship, links each workou plan to the ex it includes
+--many to many relationship, links each workout plan to the ex it includes
 CREATE TABLE workout_exercise_details (
                                           workout_exercise_detail_id BIGSERIAL PRIMARY KEY,
                                           workout_plan_id BIGINT NOT NULL,
@@ -146,13 +146,13 @@ CREATE TABLE workout_exercise_details (
                                               FOREIGN KEY (workout_plan_id) REFERENCES workout_plans(workout_plan_id) ON DELETE CASCADE,
                                           CONSTRAINT fk_workout_exercise_details_exercise_id
                                               FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id) ON DELETE RESTRICT,
-                                            --cannot add the same ex_id more than once
+    --cannot add the same ex_id more than once
                                           CONSTRAINT uk_workout_plan_exercise UNIQUE (workout_plan_id, exercise_id),
                                           CONSTRAINT ck_target_metrics CHECK (
                                               target_reps_min IS NOT NULL OR
                                               target_duration_seconds IS NOT NULL OR
                                               target_distance_meters IS NOT NULL
-                                         )
+                                              )
 );
 
 --scheduled workots table
@@ -206,8 +206,25 @@ CREATE TABLE workout_exercise_logs (
                                            FOREIGN KEY (scheduled_workout_id) REFERENCES scheduled_workouts(scheduled_workout_id) ON DELETE CASCADE,
                                        CONSTRAINT fk_workout_exercise_logs_exercise_id
                                            FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id) ON DELETE RESTRICT,
-                                        --each ex is logged only once per workout session
+    --each ex is logged only once per workout session
                                        CONSTRAINT uk_scheduled_workout_exercise UNIQUE (scheduled_workout_id, exercise_id)
+);
+
+-- Add streak tracking table
+CREATE TABLE user_workout_streaks (
+                                      streak_id BIGSERIAL PRIMARY KEY,
+                                      user_id BIGINT NOT NULL,
+                                      current_streak INTEGER DEFAULT 0,
+                                      longest_streak INTEGER DEFAULT 0,
+                                      last_workout_date DATE,
+                                      streak_start_date DATE,
+                                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                                      CONSTRAINT fk_user_workout_streaks_user_id
+                                          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    --one user has exactly one streak record
+                                      CONSTRAINT uk_user_streak UNIQUE (user_id)
 );
 
 
@@ -239,6 +256,11 @@ CREATE INDEX idx_scheduled_workouts_user_status ON scheduled_workouts(user_id, s
 --for generating reports
 CREATE INDEX idx_workout_exercise_logs_scheduled_workout_id ON workout_exercise_logs(scheduled_workout_id);
 CREATE INDEX idx_workout_exercise_logs_exercise_id ON workout_exercise_logs(exercise_id);
+
+CREATE INDEX idx_user_workout_streaks_user_id ON user_workout_streaks(user_id);
+CREATE INDEX idx_scheduled_workouts_completed_date ON scheduled_workouts(user_id, scheduled_date)
+    WHERE status = 'COMPLETED';
+
 
 --FUNCTIONS OF TYPE TRIGGER (called by the triggers below)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -288,8 +310,8 @@ CREATE TRIGGER trigger_scheduled_workouts_updated_at
 
 CREATE TRIGGER trigger_calculate_workout_duration
     BEFORE INSERT OR UPDATE ON scheduled_workouts
-    FOR EACH ROW
-    EXECUTE FUNCTION calculate_workout_duration();
+                         FOR EACH ROW
+                         EXECUTE FUNCTION calculate_workout_duration();
 
 
 --FUNCTION get_user_workout_stats
@@ -331,13 +353,13 @@ WHERE sw.user_id = p_user_id
 END;
 $$ LANGUAGE plpgsql;
 
-
+--FUNCTION
 CREATE OR REPLACE FUNCTION schedule_workout(
     p_user_id BIGINT,
     p_workout_plan_id BIGINT,
     p_scheduled_date DATE,
     p_scheduled_time TIME DEFAULT NULL
-) RETURNS BIGINT AS $$
+) RETURNS BIGINT AS $$ --id of new scheduled workout
 DECLARE
 v_scheduled_workout_id BIGINT;
 BEGIN
@@ -642,27 +664,27 @@ SELECT
     CASE
         WHEN s.times_performed > 0 AND s.avg_reps > 0 THEN
             ROUND(s.avg_reps * 1.2)
-            ELSE
-                CASE p_goal_type
-                    WHEN 'WEIGHT_LOSS' THEN
-                        CASE s.category WHEN 'CARDIO' THEN 1 WHEN 'STRENGTH' THEN 15 ELSE 15 END
-                    WHEN 'MUSCLE_GAIN' THEN
-                        CASE s.category WHEN 'STRENGTH' THEN 12 WHEN 'CARDIO' THEN 1 ELSE 12 END
-                    ELSE 15
-END
-END as recommended_reps_max,
+        ELSE
+            CASE p_goal_type
+                WHEN 'WEIGHT_LOSS' THEN
+                    CASE s.category WHEN 'CARDIO' THEN 1 WHEN 'STRENGTH' THEN 15 ELSE 15 END
+                WHEN 'MUSCLE_GAIN' THEN
+                    CASE s.category WHEN 'STRENGTH' THEN 12 WHEN 'CARDIO' THEN 1 ELSE 12 END
+                ELSE 15
+                END
+        END as recommended_reps_max,
 
-        -- Weight percentage (based on user's history if available)
-        CASE
-            WHEN s.times_performed > 0 AND s.avg_weight_used > 0 THEN
-                CASE p_goal_type
-                    WHEN 'MUSCLE_GAIN' THEN LEAST(100.0, (s.avg_weight_used / GREATEST(v_avg_user_weight, 50) * 100 * 1.1))
-                    WHEN 'WEIGHT_LOSS' THEN LEAST(90.0, (s.avg_weight_used / GREATEST(v_avg_user_weight, 50) * 100 * 0.9))
-                    ELSE LEAST(95.0, (s.avg_weight_used / GREATEST(v_avg_user_weight, 50) * 100))
-END
-ELSE
-                CASE p_goal_type
-                    WHEN 'MUSCLE_GAIN' THEN (80 * v_strength_multiplier)::DECIMAL(5,2)
+    -- Weight percentage (based on user's history if available)
+    CASE
+        WHEN s.times_performed > 0 AND s.avg_weight_used > 0 THEN
+            CASE p_goal_type
+                WHEN 'MUSCLE_GAIN' THEN LEAST(100.0, (s.avg_weight_used / GREATEST(v_avg_user_weight, 50) * 100 * 1.1))
+                WHEN 'WEIGHT_LOSS' THEN LEAST(90.0, (s.avg_weight_used / GREATEST(v_avg_user_weight, 50) * 100 * 0.9))
+                ELSE LEAST(95.0, (s.avg_weight_used / GREATEST(v_avg_user_weight, 50) * 100))
+                END
+        ELSE
+            CASE p_goal_type
+                WHEN 'MUSCLE_GAIN' THEN (80 * v_strength_multiplier)::DECIMAL(5,2)
                     WHEN 'WEIGHT_LOSS' THEN (65 * v_strength_multiplier)::DECIMAL(5,2)
                     ELSE (70 * v_strength_multiplier)::DECIMAL(5,2)
 END
@@ -705,28 +727,6 @@ END IF;
 END;
 $$;
 
-
-
--- Add streak tracking table
-CREATE TABLE user_workout_streaks (
-                                      streak_id BIGSERIAL PRIMARY KEY,
-                                      user_id BIGINT NOT NULL,
-                                      current_streak INTEGER DEFAULT 0,
-                                      longest_streak INTEGER DEFAULT 0,
-                                      last_workout_date DATE,
-                                      streak_start_date DATE,
-                                      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-                                      CONSTRAINT fk_user_workout_streaks_user_id
-                                          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-                                        --one user has exactly one streak record
-                                      CONSTRAINT uk_user_streak UNIQUE (user_id)
-);
-
-CREATE INDEX idx_user_workout_streaks_user_id ON user_workout_streaks(user_id);
-CREATE INDEX idx_scheduled_workouts_completed_date ON scheduled_workouts(user_id, scheduled_date)
-    WHERE status = 'COMPLETED';
 
 CREATE TRIGGER trigger_user_workout_streaks_updated_at
     BEFORE UPDATE ON user_workout_streaks
@@ -856,7 +856,7 @@ SELECT
     ls.first_workout_date
 
 FROM weekly_stats ws
-    --combines into one row for the summary
+         --combines into one row for the summary
          CROSS JOIN monthly_stats ms
          CROSS JOIN streak_info si
          CROSS JOIN lifetime_stats ls;
@@ -1227,9 +1227,7 @@ INSERT INTO workout_exercise_logs (scheduled_workout_id, exercise_id, exercise_o
 
 
 -- USER_WORKOUT_STREAKS TABLE
-
 -- This table is automatically populated by triggers when workouts are completed
--- The trigger 'trigger_workout_completion_streak_update' calls update_workout_streak()
--- when a workout status changes to 'COMPLETED'
+
 
 COMMIT;
