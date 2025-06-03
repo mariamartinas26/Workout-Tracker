@@ -118,6 +118,36 @@ const ScheduledWorkoutService = {
             throw error;
         }
     },
+    getTodaysWorkouts: async (userId) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/scheduled-workouts/user/${userId}/today`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                let errorMessage = `HTTP ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorData.error || errorMessage;
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    errorMessage = errorText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
+
+            const result = await response.json();
+            console.log('Today\'s workouts fetched:', result);
+            return result;
+
+        } catch (error) {
+            console.error('Error fetching today\'s workouts:', error);
+            throw error;
+        }
+    },
 
     rescheduleWorkout: async (scheduledWorkoutId, newDate, newTime) => {
         try {
@@ -216,6 +246,73 @@ const ScheduledWorkoutService = {
     }
 };
 
+const WorkoutHelpers = {
+    // Verifică dacă un workout este pentru azi
+    isWorkoutToday: (workout) => {
+        const today = new Date().toISOString().split('T')[0];
+        return workout.scheduledDate === today;
+    },
+
+    // Verifică dacă un workout trebuie marcat ca missed
+    isWorkoutMissed: (workout) => {
+        if (!workout.scheduledTime || workout.status?.toLowerCase() !== 'planned') {
+            return false;
+        }
+
+        const now = new Date();
+        const today = new Date().toISOString().split('T')[0];
+
+        // Verifică dacă workout-ul este pentru azi
+        if (workout.scheduledDate !== today) {
+            return false;
+        }
+
+        // Creează data și ora completă pentru workout
+        const workoutDateTime = new Date(`${workout.scheduledDate}T${workout.scheduledTime}`);
+
+        // Dacă timpul actual este cu mai mult de 30 de minute după ora programată
+        const timeDifference = now.getTime() - workoutDateTime.getTime();
+        const thirtyMinutesInMs = 30 * 60 * 1000;
+
+        return timeDifference > thirtyMinutesInMs;
+    },
+
+    // Actualizează statusul workout-ului dacă este missed
+    getActualWorkoutStatus: (workout) => {
+        if (WorkoutHelpers.isWorkoutMissed(workout)) {
+            return 'MISSED';
+        }
+        return workout.status;
+    },
+
+    // Obține culoarea pentru status (inclusiv pentru MISSED)
+    getStatusColor: (status) => {
+        switch (status?.toLowerCase()) {
+            case 'planned':
+                return {bg: '#e6f3ff', border: '#3182ce', text: '#2c5282'};
+            case 'in_progress':
+                return {bg: '#fff2e6', border: '#ed8936', text: '#c05621'};
+            case 'completed':
+                return {bg: '#e6ffe6', border: '#38a169', text: '#2f855a'};
+            case 'cancelled':
+                return {bg: '#ffe6e6', border: '#e53e3e', text: '#c53030'};
+            case 'missed':
+                return {bg: '#fef2e2', border: '#d69e2e', text: '#d69e2e'}; // Portocaliu pentru missed
+            case 'scheduled':
+            case 'programat':
+                return {bg: '#e6f3ff', border: '#3182ce', text: '#2c5282'};
+            case 'în progres':
+                return {bg: '#fff2e6', border: '#ed8936', text: '#c05621'};
+            case 'finalizat':
+                return {bg: '#e6ffe6', border: '#38a169', text: '#2f855a'};
+            case 'anulat':
+                return {bg: '#ffe6e6', border: '#e53e3e', text: '#c53030'};
+            default:
+                return {bg: '#f7fafc', border: '#cbd5e0', text: '#4a5568'};
+        }
+    }
+};
+
 const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
     const [workoutPlans, setWorkoutPlans] = useState([]);
     const [loadingPlans, setLoadingPlans] = useState(false);
@@ -252,6 +349,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
             const today = new Date().toISOString().split('T')[0];
             setScheduleData(prev => ({...prev, scheduledDate: today}));
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, currentUserId]);
 
     const isWorkoutToday = (workout) => {
@@ -260,9 +358,11 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
     };
 
     const getWorkoutActionButton = (workout) => {
-        if (!isWorkoutToday(workout)) return null;
+        if (!WorkoutHelpers.isWorkoutToday(workout)) return null;
 
-        const status = workout.status?.toLowerCase();
+        // Folosește statusul actual (care poate fi MISSED)
+        const actualStatus = WorkoutHelpers.getActualWorkoutStatus(workout);
+        const status = actualStatus.toLowerCase();
 
         switch (status) {
             case 'planned':
@@ -296,9 +396,9 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
             case 'missed':
                 return {
                     text: '⏰ Missed',
-                    action: 'none',
-                    color: '#ef4444',
-                    enabled: false
+                    action: 'reschedule',
+                    color: '#d69e2e',
+                    enabled: true
                 };
             case 'scheduled':
                 return {
@@ -338,9 +438,35 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
         setLoadingWorkouts(true);
         setError('');
         try {
-            const workouts = await ScheduledWorkoutService.getUserScheduledWorkouts(currentUserId);
-            setScheduledWorkouts(workouts);
-            console.log('Loaded scheduled workouts:', workouts);
+            // Obține toate workout-urile
+            const allWorkouts = await ScheduledWorkoutService.getUserScheduledWorkouts(currentUserId);
+
+            // Obține workout-urile de azi cu detectare automată missed
+            const todaysWorkouts = await ScheduledWorkoutService.getTodaysWorkouts(currentUserId);
+
+            // Creează un map pentru workout-urile de azi (cu statusurile actualizate)
+            const todaysWorkoutsMap = new Map();
+            todaysWorkouts.forEach(workout => {
+                todaysWorkoutsMap.set(workout.scheduledWorkoutId, workout);
+            });
+
+            // Actualizează workout-urile: folosește versiunea de azi dacă există, altfel versiunea originală
+            const updatedWorkouts = allWorkouts.map(workout => {
+                if (todaysWorkoutsMap.has(workout.scheduledWorkoutId)) {
+                    return todaysWorkoutsMap.get(workout.scheduledWorkoutId);
+                }
+
+                // Pentru workout-urile care nu sunt de azi, verifică local dacă sunt missed
+                const actualStatus = WorkoutHelpers.getActualWorkoutStatus(workout);
+                if (actualStatus !== workout.status) {
+                    return { ...workout, status: actualStatus };
+                }
+
+                return workout;
+            });
+
+            setScheduledWorkouts(updatedWorkouts);
+            console.log('Loaded scheduled workouts with missed detection:', updatedWorkouts);
         } catch (error) {
             console.error('Error loading scheduled workouts:', error);
             setError('Could not load scheduled workouts');
@@ -348,6 +474,8 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
             setLoadingWorkouts(false);
         }
     };
+
+
 
     const handleScheduleWorkout = (plan) => {
         setSelectedPlanForScheduling(plan);
@@ -367,7 +495,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
         try {
             await ScheduledWorkoutService.startWorkout(workout.scheduledWorkoutId);
 
-            await loadScheduledWorkouts();
+             loadScheduledWorkouts();
 
         } catch (error) {
             console.error('Error starting workout:', error);
@@ -401,7 +529,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
 
             setShowCompleteModal(false);
             setSelectedWorkout(null);
-            await loadScheduledWorkouts();
+             loadScheduledWorkouts();
 
         } catch (error) {
             console.error('Error completing workout:', error);
@@ -464,7 +592,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
             );
 
             console.log('Workout successfully rescheduled:', response);
-            await loadScheduledWorkouts();
+             loadScheduledWorkouts();
             handleClosePopup();
 
         } catch (error) {
@@ -527,7 +655,28 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                 return {bg: '#f7fafc', border: '#cbd5e0', text: '#4a5568'};
         }
     };
+    const MissedWorkoutIndicator = ({ workout }) => {
+        const actualStatus = WorkoutHelpers.getActualWorkoutStatus(workout);
 
+        if (actualStatus !== 'MISSED') {
+            return null;
+        }
+
+        return (
+            <div style={{
+                marginTop: '8px',
+                backgroundColor: '#fef2e2',
+                color: '#d69e2e',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid #fed7aa',
+                fontSize: '12px',
+                fontWeight: '600'
+            }}>
+                ⏰ This workout was automatically marked as missed because the scheduled time has passed (30+ minutes ago)
+            </div>
+        );
+    };
 
     if (!isOpen) return null;
 
@@ -822,7 +971,9 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                                     gap: '12px'
                                 }}>
                                     {scheduledWorkouts.map((workout) => {
-                                        const statusStyle = getStatusColor(workout.status);
+                                        // MODIFICAT: Obține statusul actual (care poate fi MISSED)
+                                        const actualStatus = WorkoutHelpers.getActualWorkoutStatus(workout);
+                                        const statusStyle = getStatusColor(actualStatus); // Folosește actualStatus în loc de workout.status
                                         const actionButton = getWorkoutActionButton(workout);
 
                                         return (
@@ -851,7 +1002,14 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                             onClick={(e) => {
                                                                 e.stopPropagation(); // Prevent card selection
                                                                 if (actionButton.enabled) {
-                                                                    handleWorkoutAction(workout, actionButton.action);
+                                                                    // ADĂUGAT: Gestionează acțiunea de reschedule pentru missed workouts
+                                                                    if (actionButton.action === 'reschedule') {
+                                                                        setSelectedWorkout(workout);
+                                                                        // Setează tab-ul pe scheduled pentru a arăta secțiunea de reschedule
+                                                                        setActiveTab('scheduled');
+                                                                    } else {
+                                                                        handleWorkoutAction(workout, actionButton.action);
+                                                                    }
                                                                 }
                                                             }}
                                                             disabled={!actionButton.enabled || loading}
@@ -874,6 +1032,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                         </button>
                                                     </div>
                                                 )}
+
 
                                                 {/* Workout card content */}
                                                 <div
@@ -904,17 +1063,19 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                                 gap: '8px',
                                                                 marginBottom: '8px'
                                                             }}>
-                                                            <span style={{
-                                                                backgroundColor: statusStyle.bg,
-                                                                color: statusStyle.text,
-                                                                border: `1px solid ${statusStyle.border}`,
-                                                                padding: '2px 8px',
-                                                                borderRadius: '6px',
-                                                                fontSize: '12px',
-                                                                fontWeight: '600'
-                                                            }}>
-                                                                {workout.status || 'Programat'}
-                                                            </span>
+                                                                {/* MODIFICAT: Folosește actualStatus în loc de workout.status */}
+                                                                <span style={{
+                                                                    backgroundColor: statusStyle.bg,
+                                                                    color: statusStyle.text,
+                                                                    border: `1px solid ${statusStyle.border}`,
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: '600'
+                                                                }}>
+                                {actualStatus || 'PLANNED'}
+                            </span>
+
                                                                 {/* Today indicator */}
                                                                 {isWorkoutToday(workout) && (
                                                                     <span style={{
@@ -926,8 +1087,8 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                                         fontSize: '12px',
                                                                         fontWeight: '600'
                                                                     }}>
-                                                                    🌟 Today
-                                                                </span>
+                                    🌟 Today
+                                </span>
                                                                 )}
                                                             </div>
 
@@ -952,7 +1113,24 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                                                                         : workout.workoutPlan.description}
                                                                 </p>
                                                             )}
+
+                                                            {/* ADĂUGAT: Indicator special pentru missed workouts */}
+                                                            {actualStatus === 'MISSED' && (
+                                                                <div style={{
+                                                                    marginTop: '8px',
+                                                                    backgroundColor: '#fef2e2',
+                                                                    color: '#d69e2e',
+                                                                    padding: '8px 12px',
+                                                                    borderRadius: '6px',
+                                                                    border: '1px solid #fed7aa',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: '600'
+                                                                }}>
+                                                                    ⏰ This workout was automatically marked as missed because the scheduled time has passed
+                                                                </div>
+                                                            )}
                                                         </div>
+
                                                         {selectedWorkout?.scheduledWorkoutId === workout.scheduledWorkoutId && !actionButton && (
                                                             <div style={{
                                                                 backgroundColor: '#38b2ac',

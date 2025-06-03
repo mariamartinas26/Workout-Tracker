@@ -295,46 +295,6 @@ public class ExerciseController {
     }
 
     /**
-     * Update an exercise
-     * PUT /api/exercises/{id}
-     */
-    @PutMapping("/{id}")
-    public ResponseEntity<Exercise> updateExercise(
-            @PathVariable Long id,
-            @Valid @RequestBody Exercise exercise) {
-
-        log.info("REST request to update exercise with ID: {}", id);
-
-        try {
-            Exercise updatedExercise = exerciseService.updateExercise(id, exercise);
-            return ResponseEntity.ok(updatedExercise);
-        } catch (IllegalArgumentException e) {
-            log.error("Error updating exercise: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    /**
-     * Delete an exercise
-     * DELETE /api/exercises/{id}
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteExercise(@PathVariable Long id) {
-        log.info("REST request to delete exercise with ID: {}", id);
-
-        try {
-            exerciseService.deleteExercise(id);
-            return ResponseEntity.noContent().build();
-        } catch (IllegalArgumentException e) {
-            log.error("Exercise not found: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            log.error("Error deleting exercise: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
-    }
-
-    /**
      * Count exercises by category
      * GET /api/exercises/count/category/{category}
      */

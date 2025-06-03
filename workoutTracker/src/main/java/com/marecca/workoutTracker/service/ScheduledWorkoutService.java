@@ -198,10 +198,45 @@ public class ScheduledWorkoutService {
         return scheduledWorkoutRepository.findByUserUserIdAndStatus(userId, status);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ScheduledWorkout> findTodaysWorkouts(Long userId) {
         validateUserExists(userId);
-        return scheduledWorkoutRepository.findTodaysWorkoutsForUser(userId);
+
+        // Get today's workouts
+        List<ScheduledWorkout> workouts = scheduledWorkoutRepository.findTodaysWorkoutsForUser(userId);
+
+        // Check for missed workouts and mark them
+        LocalTime currentTime = LocalTime.now();
+        boolean hasUpdates = false;
+
+        for (ScheduledWorkout workout : workouts) {
+            if (workout.getStatus() == WorkoutStatusType.PLANNED &&
+                    workout.getScheduledTime() != null &&
+                    currentTime.isAfter(workout.getScheduledTime())) {
+
+                try {
+                    log.info("Marking workout {} as missed - scheduled time {} has passed (current time: {})",
+                            workout.getScheduledWorkoutId(), workout.getScheduledTime(), currentTime);
+
+                    // Update status directly in repository
+                    scheduledWorkoutRepository.updateWorkoutStatus(workout.getScheduledWorkoutId(), WorkoutStatusType.MISSED);
+
+                    // Update the workout object status for the response
+                    workout.setStatus(WorkoutStatusType.MISSED);
+                    hasUpdates = true;
+
+                } catch (Exception e) {
+                    log.warn("Failed to mark workout {} as missed: {}", workout.getScheduledWorkoutId(), e.getMessage());
+                }
+            }
+        }
+
+        if (hasUpdates) {
+            log.info("Automatically marked {} planned workouts as missed for user {}",
+                    workouts.stream().mapToLong(w -> w.getStatus() == WorkoutStatusType.MISSED ? 1 : 0).sum(), userId);
+        }
+
+        return workouts;
     }
 
     /**
