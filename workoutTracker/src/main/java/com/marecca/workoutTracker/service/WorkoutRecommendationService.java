@@ -1,296 +1,527 @@
 package com.marecca.workoutTracker.service;
 
+import com.marecca.workoutTracker.dto.ExerciseStats;
 import com.marecca.workoutTracker.dto.WorkoutRecommendationDTO;
-import com.marecca.workoutTracker.service.exceptions.InvalidGoalTypeException;
-import com.marecca.workoutTracker.service.exceptions.InvalidUserDataException;
-import com.marecca.workoutTracker.service.exceptions.NoExercisesFoundException;
-import com.marecca.workoutTracker.service.exceptions.UserNotFoundException;
+import com.marecca.workoutTracker.entity.*;
+import com.marecca.workoutTracker.entity.enums.ExerciseCategoryType;
+import com.marecca.workoutTracker.entity.enums.MuscleGroupType;
+import com.marecca.workoutTracker.entity.enums.WorkoutStatusType;
+import com.marecca.workoutTracker.repository.*;
+import com.marecca.workoutTracker.service.exceptions.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class WorkoutRecommendationService {
+
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private UserRepository userRepository;
+
+    @Autowired
+    private ExerciseRepository exerciseRepository;
+
+    @Autowired
+    private ScheduledWorkoutRepository scheduledWorkoutRepository;
+
+    @Autowired
+    private WorkoutExerciseLogRepository workoutExerciseLogRepository;
+
+    @Autowired
+    private WorkoutPlanRepository workoutPlanRepository;
+
+    @Autowired
+    private WorkoutExerciseDetailRepository workoutExerciseDetailRepository;
+
+    @Autowired
+    private GoalRepository goalRepository;
 
     /**
      * Workout recommendation
      */
     public List<WorkoutRecommendationDTO> getRecommendations(Long userId, String goalType) {
         try {
-            String sql = "SELECT * FROM recommend_workout(?, ?)";
+            // Validate input parameters
+            validateInputParameters(userId, goalType);
 
-            List<WorkoutRecommendationDTO> recommendations = jdbcTemplate.query(
-                    sql,
-                    new Object[]{userId, goalType},
-                    new WorkoutRecommendationRowMapper()
-            );
+            //Get user data
+            User user = getUserAndValidate(userId);
 
-            return recommendations;
+            //Count completed workouts in the last 90 days
+            int workoutCount = getCompletedWorkoutCount(userId);
 
-        } catch (DataAccessException e) {
-            String errorMessage = e.getMessage();
-            String sqlState = extractSQLState(e);
+            //Calculate strength multiplier based on experience
+            BigDecimal strengthMultiplier = calculateStrengthMultiplier(workoutCount);
 
-            //hadle exceptions
-            if (sqlState != null) {
-                switch (sqlState) {
-                    case "00001":
-                        // INVALID_USER_ID
-                        throw new IllegalArgumentException(
-                                extractCustomErrorMessage(errorMessage, "INVALID_USER_ID"));
+            //Get exercises suitable for user's fitness level
+            List<Exercise> suitableExercises = getSuitableExercises(user.getFitnessLevel());
 
-                    case "00002":
-                        // NULL_GOAL_TYPE
-                        throw new IllegalArgumentException(
-                                extractCustomErrorMessage(errorMessage, "NULL_GOAL_TYPE"));
+            //Calculate exercise statistics and scores
+            List<WorkoutRecommendationDTO> recommendations = calculateRecommendations(userId, goalType, user, strengthMultiplier, suitableExercises);
 
-                    case "00003":
-                        // INVALID_GOAL_TYPE
-                        throw new InvalidGoalTypeException(
-                                extractCustomErrorMessage(errorMessage, "INVALID_GOAL_TYPE"));
+            //Filter and sort by priority score
+            List<WorkoutRecommendationDTO> filteredRecommendations = recommendations.stream()
+                    .filter(rec -> rec.getPriorityScore().compareTo(BigDecimal.valueOf(1.0)) > 0)
+                    .sorted((r1, r2) -> r2.getPriorityScore().compareTo(r1.getPriorityScore()))
+                    .limit(8)
+                    .collect(Collectors.toList());
 
-                    case "00004":
-                        // USER_NOT_FOUND
-                        throw new UserNotFoundException(
-                                extractCustomErrorMessage(errorMessage, "USER_NOT_FOUND"));
-
-                    case "00005":
-                    case "00006":
-                        // INVALID_USER_DATA
-                        throw new InvalidUserDataException(
-                                extractCustomErrorMessage(errorMessage, "INVALID_USER_DATA"));
-
-                    case "00007":
-                        // NO_EXERCISES_FOUND
-                        throw new NoExercisesFoundException(
-                                extractCustomErrorMessage(errorMessage, "NO_EXERCISES_FOUND"));
-
-                    case "00999":
-                        // DATABASE_ERROR
-                        throw new RuntimeException(
-                                "Database error occurred: " +
-                                        extractCustomErrorMessage(errorMessage, "DATABASE_ERROR"), e);
-
-                    default:
-                        break;
-                }
-            }
-
-            if (errorMessage.contains("USER_NOT_FOUND")) {
-                throw new UserNotFoundException(
-                        extractUserIdFromError(errorMessage, "USER_NOT_FOUND"));
-            } else if (errorMessage.contains("INVALID_GOAL_TYPE")) {
-                throw new InvalidGoalTypeException(
-                        extractGoalTypeFromError(errorMessage, "INVALID_GOAL_TYPE"));
-            } else if (errorMessage.contains("INVALID_USER_DATA")) {
-                throw new InvalidUserDataException(
-                        extractCustomErrorMessage(errorMessage, "INVALID_USER_DATA"));
-            } else if (errorMessage.contains("NO_EXERCISES_FOUND")) {
+            if (filteredRecommendations.isEmpty()) {
                 throw new NoExercisesFoundException(
-                        extractCustomErrorMessage(errorMessage, "NO_EXERCISES_FOUND"));
+                        "No suitable exercises found for user " + userId +
+                                " with goal type " + goalType + " and fitness level " + user.getFitnessLevel());
             }
 
-            throw new RuntimeException("Failed to retrieve workout recommendations: " + errorMessage, e);
+            return filteredRecommendations;
 
         } catch (UserNotFoundException | InvalidGoalTypeException |
-                 InvalidUserDataException | NoExercisesFoundException e) {
+                 InvalidUserDataException | NoExercisesFoundException |
+                 IllegalArgumentException e) {
             throw e;
-
-        } catch (IllegalArgumentException e) {
-            throw e;
-
         } catch (Exception e) {
             throw new RuntimeException("An unexpected error occurred while generating recommendations", e);
         }
     }
 
+    private void validateInputParameters(Long userId, String goalType) {
+        if (userId == null || userId <= 0) {
+            throw new IllegalArgumentException("User ID must be a positive number, received: " + userId);
+        }
+
+        if (goalType == null) {
+            throw new IllegalArgumentException("Goal type cannot be null");
+        }
+
+        if (!Arrays.asList("WEIGHT_LOSS", "MUSCLE_GAIN", "MAINTENANCE").contains(goalType)) {
+            throw new InvalidGoalTypeException(
+                    "Invalid goal type: " + goalType + ". Valid options are: WEIGHT_LOSS, MUSCLE_GAIN, MAINTENANCE");
+        }
+    }
+
+    private User getUserAndValidate(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+
+        if (user.getFitnessLevel() == null) {
+            throw new InvalidUserDataException("User fitness level is null for user ID: " + userId);
+        }
+
+        if (user.getWeightKg() == null || user.getWeightKg().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new InvalidUserDataException(
+                    "User weight is invalid for user ID: " + userId + ". Weight: " + user.getWeightKg());
+        }
+
+        return user;
+    }
+
+    private int getCompletedWorkoutCount(Long userId) {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(90);
+        return (int) scheduledWorkoutRepository.countWorkoutsByUserStatusAndDate(
+                userId, WorkoutStatusType.COMPLETED, startDate);
+    }
+
+    private BigDecimal calculateStrengthMultiplier(int workoutCount) {
+        if (workoutCount > 50) return BigDecimal.valueOf(1.3); // very advanced
+        if (workoutCount > 20) return BigDecimal.valueOf(1.15); // advanced
+        if (workoutCount > 5) return BigDecimal.valueOf(1.0); // medium
+        return BigDecimal.valueOf(0.8); // beginner
+    }
+
+    private List<Exercise> getSuitableExercises(String fitnessLevel) {
+        int maxDifficulty;
+        switch (fitnessLevel) {
+            case "BEGINNER":
+                maxDifficulty = 3;
+                break;
+            case "INTERMEDIATE":
+                maxDifficulty = 4;
+                break;
+            default:
+                maxDifficulty = 5;
+                break;
+        }
+
+        return exerciseRepository.findByDifficultyLevelLessThanEqual(maxDifficulty);
+    }
+
     /**
-     * Extracts the SQL state from DataAccessException
+     * for each suitable exercise, computes user stats for that exercise
+     * checks if the exersise was done in the last 7 days
+     * calculates priority score
+     * gets final recommendation
      */
-    private String extractSQLState(DataAccessException e) {
-        Throwable cause = e.getCause();
-        while (cause != null) {
-            if (cause instanceof java.sql.SQLException) {
-                return ((java.sql.SQLException) cause).getSQLState();
+    private List<WorkoutRecommendationDTO> calculateRecommendations(Long userId, String goalType, User user, BigDecimal strengthMultiplier,List<Exercise> exercises) {
+
+        List<WorkoutRecommendationDTO> recommendations = new ArrayList<>();
+        LocalDateTime recentDate = LocalDateTime.now().minusDays(7);
+
+        for (Exercise exercise : exercises) {
+            //Get exercise statistics
+            ExerciseStats stats = calculateExerciseStats(userId, exercise);
+
+            // Check if exercise was done recently
+            boolean doneRecently = workoutExerciseLogRepository.existsRecentExerciseLog(userId, exercise.getExerciseId(), recentDate);
+
+
+            // Calculate priority score
+            BigDecimal priorityScore = calculatePriorityScore(goalType, exercise, stats, doneRecently);
+
+            // Create recommendation
+            WorkoutRecommendationDTO recommendation = createRecommendation(exercise, stats, goalType, user, strengthMultiplier, priorityScore);
+
+            recommendations.add(recommendation);
+        }
+
+        return recommendations;
+    }
+
+    private ExerciseStats calculateExerciseStats(Long userId, Exercise exercise) {
+        List<WorkoutExerciseLog> logs = workoutExerciseLogRepository
+                .findLogsByUserExerciseAndStatus(userId, exercise.getExerciseId(), WorkoutStatusType.COMPLETED);
+
+        ExerciseStats stats = new ExerciseStats();
+        stats.setTimesPerformed(logs.size());
+
+        if (!logs.isEmpty()) {
+            stats.setAvgWeightUsed(logs.stream()
+                    .filter(log -> log.getWeightUsedKg() != null)
+                    .map(WorkoutExerciseLog::getWeightUsedKg)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .divide(BigDecimal.valueOf(logs.size()), 2, RoundingMode.HALF_UP));
+
+            stats.setAvgReps(logs.stream()
+                    .filter(log -> log.getRepsCompleted() != null)
+                    .mapToInt(WorkoutExerciseLog::getRepsCompleted)
+                    .average()
+                    .orElse(0.0));
+
+            stats.setAvgSets(logs.stream()
+                    .filter(log -> log.getSetsCompleted() != null)
+                    .mapToInt(WorkoutExerciseLog::getSetsCompleted)
+                    .average()
+                    .orElse(0.0));
+
+            stats.setAvgDifficulty(logs.stream()
+                    .filter(log -> log.getDifficultyRating() != null)
+                    .mapToInt(WorkoutExerciseLog::getDifficultyRating)
+                    .average()
+                    .orElse(3.0));
+        } else {
+            stats.setAvgWeightUsed(BigDecimal.ZERO);
+            stats.setAvgReps(0.0);
+            stats.setAvgSets(0.0);
+            stats.setAvgDifficulty(3.0);
+        }
+
+        return stats;
+    }
+
+    /**
+     * method for calculating priority score
+
+     */
+    private BigDecimal calculatePriorityScore(String goalType, Exercise exercise, ExerciseStats stats, boolean doneRecently) {
+        // Calculate estimated calories per minute
+        BigDecimal caloriesPerMinute = calculateCaloriesPerMinute(exercise);
+
+        // Calculate muscle building potential
+        int muscleBuildingPotential = calculateMuscleBuildingPotential(exercise);
+
+        // Calculate cardio effectiveness
+        int cardioEffectiveness = calculateCardioEffectiveness(exercise);
+
+        //if the exercise was done in the past 7 days -> -1
+        BigDecimal recencyPenalty = doneRecently ? BigDecimal.valueOf(-1.0) : BigDecimal.ZERO;
+
+        //priority score based on goal type
+        BigDecimal priorityScore;
+        switch (goalType) {
+            case "WEIGHT_LOSS":
+                priorityScore = BigDecimal.valueOf(cardioEffectiveness)
+                        .multiply(BigDecimal.valueOf(0.6))
+                        .add(caloriesPerMinute.multiply(BigDecimal.valueOf(0.3)))
+                        .add(ExerciseCategoryType.CARDIO.equals(exercise.getCategory()) ? BigDecimal.valueOf(2.0) : BigDecimal.ZERO)
+                        .add(recencyPenalty);
+                break;
+
+            case "MUSCLE_GAIN":
+                priorityScore = BigDecimal.valueOf(muscleBuildingPotential)
+                        .multiply(BigDecimal.valueOf(0.7))
+                        .add(ExerciseCategoryType.STRENGTH.equals(exercise.getCategory()) ? BigDecimal.valueOf(2.0) : BigDecimal.ZERO)
+                        .add(Arrays.asList(MuscleGroupType.FULL_BODY, MuscleGroupType.BACK, MuscleGroupType.CHEST, MuscleGroupType.QUADRICEPS)
+                                .contains(exercise.getPrimaryMuscleGroup()) ? BigDecimal.valueOf(1.0) : BigDecimal.ZERO)
+                        .add(recencyPenalty);
+                break;
+
+            default: // MAINTENANCE
+                priorityScore = BigDecimal.valueOf(cardioEffectiveness + muscleBuildingPotential)
+                        .multiply(BigDecimal.valueOf(0.4))
+                        .add(exercise.getDifficultyLevel() <= 3 ? BigDecimal.valueOf(1.0) : BigDecimal.ZERO)
+                        .add(recencyPenalty);
+                break;
+        }
+
+        return priorityScore;
+    }
+
+    private BigDecimal calculateCaloriesPerMinute(Exercise exercise) {
+        switch (exercise.getCategory()) {
+            case CARDIO:
+                return BigDecimal.valueOf(12.0);
+            case STRENGTH:
+                MuscleGroupType muscleGroup = exercise.getPrimaryMuscleGroup();
+                if (muscleGroup == MuscleGroupType.FULL_BODY) {
+                    return BigDecimal.valueOf(8.0);
+                } else if (muscleGroup == MuscleGroupType.BACK) {
+                    return BigDecimal.valueOf(6.0);
+                } else if (muscleGroup == MuscleGroupType.QUADRICEPS) {
+                    return BigDecimal.valueOf(7.0);
+                } else {
+                    return BigDecimal.valueOf(5.0);
+                }
+            default:
+                return BigDecimal.valueOf(4.0);
+        }
+    }
+
+    private int calculateMuscleBuildingPotential(Exercise exercise) {
+        if (ExerciseCategoryType.STRENGTH.equals(exercise.getCategory())) {
+            MuscleGroupType muscleGroup = exercise.getPrimaryMuscleGroup();
+            if (muscleGroup == MuscleGroupType.FULL_BODY) {
+                return 5;
+            } else if (muscleGroup == MuscleGroupType.BACK ||
+                    muscleGroup == MuscleGroupType.CHEST ||
+                    muscleGroup == MuscleGroupType.QUADRICEPS) {
+                return 4;
+            } else {
+                return 3;
             }
-            cause = cause.getCause();
         }
-        return null;
+        return 2;
     }
 
-    /**
-     * Extracts the custom error message from PL/SQL exception
-     */
-    private String extractCustomErrorMessage(String fullErrorMessage, String errorPrefix) {
-        if (fullErrorMessage == null) return "Unknown error";
+    private int calculateCardioEffectiveness(Exercise exercise) {
+        switch (exercise.getCategory()) {
+            case CARDIO:
+                return 5;
+            case STRENGTH:
+                return MuscleGroupType.FULL_BODY.equals(exercise.getPrimaryMuscleGroup()) ? 3 : 2;
+            default:
+                return 3;
+        }
+    }
 
-        int prefixIndex = fullErrorMessage.indexOf(errorPrefix + ":");
-        if (prefixIndex != -1) {
-            String message = fullErrorMessage.substring(prefixIndex + errorPrefix.length() + 1).trim();
-            int whereIndex = message.indexOf(" Where:");
-            if (whereIndex != -1) {
-                message = message.substring(0, whereIndex).trim();
+    private WorkoutRecommendationDTO createRecommendation(Exercise exercise, ExerciseStats stats, String goalType, User user, BigDecimal strengthMultiplier, BigDecimal priorityScore) {
+        WorkoutRecommendationDTO recommendation = new WorkoutRecommendationDTO();
+
+        recommendation.setExerciseId(exercise.getExerciseId());
+        recommendation.setExerciseName(exercise.getExerciseName());
+        recommendation.setPriorityScore(priorityScore);
+
+        //calculate recommended sets
+        recommendation.setRecommendedSets(calculateRecommendedSets(goalType, exercise, strengthMultiplier));
+
+        //calculate recommended reps
+        int[] repsRange = calculateRecommendedReps(goalType, exercise, stats);
+        recommendation.setRecommendedRepsMin(repsRange[0]);
+        recommendation.setRecommendedRepsMax(repsRange[1]);
+
+        //calculate recommended weight percentage
+        recommendation.setRecommendedWeightPercentage(calculateRecommendedWeightPercentage(goalType, stats, user, strengthMultiplier));
+
+        //calculate rest time
+        recommendation.setRestTimeSeconds(calculateRestTime(goalType, exercise));
+
+        return recommendation;
+    }
+
+    private Integer calculateRecommendedSets(String goalType, Exercise exercise, BigDecimal strengthMultiplier) {
+        switch (goalType) {
+            case "WEIGHT_LOSS":
+                if (exercise.getCategory() == ExerciseCategoryType.CARDIO) {
+                    return 1;
+                } else if (exercise.getCategory() == ExerciseCategoryType.STRENGTH) {
+                    return Math.max(2, strengthMultiplier.multiply(BigDecimal.valueOf(3)).intValue());
+                } else {
+                    return 2;
+                }
+            case "MUSCLE_GAIN":
+                if (exercise.getCategory() == ExerciseCategoryType.STRENGTH) {
+                    return Math.max(3, strengthMultiplier.multiply(BigDecimal.valueOf(4)).intValue());
+                } else if (exercise.getCategory() == ExerciseCategoryType.CARDIO) {
+                    return 1;
+                } else {
+                    return 3;
+                }
+            default:
+                return 3;
+        }
+    }
+
+    private int[] calculateRecommendedReps(String goalType, Exercise exercise, ExerciseStats stats) {
+        int minReps, maxReps;
+
+        if (stats.getTimesPerformed() > 0 && stats.getAvgReps() > 0) {
+            minReps = Math.max(1, (int) Math.round(stats.getAvgReps() * 0.8));
+            maxReps = (int) Math.round(stats.getAvgReps() * 1.2);
+        } else {
+            switch (goalType) {
+                case "WEIGHT_LOSS":
+                    if (exercise.getCategory() == ExerciseCategoryType.CARDIO) {
+                        minReps = maxReps = 1;
+                    } else if (exercise.getCategory() == ExerciseCategoryType.STRENGTH) {
+                        minReps = 12;
+                        maxReps = 15;
+                    } else {
+                        minReps = 10;
+                        maxReps = 15;
+                    }
+                    break;
+                case "MUSCLE_GAIN":
+                    if (exercise.getCategory() == ExerciseCategoryType.STRENGTH) {
+                        minReps = 6;
+                        maxReps = 12;
+                    } else if (exercise.getCategory() == ExerciseCategoryType.CARDIO) {
+                        minReps = maxReps = 1;
+                    } else {
+                        minReps = 8;
+                        maxReps = 12;
+                    }
+                    break;
+                default:
+                    minReps = 10;
+                    maxReps = 15;
+                    break;
             }
-            return message;
         }
 
-        return fullErrorMessage;
+        return new int[]{minReps, maxReps};
     }
 
-    /**
-     * Extracts user ID from error message
-     */
-    private String extractUserIdFromError(String errorMessage, String prefix) {
-        String cleanMessage = extractCustomErrorMessage(errorMessage, prefix);
-        // Extract the user ID using regex
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(".*ID:? (\\d+).*");
-        java.util.regex.Matcher matcher = pattern.matcher(cleanMessage);
-        if (matcher.matches()) {
-            return "User with ID " + matcher.group(1) + " does not exist";
-        }
-        return cleanMessage;
-    }
+    private BigDecimal calculateRecommendedWeightPercentage(String goalType, ExerciseStats stats,
+                                                            User user, BigDecimal strengthMultiplier) {
+        if (stats.getTimesPerformed() > 0 && stats.getAvgWeightUsed().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal userWeight = user.getWeightKg().max(BigDecimal.valueOf(50));
+            BigDecimal basePercentage = stats.getAvgWeightUsed()
+                    .divide(userWeight, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
 
-    /**
-     * Extracts goal type from error message
-     */
-    private String extractGoalTypeFromError(String errorMessage, String prefix) {
-        String cleanMessage = extractCustomErrorMessage(errorMessage, prefix);
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(".*goal type:? ([A-Z_]+).*");
-        java.util.regex.Matcher matcher = pattern.matcher(cleanMessage);
-        if (matcher.matches()) {
-            return "Invalid goal type: " + matcher.group(1) +
-                    ". Valid options are: WEIGHT_LOSS, MUSCLE_GAIN, MAINTENANCE";
-        }
-        return cleanMessage;
-    }
-
-    /**
-     * Checks if a workout plan exists for a given user and plan name
-     */
-    private boolean workoutPlanExists(Long userId, String planName) {
-        try {
-            String sql = "SELECT COUNT(*) FROM workout_plans WHERE user_id = ? AND plan_name = ?";
-            Integer count = jdbcTemplate.queryForObject(sql, Integer.class, userId, planName);
-            return count != null && count > 0;
-        } catch (DataAccessException e) {
-            return false;
+            switch (goalType) {
+                case "MUSCLE_GAIN":
+                    return basePercentage.multiply(BigDecimal.valueOf(1.1)).min(BigDecimal.valueOf(100.0));
+                case "WEIGHT_LOSS":
+                    return basePercentage.multiply(BigDecimal.valueOf(0.9)).min(BigDecimal.valueOf(90.0));
+                default:
+                    return basePercentage.min(BigDecimal.valueOf(95.0));
+            }
+        } else {
+            switch (goalType) {
+                case "MUSCLE_GAIN":
+                    return BigDecimal.valueOf(80).multiply(strengthMultiplier);
+                case "WEIGHT_LOSS":
+                    return BigDecimal.valueOf(65).multiply(strengthMultiplier);
+                default:
+                    return BigDecimal.valueOf(70).multiply(strengthMultiplier);
+            }
         }
     }
 
-    /**
-     * saves a recommended workout plan
-     * @param userId
-     * @param recommendations
-     * @param goalId
-     * @param planName
-     * @return
-     */
+    private Integer calculateRestTime(String goalType, Exercise exercise) {
+        if (exercise.getCategory() == ExerciseCategoryType.CARDIO) {
+            return 30;
+        } else if (exercise.getCategory() == ExerciseCategoryType.STRENGTH) {
+            switch (goalType) {
+                case "MUSCLE_GAIN":
+                    return 120;
+                case "WEIGHT_LOSS":
+                    return 45;
+                default:
+                    return 90;
+            }
+        } else {
+            return 60;
+        }
+    }
+
     public Map<String, Object> saveWorkoutPlan(Long userId, List<WorkoutRecommendationDTO> recommendations, Long goalId, String planName) {
         try {
-            if (!userExists(userId)) {
-                throw new IllegalArgumentException("User with ID " + userId + " does not exist");
-            }
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User with ID " + userId + " does not exist"));
 
             if (recommendations == null || recommendations.isEmpty()) {
                 throw new IllegalArgumentException("Cannot save workout plan without recommendations");
             }
 
-            // Generates plan name based on goal type
+            // Generate plan name based on goal type
             if (planName == null || planName.trim().isEmpty()) {
                 planName = generatePlanNameFromGoal(goalId);
             }
 
             // Check if workout plan already exists
-            if (workoutPlanExists(userId, planName)) {
-                // Update existing workout plan
-                return updateExistingWorkoutPlan(userId, planName, recommendations, goalId);
+            Optional<WorkoutPlan> existingPlan = workoutPlanRepository.findByUserAndPlanName(userId, planName);
+            if (existingPlan.isPresent()) {
+                return updateExistingWorkoutPlan(existingPlan.get(), recommendations, goalId);
             }
 
-            // Calculates estimated duration
+            // Calculate estimated duration
             int estimatedDuration = calculateEstimatedDuration(recommendations);
 
-            // Inserts workout plan into workout_plans table
-            String insertPlanSql = """
-    INSERT INTO workout_plans (user_id, plan_name, description, estimated_duration_minutes, 
-                             difficulty_level, goals, notes, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    RETURNING workout_plan_id
-    """;
+            // Create and save workout plan
+            WorkoutPlan workoutPlan = WorkoutPlan.builder()
+                    .user(user)
+                    .planName(planName)
+                    .description("Generated workout plan based on personalized recommendations")
+                    .estimatedDurationMinutes(estimatedDuration)
+                    .difficultyLevel(calculateAverageDifficulty(recommendations))
+                    .goals(goalId != null ? "Goal ID: " + goalId : "General fitness improvement")
+                    .notes("Generated with " + recommendations.size() + " exercises")
+                    .build();
 
-            String description = "Generated workout plan based on personalized recommendations";
-            String goals = goalId != null ? "Goal ID: " + goalId : "General fitness improvement";
-            String notes = "Generated with " + recommendations.size() + " exercises";
-            Timestamp now = Timestamp.valueOf(LocalDateTime.now());
+            workoutPlan = workoutPlanRepository.save(workoutPlan);
 
-            Long workoutPlanId = jdbcTemplate.queryForObject(
-                    insertPlanSql,
-                    new Object[]{
-                            userId, planName, description, estimatedDuration,
-                            calculateAverageDifficulty(recommendations), goals, notes, now, now
-                    },
-                    Long.class
-            );
-
-            // Inserts exercises details
-            insertWorkoutExerciseDetails(workoutPlanId, recommendations);
+            // Insert exercise details
+            insertWorkoutExerciseDetails(workoutPlan, recommendations);
 
             Map<String, Object> result = new HashMap<>();
-            result.put("workoutPlanId", workoutPlanId);
+            result.put("workoutPlanId", workoutPlan.getWorkoutPlanId());
             result.put("planName", planName);
-            result.put("description", description);
+            result.put("description", workoutPlan.getDescription());
             result.put("estimatedDurationMinutes", estimatedDuration);
             result.put("exerciseCount", recommendations.size());
-            result.put("createdAt", now);
+            result.put("createdAt", workoutPlan.getCreatedAt());
             result.put("userId", userId);
 
             return result;
 
-        } catch (DataAccessException e) {
-            throw new RuntimeException("Failed to save workout plan: " + e.getMessage(), e);
         } catch (Exception e) {
-            throw new RuntimeException("An unexpected error occurred while saving the workout plan", e);
+            throw new RuntimeException("Failed to save workout plan: " + e.getMessage(), e);
         }
     }
-    /**
-     * Generates plan name based on goal type
-     */
+
     private String generatePlanNameFromGoal(Long goalId) {
         if (goalId == null) {
             return "Recommended Workout";
         }
 
         try {
-            //query for obtaining goal type fron db
-            String getGoalTypeSql = "SELECT goal_type FROM goals WHERE goal_id = ?";
-            String goalType = jdbcTemplate.queryForObject(getGoalTypeSql, String.class, goalId);
-
-            String goalTypeDisplay = mapGoalTypeToDisplay(goalType);
-
-            return "Recommended Workout for " + goalTypeDisplay;
-
+            Optional<Goal> goal = goalRepository.findById(goalId);
+            if (goal.isPresent()) {
+                String goalTypeDisplay = mapGoalTypeToDisplay(goal.get().getGoalType().getValue());
+                return "Recommended Workout for " + goalTypeDisplay;
+            }
+            return "Recommended Workout";
         } catch (Exception e) {
             return "Recommended Workout";
         }
     }
 
-    /**
-     * maps goal type from db to a user-frendly name
-     */
     private String mapGoalTypeToDisplay(String goalType) {
         if (goalType == null) {
             return "Fitness";
@@ -307,83 +538,101 @@ public class WorkoutRecommendationService {
                 return "Fitness";
         }
     }
-    /**
-     * Statistics about user workouts
-     */
+
     public Map<String, Object> getUserWorkoutStats(Long userId) {
         try {
-            if (!userExists(userId)) {
+            if (!userRepository.existsById(userId)) {
                 throw new IllegalArgumentException("User with ID " + userId + " does not exist");
             }
 
-            String sql = """
-                SELECT 
-                    COUNT(DISTINCT sw.scheduled_workout_id) as total_workouts,
-                    COALESCE(AVG(wel.weight_used_kg), 0) as avg_weight_used,
-                    STRING_AGG(DISTINCT e.primary_muscle_group::TEXT, ', ') as muscle_groups_worked,
-                    MAX(sw.actual_start_time::DATE) as last_workout_date,
-                    COUNT(DISTINCT e.exercise_id) as unique_exercises,
-                    COALESCE(AVG(sw.overall_rating), 0) as avg_workout_rating,
-                    COUNT(CASE WHEN sw.status = 'COMPLETED' THEN 1 END) as completed_workouts,
-                    COUNT(CASE WHEN sw.status = 'MISSED' THEN 1 END) as missed_workouts
-                FROM scheduled_workouts sw
-                LEFT JOIN workout_exercise_logs wel ON sw.scheduled_workout_id = wel.scheduled_workout_id
-                LEFT JOIN exercises e ON wel.exercise_id = e.exercise_id
-                WHERE sw.user_id = ?
-                AND sw.actual_start_time >= CURRENT_DATE - INTERVAL '90 days'
-                """;
+            // Use Java-based calculation for reliability
+            return calculateUserWorkoutStatsInJava(userId);
 
-            Map<String, Object> stats = jdbcTemplate.queryForMap(sql, userId);
-
-            stats.put("userId", userId);
-            stats.put("periodDays", 90);
-            stats.put("workoutFrequencyPerWeek",
-                    calculateWorkoutFrequency((Number) stats.get("completed_workouts")));
-
-            return stats;
-
-        } catch (DataAccessException e) {
-            throw new RuntimeException("Failed to retrieve user workout stats: " + e.getMessage(), e);
         } catch (Exception e) {
-            throw new RuntimeException("An unexpected error occurred while retrieving stats", e);
+            throw new RuntimeException("Failed to retrieve user workout stats: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Checks if user exists
-     */
-    private boolean userExists(Long userId) {
-        try {
-            String sql = "SELECT COUNT(*) FROM users WHERE user_id = ?";
-            Integer count = jdbcTemplate.queryForObject(sql, new Object[]{userId}, Integer.class);
-            return count != null && count > 0;
-        } catch (DataAccessException e) {
-            return false;
-        }
+    private Map<String, Object> calculateUserWorkoutStatsInJava(Long userId) {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(90);
+        List<ScheduledWorkout> workouts = scheduledWorkoutRepository.findWorkoutsByUserAndDate(userId, startDate);
+
+        Map<String, Object> stats = new HashMap<>();
+
+        long totalWorkouts = workouts.size();
+        long completedWorkouts = workouts.stream()
+                .filter(sw -> WorkoutStatusType.COMPLETED.equals(sw.getStatus()))
+                .count();
+        long missedWorkouts = workouts.stream()
+                .filter(sw -> WorkoutStatusType.MISSED.equals(sw.getStatus()))
+                .count();
+
+        // Calculate average weight used
+        double avgWeightUsed = workouts.stream()
+                .flatMap(sw -> sw.getExerciseLogs().stream())
+                .filter(log -> log.getWeightUsedKg() != null)
+                .mapToDouble(log -> log.getWeightUsedKg().doubleValue())
+                .average()
+                .orElse(0.0);
+
+        // Get unique muscle groups worked
+        String muscleGroupsWorked = workouts.stream()
+                .flatMap(sw -> sw.getExerciseLogs().stream())
+                .map(log -> log.getExercise().getPrimaryMuscleGroup().toString())
+                .distinct()
+                .collect(Collectors.joining(", "));
+
+        // Get last workout date
+        LocalDateTime lastWorkoutDate = workouts.stream()
+                .filter(sw -> sw.getActualStartTime() != null)
+                .map(ScheduledWorkout::getActualStartTime)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+
+        // Count unique exercises
+        long uniqueExercises = workouts.stream()
+                .flatMap(sw -> sw.getExerciseLogs().stream())
+                .map(log -> log.getExercise().getExerciseId())
+                .distinct()
+                .count();
+
+        // Calculate average workout rating
+        double avgWorkoutRating = workouts.stream()
+                .filter(sw -> sw.getOverallRating() != null)
+                .mapToInt(ScheduledWorkout::getOverallRating)
+                .average()
+                .orElse(0.0);
+
+        stats.put("total_workouts", totalWorkouts);
+        stats.put("avg_weight_used", avgWeightUsed);
+        stats.put("muscle_groups_worked", muscleGroupsWorked);
+        stats.put("last_workout_date", lastWorkoutDate != null ? lastWorkoutDate.toLocalDate() : null);
+        stats.put("unique_exercises", uniqueExercises);
+        stats.put("avg_workout_rating", avgWorkoutRating);
+        stats.put("completed_workouts", completedWorkouts);
+        stats.put("missed_workouts", missedWorkouts);
+        stats.put("userId", userId);
+        stats.put("periodDays", 90);
+        stats.put("workoutFrequencyPerWeek", calculateWorkoutFrequency(completedWorkouts));
+
+        return stats;
     }
 
-
-    /**
-     * Calculates duration of workout
-     */
     private int calculateEstimatedDuration(List<WorkoutRecommendationDTO> recommendations) {
         int totalMinutes = 0;
 
         for (WorkoutRecommendationDTO rec : recommendations) {
-            //2 minutes for set + rest time
+            // 2 minutes per set + rest time
             int setsTime = (rec.getRecommendedSets() != null ? rec.getRecommendedSets() : 3) * 2;
             int restTime = (rec.getRestTimeSeconds() != null ? rec.getRestTimeSeconds() : 60)
                     * (rec.getRecommendedSets() != null ? rec.getRecommendedSets() : 3) / 60;
             totalMinutes += setsTime + restTime;
         }
 
-        //10 minutes for warm up
-        return Math.max(totalMinutes + 10, 30); //minimum 30 mins
+        // Add 10 minutes for warm up
+        return Math.max(totalMinutes + 10, 30); // minimum 30 mins
     }
 
-    /**
-     * Calculates difficulty
-     */
     private int calculateAverageDifficulty(List<WorkoutRecommendationDTO> recommendations) {
         if (recommendations.isEmpty()) return 3;
 
@@ -399,126 +648,77 @@ public class WorkoutRecommendationService {
         return 1;
     }
 
-    /**
-     * Inserts exercise details into workout plan
-     */
-    private void insertWorkoutExerciseDetails(Long workoutPlanId, List<WorkoutRecommendationDTO> recommendations) {
-        String sql = """
-            INSERT INTO workout_exercise_details 
-            (workout_plan_id, exercise_id, exercise_order, target_sets, target_reps_min, 
-             target_reps_max, target_weight_kg, rest_time_seconds, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """;
-
+    private void insertWorkoutExerciseDetails(WorkoutPlan workoutPlan, List<WorkoutRecommendationDTO> recommendations) {
         for (int i = 0; i < recommendations.size(); i++) {
             WorkoutRecommendationDTO rec = recommendations.get(i);
+
+            Exercise exercise = exerciseRepository.findById(rec.getExerciseId())
+                    .orElseThrow(() -> new RuntimeException("Exercise not found with ID: " + rec.getExerciseId()));
 
             String notes = String.format("Recommendation - Priority Score: %.2f, Weight: %s%%",
                     rec.getPriorityScore() != null ? rec.getPriorityScore().doubleValue() : 0.0,
                     rec.getRecommendedWeightPercentage() != null ? rec.getRecommendedWeightPercentage().toString() : "N/A");
 
-            jdbcTemplate.update(sql,
-                    workoutPlanId,
-                    rec.getExerciseId(),
-                    i + 1,
-                    rec.getRecommendedSets(),
-                    rec.getRecommendedRepsMin(),
-                    rec.getRecommendedRepsMax(),
-                    null,
-                    rec.getRestTimeSeconds(),
-                    notes
-            );
+            WorkoutExerciseDetail detail = WorkoutExerciseDetail.builder()
+                    .workoutPlan(workoutPlan)
+                    .exercise(exercise)
+                    .exerciseOrder(i + 1)
+                    .targetSets(rec.getRecommendedSets())
+                    .targetRepsMin(rec.getRecommendedRepsMin())
+                    .targetRepsMax(rec.getRecommendedRepsMax())
+                    .targetWeightKg(null)
+                    .restTimeSeconds(rec.getRestTimeSeconds())
+                    .notes(notes)
+                    .build();
+
+            workoutExerciseDetailRepository.save(detail);
         }
     }
 
-    /**
-     * Updates an existing workout plan with new recommendations
-     */
-    private Map<String, Object> updateExistingWorkoutPlan(Long userId, String planName, List<WorkoutRecommendationDTO> recommendations, Long goalId) {
+    private Map<String, Object> updateExistingWorkoutPlan(WorkoutPlan workoutPlan,
+                                                          List<WorkoutRecommendationDTO> recommendations, Long goalId) {
         try {
-            // Get the existing workout plan id
-            String getWorkoutPlanIdSql = "SELECT workout_plan_id FROM workout_plans WHERE user_id = ? AND plan_name = ?";
-            Long workoutPlanId = jdbcTemplate.queryForObject(getWorkoutPlanIdSql, Long.class, userId, planName);
-
             // Calculate new values
             int estimatedDuration = calculateEstimatedDuration(recommendations);
             String description = "Updated workout plan based on personalized recommendations";
             String goals = goalId != null ? "Goal ID: " + goalId : "General fitness improvement";
             String notes = "Updated with " + recommendations.size() + " exercises";
-            Timestamp now = Timestamp.valueOf(LocalDateTime.now());
 
             // Update the existing workout plan
-            String updatePlanSql = """
-            UPDATE workout_plans 
-            SET description = ?, 
-                estimated_duration_minutes = ?, 
-                difficulty_level = ?, 
-                goals = ?, 
-                notes = ?, 
-                updated_at = ?
-            WHERE workout_plan_id = ?
-            """;
+            workoutPlan.setDescription(description);
+            workoutPlan.setEstimatedDurationMinutes(estimatedDuration);
+            workoutPlan.setDifficultyLevel(calculateAverageDifficulty(recommendations));
+            workoutPlan.setGoals(goals);
+            workoutPlan.setNotes(notes);
 
-            jdbcTemplate.update(updatePlanSql,
-                    description,
-                    estimatedDuration,
-                    calculateAverageDifficulty(recommendations),
-                    goals,
-                    notes,
-                    now,
-                    workoutPlanId);
+            workoutPlan = workoutPlanRepository.save(workoutPlan);
 
             // Delete existing exercise details for this workout plan
-            String deleteExercisesSql = "DELETE FROM workout_exercise_details WHERE workout_plan_id = ?";
-            jdbcTemplate.update(deleteExercisesSql, workoutPlanId);
+            workoutExerciseDetailRepository.deleteByWorkoutPlanId(workoutPlan.getWorkoutPlanId());
 
             // Insert new exercise details
-            insertWorkoutExerciseDetails(workoutPlanId, recommendations);
+            insertWorkoutExerciseDetails(workoutPlan, recommendations);
 
-            //result
+            // Prepare result
             Map<String, Object> result = new HashMap<>();
-            result.put("workoutPlanId", workoutPlanId);
-            result.put("planName", planName);
+            result.put("workoutPlanId", workoutPlan.getWorkoutPlanId());
+            result.put("planName", workoutPlan.getPlanName());
             result.put("description", description);
             result.put("estimatedDurationMinutes", estimatedDuration);
             result.put("exerciseCount", recommendations.size());
-            result.put("updatedAt", now);
-            result.put("userId", userId);
-            result.put("isUpdated", true); //flag that indicates that is an update not a creation
+            result.put("updatedAt", workoutPlan.getUpdatedAt());
+            result.put("userId", workoutPlan.getUser().getUserId());
+            result.put("isUpdated", true);
 
             return result;
 
-        } catch (DataAccessException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Failed to update existing workout plan: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Calculates workout frequency for workout
-     */
     private double calculateWorkoutFrequency(Number completedWorkouts) {
         if (completedWorkouts == null) return 0.0;
         return Math.round(completedWorkouts.doubleValue() / 13.0 * 100.0) / 100.0;
-    }
-
-    /**
-     * RowMapper for WorkoutRecommendation
-     */
-    private static class WorkoutRecommendationRowMapper implements RowMapper<WorkoutRecommendationDTO> {
-        @Override
-        public WorkoutRecommendationDTO mapRow(ResultSet rs, int rowNum) throws SQLException {
-            WorkoutRecommendationDTO recommendation = new WorkoutRecommendationDTO();
-
-            recommendation.setExerciseId(rs.getLong("exercise_id"));
-            recommendation.setExerciseName(rs.getString("exercise_name"));
-            recommendation.setRecommendedSets(rs.getInt("recommended_sets"));
-            recommendation.setRecommendedRepsMin(rs.getInt("recommended_reps_min"));
-            recommendation.setRecommendedRepsMax(rs.getInt("recommended_reps_max"));
-            recommendation.setRecommendedWeightPercentage(rs.getBigDecimal("recommended_weight_percentage"));
-            recommendation.setRestTimeSeconds(rs.getInt("rest_time_seconds"));
-            recommendation.setPriorityScore(rs.getBigDecimal("priority_score"));
-
-            return recommendation;
-        }
     }
 }

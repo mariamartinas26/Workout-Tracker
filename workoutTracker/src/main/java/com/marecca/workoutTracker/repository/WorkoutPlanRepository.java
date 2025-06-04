@@ -16,6 +16,19 @@ import java.util.Optional;
 @Repository
 public interface WorkoutPlanRepository extends JpaRepository<WorkoutPlan, Long> {
 
+    @Query("SELECT CASE WHEN COUNT(wp) > 0 THEN true ELSE false END " +
+            "FROM WorkoutPlan wp WHERE wp.user.userId = :userId AND wp.planName = :planName")
+    boolean existsByUserAndPlanName(@Param("userId") Long userId, @Param("planName") String planName);
+
+    @Query("SELECT wp FROM WorkoutPlan wp WHERE wp.user.userId = :userId AND wp.planName = :planName")
+    Optional<WorkoutPlan> findByUserAndPlanName(@Param("userId") Long userId, @Param("planName") String planName);
+
+    @Query("SELECT CASE WHEN COUNT(wp) > 0 THEN true ELSE false END " +
+            "FROM WorkoutPlan wp WHERE wp.user.userId = :userId AND wp.planName = :planName")
+    boolean existsByUserIdAndPlanName(@Param("userId") Long userId, @Param("planName") String planName);
+
+    @Query("SELECT wp FROM WorkoutPlan wp WHERE wp.user.userId = :userId AND wp.planName = :planName")
+    Optional<WorkoutPlan> findByUserIdAndPlanName(@Param("userId") Long userId, @Param("planName") String planName);
 
     List<WorkoutPlan> findByUserUserId(Long userId);
     Page<WorkoutPlan> findByUserUserId(Long userId, Pageable pageable);

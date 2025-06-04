@@ -16,6 +16,7 @@ import java.util.Optional;
 
 @Repository
 public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
+
     @Query(value = "SELECT * FROM exercises e WHERE e.primary_muscle_group = CAST(:muscleGroup AS muscle_group_type) OR :muscleGroup = ANY(e.secondary_muscle_groups)", nativeQuery = true)
     List<Exercise> findByAnyMuscleGroup(@Param("muscleGroup") String muscleGroup);
 
@@ -35,6 +36,7 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
     Optional<Exercise> findByExerciseName(String exerciseName);
 
     List<Exercise> findByDifficultyLevelLessThanEqual(Integer difficultyLevel);
+
     List<Exercise> findByDifficultyLevelGreaterThanEqual(Integer difficultyLevel);
 
     boolean existsByExerciseName(String exerciseName);

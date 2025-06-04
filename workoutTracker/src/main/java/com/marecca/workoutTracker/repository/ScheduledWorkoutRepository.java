@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorkout, Long> {
@@ -166,4 +167,43 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
     List<Object[]> getWorkoutTypeBreakdown(@Param("userId") Long userId,
                                            @Param("startDate") LocalDate startDate,
                                            @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT COUNT(sw) FROM ScheduledWorkout sw " +
+            "WHERE sw.user.userId = :userId AND sw.status = :status " +
+            "AND sw.actualStartTime >= :startDate")
+    int countCompletedWorkoutsByUserAndDateRange(@Param("userId") Long userId,
+                                                 @Param("status") WorkoutStatusType status,
+                                                 @Param("startDate") LocalDateTime startDate);
+
+    @Query(value = """
+        SELECT 
+            COUNT(DISTINCT sw.scheduled_workout_id) as total_workouts,
+            COALESCE(AVG(wel.weight_used_kg), 0) as avg_weight_used,
+            STRING_AGG(DISTINCT e.primary_muscle_group::TEXT, ', ') as muscle_groups_worked,
+            MAX(sw.actual_start_time::DATE) as last_workout_date,
+            COUNT(DISTINCT e.exercise_id) as unique_exercises,
+            COALESCE(AVG(sw.overall_rating), 0) as avg_workout_rating,
+            COUNT(CASE WHEN sw.status = 'COMPLETED' THEN 1 END) as completed_workouts,
+            COUNT(CASE WHEN sw.status = 'MISSED' THEN 1 END) as missed_workouts
+        FROM scheduled_workouts sw
+        LEFT JOIN workout_exercise_logs wel ON sw.scheduled_workout_id = wel.scheduled_workout_id
+        LEFT JOIN exercises e ON wel.exercise_id = e.exercise_id
+        JOIN users u ON sw.user_id = u.user_id
+        WHERE u.user_id = :userId
+        AND sw.actual_start_time >= CURRENT_DATE - INTERVAL '90 days'
+        """, nativeQuery = true)
+    Map<String, Object> getUserWorkoutStats(@Param("userId") Long userId);
+
+    @Query("SELECT COUNT(sw) FROM ScheduledWorkout sw " +
+            "WHERE sw.user.userId = :userId AND sw.status = :status " +
+            "AND sw.actualStartTime >= :startDate")
+    long countWorkoutsByUserStatusAndDate(@Param("userId") Long userId,
+                                          @Param("status") WorkoutStatusType status,
+                                          @Param("startDate") LocalDateTime startDate);
+
+    @Query("SELECT sw FROM ScheduledWorkout sw " +
+            "WHERE sw.user.userId = :userId " +
+            "AND sw.actualStartTime >= :startDate")
+    List<ScheduledWorkout> findWorkoutsByUserAndDate(@Param("userId") Long userId,
+                                                     @Param("startDate") LocalDateTime startDate);
 }

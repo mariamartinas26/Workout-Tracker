@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 public interface WorkoutExerciseDetailRepository extends JpaRepository<WorkoutExerciseDetail, Long> {
 
     @Modifying
+    @Transactional
     @Query("DELETE FROM WorkoutExerciseDetail wed WHERE wed.workoutPlan.workoutPlanId = :workoutPlanId")
     void deleteByWorkoutPlanId(@Param("workoutPlanId") Long workoutPlanId);
 }

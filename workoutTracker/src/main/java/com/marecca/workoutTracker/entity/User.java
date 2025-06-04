@@ -41,6 +41,7 @@ public class User {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
+
     @Column(name = "height_cm")
     private Integer heightCm;
 
