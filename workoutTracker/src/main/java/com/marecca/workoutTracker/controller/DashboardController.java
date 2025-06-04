@@ -368,16 +368,12 @@ public class DashboardController {
         if (accessCheck != null) return accessCheck;
 
         try {
-            log.info("Achievements endpoint for user {} ", userId);
-
-            // Calculează data de început
             LocalDateTime startDate = LocalDateTime.now().minusDays(daysBack);
 
             List<Map<String, Object>> achievements = new ArrayList<>();
 
-            // 1. Obține goal-urile completate recent
-            List<Goal> completedGoals = goalRepository.findCompletedGoalsInDateRange(
-                    userId, startDate, LocalDateTime.now());
+            //recently completed goals
+            List<Goal> completedGoals = goalRepository.findCompletedGoalsInDateRange(userId, startDate, LocalDateTime.now());
 
             for (Goal goal : completedGoals) {
                 Map<String, Object> achievement = new HashMap<>();
@@ -392,7 +388,7 @@ public class DashboardController {
                 achievements.add(achievement);
             }
 
-            // 2. Obține antrenamentele completate recent
+            //recently completed workouts
             List<ScheduledWorkout> recentWorkouts = scheduledWorkoutRepository
                     .findCompletedWorkoutsInDateRange(userId, startDate);
 
@@ -410,10 +406,7 @@ public class DashboardController {
                 achievements.add(achievement);
             }
 
-            // 3. Verifică milestone-uri de greutate
-            //achievements.addAll(getWeightMilestones(userId, startDate));
-
-            // Sortează după dată (cel mai recent primul)
+            //sorting after date
             achievements.sort((a, b) -> {
                 LocalDateTime dateA = (LocalDateTime) a.get("achievedAt");
                 LocalDateTime dateB = (LocalDateTime) b.get("achievedAt");
@@ -423,12 +416,10 @@ public class DashboardController {
             return ResponseEntity.ok(achievements);
 
         } catch (Exception e) {
-            log.error("Error getting recent achievements for user {}: {}", userId, e.getMessage());
             return jwtUtils.createErrorResponse("Failed to get achievements", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-// METODE HELPER (adaugă în clasa controller)
 
     private String getGoalAchievementTitle(Goal goal) {
         switch (goal.getGoalType()) {
