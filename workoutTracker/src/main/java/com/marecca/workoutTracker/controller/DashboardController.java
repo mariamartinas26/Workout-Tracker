@@ -62,7 +62,7 @@ public class DashboardController {
      */
     @GetMapping("/summary/{userId}")
     public ResponseEntity<?> getDashboardSummaryForUser(@PathVariable Long userId, HttpServletRequest request) {
-        // Check user access - returns error response if access denied
+        //checks user access
         ResponseEntity<?> accessCheck = jwtUtils.checkUserAccess(request, userId);
         if (accessCheck != null) return accessCheck;
 
@@ -142,16 +142,16 @@ public class DashboardController {
     @GetMapping("/trends")
     public ResponseEntity<?> getWorkoutTrends(
             HttpServletRequest request,
-            @RequestParam String period, // 'daily', 'weekly', 'monthly'
+            @RequestParam String period, // daily, weekly, monthly
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
 
-            // Validate period type
+            //validate period type
             if (!period.matches("daily|weekly|monthly")) {
-                return jwtUtils.createBadRequestResponse("Invalid period. Must be 'daily', 'weekly', or 'monthly'");
+                return jwtUtils.createBadRequestResponse("Invalid period");
             }
 
             if (startDate == null || endDate == null) {
@@ -195,7 +195,7 @@ public class DashboardController {
         try {
             // Validate period type
             if (!period.matches("daily|weekly|monthly")) {
-                return jwtUtils.createBadRequestResponse("Invalid period. Must be 'daily', 'weekly', or 'monthly'");
+                return jwtUtils.createBadRequestResponse("Invalid period");
             }
 
             if (startDate == null || endDate == null) {
@@ -276,45 +276,22 @@ public class DashboardController {
 
     /**
      * Get recent achievements for authenticated user
+     * Returns only workout achievements - goal achievements are handled by GoalController
      */
     @GetMapping("/achievements")
-    public ResponseEntity<?> getRecentAchievements(
-            HttpServletRequest request,
-            @RequestParam(defaultValue = "30") Integer daysBack) {
+    public ResponseEntity<?> getRecentAchievements(HttpServletRequest request, @RequestParam(defaultValue = "30") Integer daysBack) {
 
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
 
-            // Calculează data de început
+            //computes startDate
             LocalDateTime startDate = LocalDateTime.now().minusDays(daysBack);
 
             List<Map<String, Object>> achievements = new ArrayList<>();
 
-            // 1. Obține goal-urile completate recent
+            //recently completed workouts
             try {
-                List<Goal> completedGoals = goalRepository.findCompletedGoalsInDateRange(
-                        authenticatedUserId, startDate, LocalDateTime.now());
-
-                for (Goal goal : completedGoals) {
-                    Map<String, Object> achievement = new HashMap<>();
-                    achievement.put("id", "goal_" + goal.getGoalId());
-                    achievement.put("type", "COMPLETED_GOAL");
-                    achievement.put("title", getGoalAchievementTitle(goal));
-                    achievement.put("description", getGoalAchievementDescription(goal));
-                    achievement.put("achievedAt", goal.getCompletedAt());
-                    achievement.put("goalType", goal.getGoalType().getValue());
-                    achievement.put("icon", getGoalAchievementIcon(goal.getGoalType()));
-                    achievement.put("points", calculateAchievementPoints(goal));
-                    achievements.add(achievement);
-                }
-            } catch (Exception e) {
-                log.warn("Could not fetch completed goals: {}", e.getMessage());
-            }
-
-            // 2. Obține antrenamentele completate recent
-            try {
-                List<ScheduledWorkout> recentWorkouts = scheduledWorkoutRepository
-                        .findCompletedWorkoutsInDateRange(authenticatedUserId, startDate);
+                List<ScheduledWorkout> recentWorkouts = scheduledWorkoutRepository.findCompletedWorkoutsInDateRange(authenticatedUserId, startDate);
 
                 for (ScheduledWorkout workout : recentWorkouts) {
                     Map<String, Object> achievement = new HashMap<>();
@@ -325,7 +302,6 @@ public class DashboardController {
                             (workout.getActualDurationMinutes() != null ? workout.getActualDurationMinutes() + " minute " : "") +
                             "workout session");
                     achievement.put("achievedAt", workout.getActualEndTime());
-                    achievement.put("icon", "🏃‍♂️");
                     achievement.put("points", 25);
                     achievements.add(achievement);
                 }
@@ -353,13 +329,11 @@ public class DashboardController {
     }
 
     /**
-     * Get recent achievements for specific user (with validation)
+     * Get recent achievements for specific user
+     * Returns only workout achievements - goal achievements are handled by GoalController
      */
     @GetMapping("/achievements/{userId}")
-    public ResponseEntity<?> getRecentAchievementsForUser(
-            @PathVariable Long userId,
-            HttpServletRequest request,
-            @RequestParam(defaultValue = "30") Integer daysBack) {
+    public ResponseEntity<?> getRecentAchievementsForUser(@PathVariable Long userId, HttpServletRequest request, @RequestParam(defaultValue = "30") Integer daysBack) {
 
         // Check user access
         ResponseEntity<?> accessCheck = jwtUtils.checkUserAccess(request, userId);
@@ -370,26 +344,6 @@ public class DashboardController {
 
             List<Map<String, Object>> achievements = new ArrayList<>();
 
-            //recently completed goals
-            try {
-                List<Goal> completedGoals = goalRepository.findCompletedGoalsInDateRange(
-                        userId, startDate, LocalDateTime.now());
-
-                for (Goal goal : completedGoals) {
-                    Map<String, Object> achievement = new HashMap<>();
-                    achievement.put("id", "goal_" + goal.getGoalId());
-                    achievement.put("type", "COMPLETED_GOAL");
-                    achievement.put("title", getGoalAchievementTitle(goal));
-                    achievement.put("description", getGoalAchievementDescription(goal));
-                    achievement.put("achievedAt", goal.getCompletedAt());
-                    achievement.put("goalType", goal.getGoalType().getValue());
-                    achievement.put("icon", getGoalAchievementIcon(goal.getGoalType()));
-                    achievement.put("points", calculateAchievementPoints(goal));
-                    achievements.add(achievement);
-                }
-            } catch (Exception e) {
-                log.warn("Could not fetch completed goals for user {}: {}", userId, e.getMessage());
-            }
 
             //recently completed workouts
             try {
@@ -405,7 +359,6 @@ public class DashboardController {
                             (workout.getActualDurationMinutes() != null ? workout.getActualDurationMinutes() + " minute " : "") +
                             "workout session");
                     achievement.put("achievedAt", workout.getActualEndTime());
-                    achievement.put("icon", "🏃‍♂️");
                     achievement.put("points", 25);
                     achievements.add(achievement);
                 }
@@ -482,81 +435,4 @@ public class DashboardController {
         }
     }
 
-
-    private String getGoalAchievementTitle(Goal goal) {
-        switch (goal.getGoalType()) {
-            case LOSE_WEIGHT:
-                return "Weight Loss Goal Achieved!";
-            case GAIN_MUSCLE:
-                return "Muscle Gain Goal Achieved!";
-            case MAINTAIN_HEALTH:
-                return "Health Maintenance Goal Achieved!";
-            default:
-                return "Goal Completed!";
-        }
-    }
-
-    private String getGoalAchievementDescription(Goal goal) {
-        StringBuilder description = new StringBuilder();
-
-        switch (goal.getGoalType()) {
-            case LOSE_WEIGHT:
-                if (goal.getTargetWeightLoss() != null && goal.getTargetWeightLoss().compareTo(BigDecimal.ZERO) > 0) {
-                    description.append("You lost ").append(goal.getTargetWeightLoss()).append(" kg");
-                } else {
-                    description.append("You achieved your weight loss goal");
-                }
-                break;
-            case GAIN_MUSCLE:
-                if (goal.getTargetWeightGain() != null && goal.getTargetWeightGain().compareTo(BigDecimal.ZERO) > 0) {
-                    description.append("You gained ").append(goal.getTargetWeightGain()).append(" kg of muscle");
-                } else {
-                    description.append("You achieved your muscle gain goal");
-                }
-                break;
-            case MAINTAIN_HEALTH:
-                description.append("You successfully maintained your health goals");
-                break;
-            default:
-                description.append("You achieved your fitness goal");
-        }
-
-        if (goal.getTimeframeMonths() != null) {
-            String months = goal.getTimeframeMonths() == 1 ? "month" : "months";
-            description.append(" in ").append(goal.getTimeframeMonths()).append(" ").append(months);
-        }
-
-        description.append("!");
-        return description.toString();
-    }
-
-    private String getGoalAchievementIcon(Goal.GoalType goalType) {
-        switch (goalType) {
-            case LOSE_WEIGHT:
-                return "🎯";
-            case GAIN_MUSCLE:
-                return "💪";
-            case MAINTAIN_HEALTH:
-                return "⚖️";
-            default:
-                return "🏆";
-        }
-    }
-
-    private int calculateAchievementPoints(Goal goal) {
-        int basePoints = 100;
-
-        if (goal.getTargetWeightLoss() != null) {
-            basePoints += goal.getTargetWeightLoss().multiply(BigDecimal.valueOf(10)).intValue();
-        }
-        if (goal.getTargetWeightGain() != null) {
-            basePoints += goal.getTargetWeightGain().multiply(BigDecimal.valueOf(10)).intValue();
-        }
-
-        if (goal.getTimeframeMonths() != null) {
-            basePoints += Math.max(0, (12 - goal.getTimeframeMonths()) * 5);
-        }
-
-        return basePoints;
-    }
 }

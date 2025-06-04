@@ -39,50 +39,38 @@ public class ScheduledWorkoutService {
     @Transactional
     public Long scheduleWorkout(Long userId, Long workoutPlanId, LocalDate scheduledDate, LocalTime scheduledTime) {
         try {
-            // Validate input parameters - following exact PL/SQL function logic
-
-            // Check: p_user_id IS NULL OR p_user_id <= 0
             if (userId == null || userId <= 0) {
                 throw new IllegalArgumentException("INVALID_USER_ID: User ID must be a positive number");
             }
 
-            // Check: p_workout_plan_id IS NULL OR p_workout_plan_id <= 0
             if (workoutPlanId == null || workoutPlanId <= 0) {
                 throw new IllegalArgumentException("INVALID_WORKOUT_PLAN_ID: Workout plan ID must be a positive number");
             }
 
-            // Check: p_scheduled_date IS NULL OR p_scheduled_date < CURRENT_DATE
             if (scheduledDate == null || scheduledDate.isBefore(LocalDate.now())) {
                 throw new IllegalArgumentException("INVALID_SCHEDULED_DATE: Scheduled date cannot be null or in the past");
             }
 
-            // Check if user exists - following exact PL/SQL function logic
             if (!userRepository.existsById(userId)) {
                 throw new UserNotFoundException(String.format("USER_NOT_FOUND: User with ID %s does not exist", userId));
             }
 
-            // Check if workout plan exists - following exact PL/SQL function logic
             if (!workoutPlanRepository.existsById(workoutPlanId)) {
                 throw new WorkoutPlanNotFoundException(String.format("WORKOUT_PLAN_NOT_FOUND: Workout plan with ID %s does not exist", workoutPlanId));
             }
 
-            // Check if workout plan belongs to the user - following exact PL/SQL function logic
             Optional<WorkoutPlan> workoutPlanOpt = workoutPlanRepository.findById(workoutPlanId);
             if (workoutPlanOpt.isPresent() && !workoutPlanOpt.get().getUser().getUserId().equals(userId)) {
                 throw new IllegalArgumentException(String.format("WORKOUT_PLAN_NOT_OWNED: Workout plan with ID %s does not belong to user %s", workoutPlanId, userId));
             }
 
-            // Check if user already has a workout scheduled at the same date and time - following exact PL/SQL function logic
             List<WorkoutStatusType> activeStatuses = Arrays.asList(WorkoutStatusType.PLANNED, WorkoutStatusType.IN_PROGRESS);
 
-            // Use the exact same logic as the PL/SQL function, but split into two cases for better JPA handling
             boolean hasConflict = false;
 
             if (scheduledTime == null) {
-                // When scheduledTime is NULL, check for other workouts with NULL scheduledTime on same date
                 hasConflict = scheduledWorkoutRepository.hasWorkoutScheduledOnDate(userId, scheduledDate, activeStatuses);
             } else {
-                // When scheduledTime is NOT NULL, check for workouts at the exact same time
                 hasConflict = scheduledWorkoutRepository.hasWorkoutScheduledAtSpecificTime(userId, scheduledDate, scheduledTime, activeStatuses);
             }
 
@@ -93,11 +81,8 @@ public class ScheduledWorkoutService {
                                 scheduledDate, timeInfo));
             }
 
-            // Get the entities for saving
-            User user = userRepository.findById(userId).get(); // We already validated it exists
-            WorkoutPlan workoutPlan = workoutPlanRepository.findById(workoutPlanId).get(); // We already validated it exists
-
-            // Insert the scheduled workout - following exact PL/SQL function logic
+            User user = userRepository.findById(userId).get();
+            WorkoutPlan workoutPlan = workoutPlanRepository.findById(workoutPlanId).get();
             ScheduledWorkout scheduledWorkout = ScheduledWorkout.builder()
                     .user(user)
                     .workoutPlan(workoutPlan)
@@ -121,26 +106,21 @@ public class ScheduledWorkoutService {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Validation error: " + e.getMessage());
         } catch (Exception e) {
-            // Following PL/SQL function logic for unexpected errors
             throw new RuntimeException("DATABASE_ERROR: Unexpected error occurred while scheduling workout: " + e.getMessage(), e);
         }
     }
 
     /**
      * checks if a user can schedule a workout at a specific hour/date
-     * Uses the same logic as the PL/SQL schedule_workout function
      */
     @Transactional(readOnly = true)
     public boolean canScheduleWorkoutAt(Long userId, LocalDate scheduledDate, LocalTime scheduledTime) {
         try {
             List<WorkoutStatusType> activeStatuses = Arrays.asList(WorkoutStatusType.PLANNED, WorkoutStatusType.IN_PROGRESS);
 
-            // Use the exact same conflict checking logic as the PL/SQL function, split into two cases
             if (scheduledTime == null) {
-                // When scheduledTime is NULL, check for other workouts with NULL scheduledTime on same date
                 return !scheduledWorkoutRepository.hasWorkoutScheduledOnDate(userId, scheduledDate, activeStatuses);
             } else {
-                // When scheduledTime is NOT NULL, check for workouts at the exact same time
                 return !scheduledWorkoutRepository.hasWorkoutScheduledAtSpecificTime(userId, scheduledDate, scheduledTime, activeStatuses);
             }
         } catch (Exception e) {
@@ -188,14 +168,14 @@ public class ScheduledWorkoutService {
         return scheduledWorkoutRepository.findByUserUserIdAndStatus(userId, status);
     }
 
+
+    //?????????NU FACE NIMIC CRED
     @Transactional
     public List<ScheduledWorkout> findTodaysWorkouts(Long userId) {
         validateUserExists(userId);
 
-        // Get today's workouts
         List<ScheduledWorkout> workouts = scheduledWorkoutRepository.findTodaysWorkoutsForUser(userId);
 
-        // Check for missed workouts and mark them
         LocalTime currentTime = LocalTime.now();
         int missedWorkoutsCount = 0;
 
@@ -205,7 +185,6 @@ public class ScheduledWorkoutService {
                     currentTime.isAfter(workout.getScheduledTime())) {
 
                 try {
-                    // Update status directly in repository
                     scheduledWorkoutRepository.updateWorkoutStatus(workout.getScheduledWorkoutId(), WorkoutStatusType.MISSED);
 
                     // Update the workout object status for the response
@@ -286,22 +265,6 @@ public class ScheduledWorkoutService {
         return findScheduledWorkoutById(scheduledWorkoutId);
     }
 
-    /**
-     * Marks a workout as missed
-     * @return workout updated
-     */
-    public ScheduledWorkout markWorkoutAsMissed(Long scheduledWorkoutId) {
-        ScheduledWorkout workout = findScheduledWorkoutById(scheduledWorkoutId);
-
-        if (workout.getStatus() != WorkoutStatusType.PLANNED) {
-            throw new IllegalStateException("Only planned workouts can be marked as missed");
-        }
-
-        scheduledWorkoutRepository.updateWorkoutStatus(scheduledWorkoutId, WorkoutStatusType.MISSED);
-
-        return findScheduledWorkoutById(scheduledWorkoutId);
-    }
-
     @Transactional(readOnly = true)
     public Long countCompletedWorkouts(Long userId) {
         validateUserExists(userId);
@@ -353,7 +316,7 @@ public class ScheduledWorkoutService {
                 }
             }
 
-            // Update the workout
+            //update the workout
             scheduledWorkout.setScheduledDate(newDate);
             scheduledWorkout.setScheduledTime(newTime);
             scheduledWorkout.setUpdatedAt(LocalDateTime.now());

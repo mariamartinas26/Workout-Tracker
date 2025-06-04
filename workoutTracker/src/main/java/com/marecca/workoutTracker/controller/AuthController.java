@@ -26,7 +26,6 @@ public class AuthController {
     private final UserService userService;
     private final JwtUtil jwtUtil;
 
-    // Your existing inner classes remain the same...
     public static class RegisterRequest {
         private String username;
         private String email;
@@ -71,7 +70,6 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
-            // Your existing validation logic...
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 return createErrorResponse("Email is required", HttpStatus.BAD_REQUEST);
             }
@@ -89,7 +87,7 @@ public class AuthController {
                 return createErrorResponse("Email already exists", HttpStatus.BAD_REQUEST);
             }
 
-            // Username generation logic...
+            //generating username
             String username = request.getUsername();
             if (username == null || username.trim().isEmpty()) {
                 username = request.getEmail().split("@")[0];
@@ -113,7 +111,7 @@ public class AuthController {
 
             User savedUser = userService.registerUser(newUser, request.getPassword());
 
-            // Generate JWT token
+            //generate JWT token
             String token = jwtUtil.generateToken(savedUser.getEmail(), savedUser.getUserId());
 
             Map<String, Object> response = createUserResponse(savedUser);
@@ -141,7 +139,7 @@ public class AuthController {
                 return createErrorResponse("Account is deactivated", HttpStatus.UNAUTHORIZED);
             }
 
-            // Generate JWT token
+            //generate JWT token
             String token = jwtUtil.generateToken(user.getEmail(), user.getUserId());
 
             Map<String, Object> response = createUserResponse(user);
@@ -188,7 +186,6 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error completing profile for user ID: {}", request.getUserId(), e);
             return createErrorResponse("Error completing profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

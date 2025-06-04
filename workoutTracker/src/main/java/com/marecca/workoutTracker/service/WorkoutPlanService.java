@@ -166,10 +166,6 @@ public class WorkoutPlanService {
         }
     }
 
-    private User findUserById(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
-    }
 
     private void validateUserExists(Long userId) {
         if (!userRepository.existsById(userId)) {
@@ -187,7 +183,6 @@ public class WorkoutPlanService {
             throw new IllegalArgumentException("Workout plan not found with ID: " + workoutPlanId);
         }
     }
-
 
     private void updateWorkoutPlanFields(WorkoutPlan existing, WorkoutPlan updated) {
         existing.setPlanName(updated.getPlanName());

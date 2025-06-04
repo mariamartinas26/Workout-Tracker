@@ -26,14 +26,7 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
 
     List<Exercise> findByDifficultyLevel(Integer difficultyLevel);
 
-    List<Exercise> findByEquipmentContainingIgnoreCase(String equipment);
-
-    @Query("SELECT e FROM Exercise e WHERE e.equipment IS NULL OR e.equipment = ''")
-    List<Exercise> findExercisesWithoutEquipment();
-
     List<Exercise> findByExerciseNameContainingIgnoreCase(String name);
-
-    Optional<Exercise> findByExerciseName(String exerciseName);
 
     List<Exercise> findByDifficultyLevelLessThanEqual(Integer difficultyLevel);
 
@@ -44,9 +37,6 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
     long countByCategory(ExerciseCategoryType category);
 
     long countByPrimaryMuscleGroup(MuscleGroupType muscleGroup);
-
-    @Query("SELECT e FROM Exercise e WHERE e.createdAt >= :sinceDate ORDER BY e.createdAt DESC")
-    List<Exercise> findRecentExercises(@Param("sinceDate") LocalDateTime sinceDate);
 
     @Query(value = "SELECT * FROM exercises ORDER BY created_at DESC LIMIT ?1", nativeQuery = true)
     List<Exercise> findMostPopularExercises(int limit);
@@ -66,7 +56,11 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
     @Query("SELECT e FROM Exercise e")
     List<Exercise> findUnusedExercises();
 
-    @Query("SELECT 0")
+    @Query(value = "SELECT COUNT(DISTINCT wp.id) " +
+            "FROM workout_plans wp " +
+            "JOIN workout_plan_exercises wpe ON wp.id = wpe.workout_plan_id " +
+            "WHERE wpe.exercise_id = :exerciseId",
+            nativeQuery = true)
     long countWorkoutPlansUsingExercise(@Param("exerciseId") Long exerciseId);
 
     @Query("SELECT e FROM Exercise e WHERE e.secondaryMuscleGroups IN :muscleGroups")

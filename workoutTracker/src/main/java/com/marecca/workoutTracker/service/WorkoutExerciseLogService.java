@@ -57,11 +57,6 @@ public class WorkoutExerciseLogService {
     }
 
     @Transactional(readOnly = true)
-    public List<WorkoutExerciseLog> findByExerciseId(Long exerciseId) {
-        return workoutExerciseLogRepository.findByExerciseExerciseId(exerciseId);
-    }
-
-    @Transactional(readOnly = true)
     public List<WorkoutExerciseLog> findByUserId(Long userId) {
         return workoutExerciseLogRepository.findByUserId(userId);
     }
@@ -138,7 +133,7 @@ public class WorkoutExerciseLogService {
     }
 
     /**
-     * calculates progress for a exercise(compares first log with the last)
+     * calculates progress for an exercise(compares first log with the last)
      */
     @Transactional(readOnly = true)
     public Double calculateProgressPercentage(Long userId, Long exerciseId) {

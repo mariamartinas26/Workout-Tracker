@@ -35,9 +35,6 @@ public class DashboardService {
      */
     public DashboardSummaryDTO getDashboardSummary(Long userId, LocalDate currentDate) {
         try {
-
-
-            // Calculate week boundaries (Monday to Sunday)
             LocalDate weekStart, weekEnd;
             if (currentDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
                 weekStart = currentDate.minusDays(6);
@@ -95,7 +92,6 @@ public class DashboardService {
                     .build();
 
         } catch (Exception e) {
-            log.error("Error getting dashboard summary for user {}: {}", userId, e.getMessage(), e);
             return createEmptyDashboard();
         }
     }
@@ -122,7 +118,6 @@ public class DashboardService {
             return calendar;
 
         } catch (Exception e) {
-            log.error("Error getting workout calendar for user {}: {}", userId, e.getMessage());
             return new ArrayList<>();
         }
     }
@@ -149,7 +144,6 @@ public class DashboardService {
             return trends;
 
         } catch (Exception e) {
-            log.error("Error getting workout trends for user {}: {}", userId, e.getMessage());
             return new ArrayList<>();
         }
     }
@@ -173,7 +167,6 @@ public class DashboardService {
             return breakdown;
 
         } catch (Exception e) {
-            log.error("Error getting workout type breakdown for user {}: {}", userId, e.getMessage());
             return new ArrayList<>();
         }
     }

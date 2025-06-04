@@ -14,11 +14,6 @@ import java.util.List;
 
 @Repository
 public interface WorkoutExerciseLogRepository extends JpaRepository<WorkoutExerciseLog, Long> {
-
-    // ===================================================================
-    // METHODS FOR WORKOUT RECOMMENDATION SERVICE
-    // ===================================================================
-
     /**
      * Find exercise logs by user, exercise and workout status
      */
@@ -45,9 +40,6 @@ public interface WorkoutExerciseLogRepository extends JpaRepository<WorkoutExerc
                                     @Param("exerciseId") Long exerciseId,
                                     @Param("startDate") LocalDateTime startDate);
 
-    // ===================================================================
-    // GENERAL QUERY METHODS
-    // ===================================================================
 
     /**
      * Find all logs for a specific scheduled workout
@@ -56,18 +48,6 @@ public interface WorkoutExerciseLogRepository extends JpaRepository<WorkoutExerc
             "WHERE wel.scheduledWorkout.scheduledWorkoutId = :scheduledWorkoutId " +
             "ORDER BY wel.exerciseOrder")
     List<WorkoutExerciseLog> findByScheduledWorkoutIdOrderByExerciseOrder(@Param("scheduledWorkoutId") Long scheduledWorkoutId);
-
-    /**
-     * Find all logs for a specific exercise
-     */
-    @Query("SELECT wel FROM WorkoutExerciseLog wel " +
-            "WHERE wel.exercise.exerciseId = :exerciseId")
-    List<WorkoutExerciseLog> findByExerciseExerciseId(@Param("exerciseId") Long exerciseId);
-
-    // Alias for better naming
-    @Query("SELECT wel FROM WorkoutExerciseLog wel " +
-            "WHERE wel.exercise.exerciseId = :exerciseId")
-    List<WorkoutExerciseLog> findByExerciseId(@Param("exerciseId") Long exerciseId);
 
     /**
      * Find all logs for a specific user
@@ -112,9 +92,6 @@ public interface WorkoutExerciseLogRepository extends JpaRepository<WorkoutExerc
     List<WorkoutExerciseLog> findRecentExerciseLogsForUser(@Param("userId") Long userId,
                                                            @Param("limit") int limit);
 
-    // ===================================================================
-    // STATISTICS AND PERSONAL BESTS
-    // ===================================================================
 
     /**
      * Find user's personal best weight for a specific exercise
@@ -159,46 +136,4 @@ public interface WorkoutExerciseLogRepository extends JpaRepository<WorkoutExerc
                                                @Param("startDate") LocalDate startDate,
                                                @Param("endDate") LocalDate endDate);
 
-    /**
-     * Find average weight used for exercise by user
-     */
-    @Query("SELECT AVG(wel.weightUsedKg) FROM WorkoutExerciseLog wel " +
-            "JOIN wel.scheduledWorkout sw " +
-            "JOIN wel.exercise e " +
-            "WHERE sw.user.userId = :userId " +
-            "AND e.exerciseId = :exerciseId " +
-            "AND wel.weightUsedKg IS NOT NULL")
-    BigDecimal findAverageWeightForExercise(@Param("userId") Long userId,
-                                            @Param("exerciseId") Long exerciseId);
-
-    /**
-     * Count total workouts for user in date range
-     */
-    @Query("SELECT COUNT(DISTINCT sw.scheduledWorkoutId) FROM WorkoutExerciseLog wel " +
-            "JOIN wel.scheduledWorkout sw " +
-            "WHERE sw.user.userId = :userId " +
-            "AND sw.scheduledDate BETWEEN :startDate AND :endDate")
-    Long countWorkoutsInDateRange(@Param("userId") Long userId,
-                                  @Param("startDate") LocalDate startDate,
-                                  @Param("endDate") LocalDate endDate);
-
-    /**
-     * Find logs for completed workouts only
-     */
-    @Query("SELECT wel FROM WorkoutExerciseLog wel " +
-            "JOIN wel.scheduledWorkout sw " +
-            "WHERE sw.user.userId = :userId " +
-            "AND sw.status = 'COMPLETED'")
-    List<WorkoutExerciseLog> findCompletedLogsByUser(@Param("userId") Long userId);
-
-    /**
-     * Check if user has any logs for a specific exercise
-     */
-    @Query("SELECT COUNT(wel) > 0 FROM WorkoutExerciseLog wel " +
-            "JOIN wel.scheduledWorkout sw " +
-            "JOIN wel.exercise e " +
-            "WHERE sw.user.userId = :userId " +
-            "AND e.exerciseId = :exerciseId")
-    boolean hasUserPerformedExercise(@Param("userId") Long userId,
-                                     @Param("exerciseId") Long exerciseId);
 }

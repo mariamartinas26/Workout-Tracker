@@ -87,7 +87,7 @@ public class GoalService {
     }
 
     /**
-     * Calculate goal metrics (calories, weight change, etc.)
+     * Calculate goal metrics
      * for MENTAIN_HEALTH goal we don't have to calculate any metrics
      */
     private void calculateGoalMetrics(Goal goal) {
@@ -135,19 +135,6 @@ public class GoalService {
         }
     }
 
-    /**
-     * Get most recent active goal for a user
-     */
-    public Optional<Goal> getMostRecentActiveGoal(Long userId) {
-        return goalRepository.findMostRecentActiveGoalByUserId(userId);
-    }
-
-    /**
-     * Count active goals for a user
-     */
-    public Long countActiveGoals(Long userId) {
-        return goalRepository.countActiveGoalsByUserId(userId);
-    }
 
     /**
      * Gets completed goals for a user at a specific time

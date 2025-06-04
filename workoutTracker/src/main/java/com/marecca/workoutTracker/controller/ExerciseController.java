@@ -20,9 +20,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Controller for exercise management - JWT Protected
- */
+
 @RestController
 @RequestMapping("/api/exercises")
 @RequiredArgsConstructor

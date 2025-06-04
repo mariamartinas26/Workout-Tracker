@@ -14,21 +14,13 @@ import java.util.Optional;
 @Repository
 public interface GoalRepository extends JpaRepository<Goal, Long> {
 
-    // Find all goals for a user by user ID
+    //find all goals for a user by id
     @Query("SELECT g FROM Goal g WHERE g.user.userId = :userId ORDER BY g.createdAt DESC")
     List<Goal> findByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
 
-    // Find active goals for a user
+    //find active goals for a user
     @Query("SELECT g FROM Goal g WHERE g.user.userId = :userId AND g.status = 'ACTIVE' ORDER BY g.createdAt DESC")
     List<Goal> findActiveGoalsByUserId(@Param("userId") Long userId);
-
-    // Find the most recent active goal for a user
-    @Query("SELECT g FROM Goal g WHERE g.user.userId = :userId AND g.status = 'ACTIVE' ORDER BY g.createdAt DESC")
-    Optional<Goal> findMostRecentActiveGoalByUserId(@Param("userId") Long userId);
-
-    // Count active goals for a user
-    @Query("SELECT COUNT(g) FROM Goal g WHERE g.user.userId = :userId AND g.status = 'ACTIVE'")
-    Long countActiveGoalsByUserId(@Param("userId") Long userId);
 
     @Query("SELECT g FROM Goal g WHERE g.user.userId = :userId " +
             "AND g.status = 'COMPLETED' " +

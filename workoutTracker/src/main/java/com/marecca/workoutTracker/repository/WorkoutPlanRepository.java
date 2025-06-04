@@ -15,57 +15,10 @@ import java.util.Optional;
 
 @Repository
 public interface WorkoutPlanRepository extends JpaRepository<WorkoutPlan, Long> {
-
-    @Query("SELECT CASE WHEN COUNT(wp) > 0 THEN true ELSE false END " +
-            "FROM WorkoutPlan wp WHERE wp.user.userId = :userId AND wp.planName = :planName")
-    boolean existsByUserAndPlanName(@Param("userId") Long userId, @Param("planName") String planName);
-
     @Query("SELECT wp FROM WorkoutPlan wp WHERE wp.user.userId = :userId AND wp.planName = :planName")
     Optional<WorkoutPlan> findByUserAndPlanName(@Param("userId") Long userId, @Param("planName") String planName);
 
-    @Query("SELECT CASE WHEN COUNT(wp) > 0 THEN true ELSE false END " +
-            "FROM WorkoutPlan wp WHERE wp.user.userId = :userId AND wp.planName = :planName")
-    boolean existsByUserIdAndPlanName(@Param("userId") Long userId, @Param("planName") String planName);
-
-    @Query("SELECT wp FROM WorkoutPlan wp WHERE wp.user.userId = :userId AND wp.planName = :planName")
-    Optional<WorkoutPlan> findByUserIdAndPlanName(@Param("userId") Long userId, @Param("planName") String planName);
-
     List<WorkoutPlan> findByUserUserId(Long userId);
-    Page<WorkoutPlan> findByUserUserId(Long userId, Pageable pageable);
-    Optional<WorkoutPlan> findByUserUserIdAndPlanName(Long userId, String planName);
-
-    long countByUserUserId(Long userId);
 
     boolean existsByUserUserIdAndPlanName(Long userId, String planName);
-
-    List<WorkoutPlan> findByDifficultyLevel(Integer difficultyLevel);
-    List<WorkoutPlan> findByEstimatedDurationMinutesLessThanEqual(Integer maxDurationMinutes);
-
-    @Query("SELECT wp FROM WorkoutPlan wp JOIN wp.exerciseDetails wed WHERE wed.exercise.exerciseId = :exerciseId")
-    List<WorkoutPlan> findByExerciseId(@Param("exerciseId") Long exerciseId);
-
-    @Query("SELECT DISTINCT wp FROM WorkoutPlan wp JOIN wp.exerciseDetails wed JOIN wed.exercise e WHERE e.category = :category")
-    List<WorkoutPlan> findByExerciseCategory(@Param("category") String category);
-
-    @Query("SELECT wp FROM WorkoutPlan wp WHERE wp.user.userId = :userId AND " +
-            "(LOWER(wp.planName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(wp.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    List<WorkoutPlan> searchByUserIdAndKeyword(
-            @Param("userId") Long userId,
-            @Param("keyword") String keyword);
-
-    @Query(value = "SELECT wp.* FROM workout_plans wp " +
-            "LEFT JOIN (SELECT workout_plan_id, COUNT(*) as usage_count " +
-            "FROM scheduled_workouts " +
-            "GROUP BY workout_plan_id) as usage " +
-            "ON wp.workout_plan_id = usage.workout_plan_id " +
-            "WHERE wp.user_id = :userId " +
-            "ORDER BY COALESCE(usage.usage_count, 0) DESC",
-            nativeQuery = true)
-    List<WorkoutPlan> findByUserIdOrderByPopularity(@Param("userId") Long userId);
-
-    @Query("SELECT AVG(wp.estimatedDurationMinutes) FROM WorkoutPlan wp WHERE wp.user.userId = :userId")
-    Double calculateAverageDurationForUser(@Param("userId") Long userId);
-
-    List<WorkoutPlan> findByUserUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 }

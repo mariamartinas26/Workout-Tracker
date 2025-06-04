@@ -62,12 +62,8 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             @Param("caloriesBurned") Integer caloriesBurned,
             @Param("rating") Integer rating);
 
-    List<ScheduledWorkout> findTop5ByUserUserIdAndStatusOrderByActualEndTimeDesc(
-            Long userId, WorkoutStatusType status);
+    List<ScheduledWorkout> findTop5ByUserUserIdAndStatusOrderByActualEndTimeDesc(Long userId, WorkoutStatusType status);
 
-    /**
-     * Simple exact time conflict check for reschedule
-     */
     @Query("SELECT sw FROM ScheduledWorkout sw " +
             "WHERE sw.user.userId = :userId " +
             "AND sw.scheduledDate = :date " +
@@ -118,7 +114,6 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             @Param("statuses") List<WorkoutStatusType> statuses
     );
 
-    // Dashboard Summary Queries - replacing the PL/SQL function
     @Query("SELECT COUNT(sw), " +
             "COALESCE(SUM(sw.caloriesBurned), 0), " +
             "AVG(CASE WHEN sw.actualDurationMinutes > 0 THEN sw.actualDurationMinutes ELSE NULL END), " +
@@ -144,11 +139,6 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             "AND sw.status = 'COMPLETED'")
     List<Object[]> getLifetimeWorkoutStats(@Param("userId") Long userId);
 
-    // Keep the old PL/SQL function calls for other features (can be converted later)
-    // Dashboard Summary - OLD (can be removed after testing new implementation)
-    @Query(value = "SELECT * FROM get_dashboard_summary(:userId, :currentDate)", nativeQuery = true)
-    List<Object[]> getDashboardSummaryOld(@Param("userId") Long userId, @Param("currentDate") LocalDate currentDate);
-
     // Workout Calendar
     @Query(value = "SELECT * FROM get_workout_calendar(:userId, :startDate, :endDate)", nativeQuery = true)
     List<Object[]> getWorkoutCalendar(@Param("userId") Long userId,
@@ -167,32 +157,6 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
     List<Object[]> getWorkoutTypeBreakdown(@Param("userId") Long userId,
                                            @Param("startDate") LocalDate startDate,
                                            @Param("endDate") LocalDate endDate);
-
-    @Query("SELECT COUNT(sw) FROM ScheduledWorkout sw " +
-            "WHERE sw.user.userId = :userId AND sw.status = :status " +
-            "AND sw.actualStartTime >= :startDate")
-    int countCompletedWorkoutsByUserAndDateRange(@Param("userId") Long userId,
-                                                 @Param("status") WorkoutStatusType status,
-                                                 @Param("startDate") LocalDateTime startDate);
-
-    @Query(value = """
-        SELECT 
-            COUNT(DISTINCT sw.scheduled_workout_id) as total_workouts,
-            COALESCE(AVG(wel.weight_used_kg), 0) as avg_weight_used,
-            STRING_AGG(DISTINCT e.primary_muscle_group::TEXT, ', ') as muscle_groups_worked,
-            MAX(sw.actual_start_time::DATE) as last_workout_date,
-            COUNT(DISTINCT e.exercise_id) as unique_exercises,
-            COALESCE(AVG(sw.overall_rating), 0) as avg_workout_rating,
-            COUNT(CASE WHEN sw.status = 'COMPLETED' THEN 1 END) as completed_workouts,
-            COUNT(CASE WHEN sw.status = 'MISSED' THEN 1 END) as missed_workouts
-        FROM scheduled_workouts sw
-        LEFT JOIN workout_exercise_logs wel ON sw.scheduled_workout_id = wel.scheduled_workout_id
-        LEFT JOIN exercises e ON wel.exercise_id = e.exercise_id
-        JOIN users u ON sw.user_id = u.user_id
-        WHERE u.user_id = :userId
-        AND sw.actual_start_time >= CURRENT_DATE - INTERVAL '90 days'
-        """, nativeQuery = true)
-    Map<String, Object> getUserWorkoutStats(@Param("userId") Long userId);
 
     @Query("SELECT COUNT(sw) FROM ScheduledWorkout sw " +
             "WHERE sw.user.userId = :userId AND sw.status = :status " +

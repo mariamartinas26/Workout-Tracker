@@ -119,23 +119,6 @@ public class ExerciseService {
     }
 
 
-    public void deleteExercise(Long exerciseId) {
-        validateExerciseExists(exerciseId);
-
-        //checks if it's used in any plans
-        long usageCount = exerciseRepository.countWorkoutPlansUsingExercise(exerciseId);
-        if (usageCount > 0) {
-            throw new IllegalStateException(
-                    String.format("You can't delete this exercise because it's used in %d plans", usageCount));
-        }
-
-        try {
-            exerciseRepository.deleteById(exerciseId);
-        } catch (Exception e) {
-            throw new IllegalStateException("You can't delete de exercise", e);
-        }
-    }
-
     @Transactional(readOnly = true)
     public List<Exercise> findFilteredExercises(
             ExerciseCategoryType category,
@@ -286,18 +269,4 @@ public class ExerciseService {
             throw new IllegalArgumentException("Exercise not found with ID: " + exerciseId);
         }
     }
-
-
-    private void updateExerciseFields(Exercise existing, Exercise updated) {
-        existing.setExerciseName(updated.getExerciseName());
-        existing.setDescription(updated.getDescription());
-        existing.setCategory(updated.getCategory());
-        existing.setPrimaryMuscleGroup(updated.getPrimaryMuscleGroup());
-        existing.setSecondaryMuscleGroups(updated.getSecondaryMuscleGroups());
-        existing.setEquipmentNeeded(updated.getEquipmentNeeded());
-        existing.setDifficultyLevel(updated.getDifficultyLevel());
-        existing.setInstructions(updated.getInstructions());
-    }
-
-
 }

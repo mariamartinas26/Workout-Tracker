@@ -12,9 +12,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Business logic for operations with users
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,7 +33,6 @@ public class UserService {
      */
     @Transactional(readOnly = true)
     public Optional<User> findByEmail(String email) {
-        log.debug("Finding user by email: {}", email);
         return userRepository.findByEmail(email.toLowerCase());
     }
 
@@ -64,7 +60,6 @@ public class UserService {
             existingUser.setFitnessLevel(updatedUser.getFitnessLevel());
         }
 
-        // updatedAt is set automatically by @PreUpdate
         return userRepository.save(existingUser);
     }
 
@@ -74,12 +69,8 @@ public class UserService {
      * @throws IllegalArgumentException if user does not exist
      */
     public void deactivateUser(Long userId) {
-        log.info("Deactivating user with ID: {}", userId);
-
         validateUserExists(userId);
         userRepository.deactivateUser(userId);
-
-        log.info("User deactivated successfully: {}", userId);
     }
 
     /**
@@ -87,14 +78,10 @@ public class UserService {
      * @param userId
      */
     public void activateUser(Long userId) {
-        log.info("Activating user with ID: {}", userId);
-
         User user = findUserById(userId);
         user.setIsActive(true);
-        // updatedAt is set automatically by @PreUpdate
 
         userRepository.save(user);
-        log.info("User activated successfully: {}", userId);
     }
 
     /**
@@ -108,7 +95,6 @@ public class UserService {
         // Encrypt password
         user.setPasswordHash(passwordEncoder.encode(plainPassword));
         user.setIsActive(true);
-        // Note: createdAt and updatedAt are set automatically by @PrePersist
 
         return userRepository.save(user);
     }

@@ -74,11 +74,8 @@ public class WorkoutRecommendationService {
                     .collect(Collectors.toList());
 
             if (filteredRecommendations.isEmpty()) {
-                throw new NoExercisesFoundException(
-                        "No suitable exercises found for user " + userId +
-                                " with goal type " + goalType + " and fitness level " + user.getFitnessLevel());
+                throw new NoExercisesFoundException("No suitable exercises found for user " + userId + " with goal type " + goalType + " and fitness level " + user.getFitnessLevel());
             }
-
             return filteredRecommendations;
 
         } catch (UserNotFoundException | InvalidGoalTypeException |
@@ -100,24 +97,20 @@ public class WorkoutRecommendationService {
         }
 
         if (!Arrays.asList("WEIGHT_LOSS", "MUSCLE_GAIN", "MAINTENANCE").contains(goalType)) {
-            throw new InvalidGoalTypeException(
-                    "Invalid goal type: " + goalType + ". Valid options are: WEIGHT_LOSS, MUSCLE_GAIN, MAINTENANCE");
+            throw new InvalidGoalTypeException("Invalid goal type: " + goalType + ". Valid options are: WEIGHT_LOSS, MUSCLE_GAIN, MAINTENANCE");
         }
     }
 
     private User getUserAndValidate(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+        User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
 
         if (user.getFitnessLevel() == null) {
             throw new InvalidUserDataException("User fitness level is null for user ID: " + userId);
         }
 
         if (user.getWeightKg() == null || user.getWeightKg().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new InvalidUserDataException(
-                    "User weight is invalid for user ID: " + userId + ". Weight: " + user.getWeightKg());
+            throw new InvalidUserDataException("User weight is invalid for user ID: " + userId + ". Weight: " + user.getWeightKg());
         }
-
         return user;
     }
 
@@ -403,8 +396,7 @@ public class WorkoutRecommendationService {
         return new int[]{minReps, maxReps};
     }
 
-    private BigDecimal calculateRecommendedWeightPercentage(String goalType, ExerciseStats stats,
-                                                            User user, BigDecimal strengthMultiplier) {
+    private BigDecimal calculateRecommendedWeightPercentage(String goalType, ExerciseStats stats, User user, BigDecimal strengthMultiplier) {
         if (stats.getTimesPerformed() > 0 && stats.getAvgWeightUsed().compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal userWeight = user.getWeightKg().max(BigDecimal.valueOf(50));
             BigDecimal basePercentage = stats.getAvgWeightUsed()
@@ -622,8 +614,7 @@ public class WorkoutRecommendationService {
         for (WorkoutRecommendationDTO rec : recommendations) {
             // 2 minutes per set + rest time
             int setsTime = (rec.getRecommendedSets() != null ? rec.getRecommendedSets() : 3) * 2;
-            int restTime = (rec.getRestTimeSeconds() != null ? rec.getRestTimeSeconds() : 60)
-                    * (rec.getRecommendedSets() != null ? rec.getRecommendedSets() : 3) / 60;
+            int restTime = (rec.getRestTimeSeconds() != null ? rec.getRestTimeSeconds() : 60) * (rec.getRecommendedSets() != null ? rec.getRecommendedSets() : 3) / 60;
             totalMinutes += setsTime + restTime;
         }
 
