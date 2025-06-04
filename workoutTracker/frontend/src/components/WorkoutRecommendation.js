@@ -1,13 +1,54 @@
 import React, { useState, useEffect } from 'react';
 
+const getAuthToken = () => {
+    const token = localStorage.getItem('workout_tracker_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('authToken');
+    console.log('Getting token:', token ? 'Found' : 'Not found');
+    return token;
+};
+
+// Helper function to create authenticated headers
+const getAuthHeaders = () => {
+    const authToken = getAuthToken();
+    if (!authToken) {
+        throw new Error('No authentication token found. Please login again.');
+    }
+
+    console.log('Creating headers with token:', authToken.substring(0, 20) + '...');
+
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+    };
+};
+
+// Get current user from JWT token in localStorage
+const getCurrentUserId = () => {
+    try {
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+            const user = JSON.parse(userData);
+            return user.userId || user.id;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error parsing user data:', error);
+        return null;
+    }
+};
+
 const WorkoutRecommendationsApi = {
-    getRecommendations: async (userId, goalType, duration = 60, maxExercises = 8) => {
+    getRecommendations: async (goalType, duration = 60, maxExercises = 8) => {
         try {
+            const userId = getCurrentUserId();
+            if (!userId) {
+                throw new Error('User ID not found. Please login again.');
+            }
+
             const response = await fetch(`http://localhost:8082/api/workouts/recommend`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({
                     userId: userId,
                     goalType: goalType
@@ -15,6 +56,13 @@ const WorkoutRecommendationsApi = {
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
+
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to get workout recommendations');
             }
@@ -26,13 +74,16 @@ const WorkoutRecommendationsApi = {
         }
     },
 
-    saveWorkoutPlan: async (userId, recommendations, goalId) => {
+    saveWorkoutPlan: async (recommendations, goalId) => {
         try {
+            const userId = getCurrentUserId();
+            if (!userId) {
+                throw new Error('User ID not found. Please login again.');
+            }
+
             const response = await fetch(`http://localhost:8082/api/workouts/save-recommended-plan`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({
                     userId: userId,
                     goalId: goalId,
@@ -41,6 +92,13 @@ const WorkoutRecommendationsApi = {
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
+
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to save workout plan');
             }
@@ -82,10 +140,12 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
     };
 
     useEffect(() => {
-        if (user?.id && goal?.goalType) {
+        // Now we get user info from JWT token, not props
+        const currentUser = getCurrentUserId();
+        if (currentUser && goal?.goalType) {
             getRecommendations();
         }
-    }, [user?.id, goal?.goalType]);
+    }, [goal?.goalType]);
 
     const getRecommendations = async () => {
         try {
@@ -93,15 +153,19 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
             setError('');
             setSuccess('');
 
+            const currentUser = getCurrentUserId();
+            if (!currentUser) {
+                throw new Error('User not found. Please login again.');
+            }
+
             const backendGoalType = mapGoalTypeForBackend(goal.goalType);
             console.log('Getting recommendations for:', {
-                userId: user.id,
+                userId: currentUser,
                 goalType: backendGoalType,
                 originalGoalType: goal.goalType
             });
 
             const response = await WorkoutRecommendationsApi.getRecommendations(
-                user.id,
                 backendGoalType,
                 workoutDuration,
                 maxExercises
@@ -119,6 +183,14 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
         } catch (err) {
             setError(err.message || 'Failed to get workout recommendations. Please check if the backend is running.');
             console.error('Error getting recommendations:', err);
+
+            // Handle authentication errors
+            if (err.message.includes('Authentication failed') || err.message.includes('User not found')) {
+                localStorage.removeItem('workout_tracker_token');
+                localStorage.removeItem('userData');
+                localStorage.removeItem('isAuthenticated');
+                setError('Session expired. Please login again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -129,13 +201,16 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
             setSaving(true);
             setError('');
 
+            const currentUser = getCurrentUserId();
+            if (!currentUser) {
+                throw new Error('User not found. Please login again.');
+            }
+
             const response = await fetch(`http://localhost:8082/api/workouts/save-recommended-plan`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({
-                    userId: user.id,
+                    userId: currentUser,
                     goalId: goal.goalId,
                     recommendations: recommendations,
                     planName: `Recommended Workout for ${mapGoalTypeForDisplay(goal.goalType)}`
@@ -143,6 +218,13 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
+
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to save workout plan');
             }
@@ -159,10 +241,19 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
         } catch (err) {
             setError(err.message || 'Failed to save workout plan');
             console.error('Error saving workout plan:', err);
+
+            // Handle authentication errors
+            if (err.message.includes('Authentication failed') || err.message.includes('User not found')) {
+                localStorage.removeItem('workout_tracker_token');
+                localStorage.removeItem('userData');
+                localStorage.removeItem('isAuthenticated');
+                setError('Session expired. Please login again.');
+            }
         } finally {
             setSaving(false);
         }
     };
+
 
     const handleRefreshRecommendations = () => {
         getRecommendations();
