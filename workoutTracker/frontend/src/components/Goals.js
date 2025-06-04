@@ -1,5 +1,7 @@
+import Swal from 'sweetalert2';
 import React, { useState, useEffect } from 'react';
 import WorkoutRecommendations from './WorkoutRecommendation';
+
 
 const getAuthToken = () => {
     const token = localStorage.getItem('workout_tracker_token') ||
@@ -427,7 +429,34 @@ const Goals = ({onBack, onGoalSet }) => {
     };
 
     const handleDeleteGoal = async (goalId) => {
-        if (!window.confirm('Are you sure you want to delete this goal?')) {
+        const result = await Swal.fire({
+            title: '🗑️ Delete Goal?',
+            text: 'Are you sure you want to delete this goal? This action cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true,
+            customClass: {
+                popup: 'custom-swal-popup',
+                title: 'custom-swal-title',
+                content: 'custom-swal-content'
+            },
+            background: 'rgba(255, 255, 255, 0.98)',
+            backdrop: 'rgba(0, 0, 0, 0.5)',
+            showClass: {
+                popup: 'swal2-show',
+                backdrop: 'swal2-backdrop-show'
+            },
+            hideClass: {
+                popup: 'swal2-hide',
+                backdrop: 'swal2-backdrop-hide'
+            }
+        });
+
+        if (!result.isConfirmed) {
             return;
         }
 
@@ -436,17 +465,35 @@ const Goals = ({onBack, onGoalSet }) => {
             setError('');
 
             await GoalsApi.deleteGoal(goalId);
-
-            // Refresh goals list
             await fetchUserGoals();
 
-            setSuccess('Goal deleted successfully');
-            setTimeout(() => setSuccess(''), 3000);
+            // Success message
+            Swal.fire({
+                title: 'Deleted!',
+                text: 'Your goal has been successfully deleted.',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end',
+                background: '#f0fdf4',
+                color: '#166534',
+                timerProgressBar: true
+            });
+
         } catch (err) {
             setError(err.message || 'Failed to delete goal');
             console.error('Error deleting goal:', err);
 
-            // Handle authentication errors
+            // Error message
+            Swal.fire({
+                title: 'Error!',
+                text: err.message || 'Failed to delete goal',
+                icon: 'error',
+                confirmButtonColor: '#ef4444',
+                background: 'rgba(255, 255, 255, 0.98)'
+            });
+
             if (err.message.includes('Authentication failed') || err.message.includes('User not found')) {
                 localStorage.removeItem('workout_tracker_token');
                 localStorage.removeItem('userData');

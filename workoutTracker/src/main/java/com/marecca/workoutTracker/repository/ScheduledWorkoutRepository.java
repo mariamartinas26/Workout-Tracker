@@ -206,4 +206,11 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             "AND sw.actualStartTime >= :startDate")
     List<ScheduledWorkout> findWorkoutsByUserAndDate(@Param("userId") Long userId,
                                                      @Param("startDate") LocalDateTime startDate);
+
+    @Query("SELECT sw FROM ScheduledWorkout sw WHERE sw.user.userId = :userId " +
+            "AND sw.status = 'COMPLETED' " +
+            "AND sw.actualEndTime >= :startDate " +
+            "ORDER BY sw.actualEndTime DESC")
+    List<ScheduledWorkout> findCompletedWorkoutsInDateRange(@Param("userId") Long userId,
+                                                            @Param("startDate") LocalDateTime startDate);
 }
