@@ -7,12 +7,11 @@ import com.marecca.workoutTracker.dto.request.RescheduleWorkoutRequest;
 import com.marecca.workoutTracker.dto.response.SuccessResponse;
 import com.marecca.workoutTracker.entity.ScheduledWorkout;
 import com.marecca.workoutTracker.service.ScheduledWorkoutService;
-import com.marecca.workoutTracker.service.exceptions.UserNotFoundException;
-import com.marecca.workoutTracker.service.exceptions.WorkoutAlreadyScheduledException;
-import com.marecca.workoutTracker.service.exceptions.WorkoutPlanNotFoundException;
+import com.marecca.workoutTracker.service.exceptions.*;
 import com.marecca.workoutTracker.util.JwtControllerUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,16 +45,14 @@ public class ScheduledWorkoutController {
     public ResponseEntity<?> scheduleWorkout(@Valid @RequestBody ScheduleWorkoutRequest request, HttpServletRequest httpRequest) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(httpRequest);
-            log.info("REST request to schedule workout by user: {} for plan: {}", authenticatedUserId, request.getWorkoutPlanId());
 
             // Verify user can only schedule workouts for themselves
             if (!request.getUserId().equals(authenticatedUserId)) {
-                log.warn("User {} attempted to schedule workout for user {}", authenticatedUserId, request.getUserId());
                 return jwtUtils.createErrorResponse("You can only schedule workouts for yourself", HttpStatus.FORBIDDEN);
             }
 
             Long scheduledWorkoutId = scheduledWorkoutService.scheduleWorkout(
-                    authenticatedUserId, // Use authenticated user ID
+                    authenticatedUserId,
                     request.getWorkoutPlanId(),
                     request.getScheduledDate(),
                     request.getScheduledTime()
@@ -68,31 +65,35 @@ public class ScheduledWorkoutController {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
+        } catch (JwtTokenExpiredException e) {
+            return jwtUtils.createUnauthorizedResponse("Token has expired. Please login again.");
+
+        } catch (InvalidJwtTokenException e) {
+            return jwtUtils.createUnauthorizedResponse("Invalid authentication token");
+
+        } catch (JwtTokenException e) {
+            return jwtUtils.createUnauthorizedResponse("Authentication failed");
+
         } catch (UserNotFoundException e) {
-            log.error("User not found: {}", e.getMessage());
             return jwtUtils.createErrorResponse("User not found", HttpStatus.NOT_FOUND);
 
         } catch (WorkoutPlanNotFoundException e) {
-            log.error("Workout plan not found: {}", e.getMessage());
             return jwtUtils.createErrorResponse("Workout plan not found", HttpStatus.NOT_FOUND);
 
         } catch (WorkoutAlreadyScheduledException e) {
-            log.error("Workout already scheduled: {}", e.getMessage());
             return jwtUtils.createErrorResponse("Workout already scheduled", HttpStatus.CONFLICT);
 
         } catch (IllegalArgumentException e) {
-            log.error("Validation error while scheduling workout: {}", e.getMessage());
             return jwtUtils.createBadRequestResponse(e.getMessage());
 
-        } catch (RuntimeException e) {
-            log.error("Database error while scheduling workout: {}", e.getMessage());
-            return jwtUtils.createErrorResponse("Database error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (DataAccessException e) {
+            return jwtUtils.createErrorResponse("Database operation failed", HttpStatus.INTERNAL_SERVER_ERROR);
 
         } catch (Exception e) {
-            log.error("Authentication error or unexpected error: {}", e.getMessage());
-            return jwtUtils.createUnauthorizedResponse("Authentication required to schedule workouts");
+            return jwtUtils.createErrorResponse("An unexpected error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
 
     /**
      * Find all scheduled workouts for a user (requires authentication)
@@ -101,19 +102,29 @@ public class ScheduledWorkoutController {
     public ResponseEntity<?> getUserWorkouts(@PathVariable Long userId, HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get workouts for user: {} by authenticated user: {}", userId, authenticatedUserId);
 
             // Users can only access their own workouts
             if (!userId.equals(authenticatedUserId)) {
-                log.warn("User {} attempted to access workouts for user {}", authenticatedUserId, userId);
                 return jwtUtils.createErrorResponse("You can only access your own workouts", HttpStatus.FORBIDDEN);
             }
 
             List<ScheduledWorkout> workouts = scheduledWorkoutService.findByUserId(authenticatedUserId);
             return ResponseEntity.ok(workouts);
+
+        } catch (JwtTokenExpiredException e) {
+            return jwtUtils.createUnauthorizedResponse("Token has expired. Please login again.");
+
+        } catch (InvalidJwtTokenException e) {
+            return jwtUtils.createUnauthorizedResponse("Invalid authentication token");
+
+        } catch (JwtTokenException e) {
+            return jwtUtils.createUnauthorizedResponse("Authentication failed");
+
+        } catch (UserNotFoundException e) {
+            return jwtUtils.createErrorResponse("User not found", HttpStatus.NOT_FOUND);
+
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
-            return jwtUtils.createUnauthorizedResponse("Authentication required to access workouts");
+            return jwtUtils.createErrorResponse("An unexpected error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -124,17 +135,14 @@ public class ScheduledWorkoutController {
     public ResponseEntity<?> getTodaysWorkouts(@PathVariable Long userId, HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get today's workouts for user: {} by authenticated user: {}", userId, authenticatedUserId);
 
             if (!userId.equals(authenticatedUserId)) {
-                log.warn("User {} attempted to access today's workouts for user {}", authenticatedUserId, userId);
                 return jwtUtils.createErrorResponse("You can only access your own workouts", HttpStatus.FORBIDDEN);
             }
 
             List<ScheduledWorkout> workouts = scheduledWorkoutService.findTodaysWorkouts(authenticatedUserId);
             return ResponseEntity.ok(workouts);
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to access today's workouts");
         }
     }
@@ -146,7 +154,6 @@ public class ScheduledWorkoutController {
     public ResponseEntity<?> startWorkout(@PathVariable Long workoutId, HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.info("REST request to start workout: {} by user: {}", workoutId, authenticatedUserId);
 
             // Verify workout ownership before starting
             Optional<ScheduledWorkout> workoutOpt = scheduledWorkoutService.findById(workoutId);
@@ -156,8 +163,6 @@ public class ScheduledWorkoutController {
 
             ScheduledWorkout workout = workoutOpt.get();
             if (!workout.getUser().getUserId().equals(authenticatedUserId)) {
-                log.warn("User {} attempted to start workout {} owned by user {}",
-                        authenticatedUserId, workoutId, workout.getUser().getUserId());
                 return jwtUtils.createErrorResponse("You can only start your own workouts", HttpStatus.FORBIDDEN);
             }
 
@@ -168,10 +173,8 @@ public class ScheduledWorkoutController {
                             .build());
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.error("Validation error starting workout: {}", e.getMessage());
             return jwtUtils.createBadRequestResponse(e.getMessage());
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to start workouts");
         }
     }
@@ -186,7 +189,6 @@ public class ScheduledWorkoutController {
             HttpServletRequest httpRequest) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(httpRequest);
-            log.info("REST request to complete workout: {} by user: {}", workoutId, authenticatedUserId);
 
             // Verify workout ownership before completing
             Optional<ScheduledWorkout> workoutOpt = scheduledWorkoutService.findById(workoutId);
@@ -196,8 +198,6 @@ public class ScheduledWorkoutController {
 
             ScheduledWorkout workout = workoutOpt.get();
             if (!workout.getUser().getUserId().equals(authenticatedUserId)) {
-                log.warn("User {} attempted to complete workout {} owned by user {}",
-                        authenticatedUserId, workoutId, workout.getUser().getUserId());
                 return jwtUtils.createErrorResponse("You can only complete your own workouts", HttpStatus.FORBIDDEN);
             }
 
@@ -213,10 +213,8 @@ public class ScheduledWorkoutController {
                             .build());
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.error("Validation error completing workout: {}", e.getMessage());
             return jwtUtils.createBadRequestResponse(e.getMessage());
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to complete workouts");
         }
     }
@@ -228,7 +226,6 @@ public class ScheduledWorkoutController {
     public ResponseEntity<?> cancelWorkout(@PathVariable Long workoutId, HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.info("REST request to cancel workout: {} by user: {}", workoutId, authenticatedUserId);
 
             // Verify workout ownership before cancelling
             Optional<ScheduledWorkout> workoutOpt = scheduledWorkoutService.findById(workoutId);
@@ -238,8 +235,6 @@ public class ScheduledWorkoutController {
 
             ScheduledWorkout workout = workoutOpt.get();
             if (!workout.getUser().getUserId().equals(authenticatedUserId)) {
-                log.warn("User {} attempted to cancel workout {} owned by user {}",
-                        authenticatedUserId, workoutId, workout.getUser().getUserId());
                 return jwtUtils.createErrorResponse("You can only cancel your own workouts", HttpStatus.FORBIDDEN);
             }
 
@@ -250,10 +245,8 @@ public class ScheduledWorkoutController {
                             .build());
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.error("Validation error cancelling workout: {}", e.getMessage());
             return jwtUtils.createBadRequestResponse(e.getMessage());
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to cancel workouts");
         }
     }
@@ -269,11 +262,9 @@ public class ScheduledWorkoutController {
             HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to check availability for user: {} by authenticated user: {}", userId, authenticatedUserId);
 
             // Users can only check their own availability
             if (!userId.equals(authenticatedUserId)) {
-                log.warn("User {} attempted to check availability for user {}", authenticatedUserId, userId);
                 return jwtUtils.createErrorResponse("You can only check your own availability", HttpStatus.FORBIDDEN);
             }
 
@@ -288,7 +279,6 @@ public class ScheduledWorkoutController {
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to check availability");
         }
     }
@@ -300,7 +290,6 @@ public class ScheduledWorkoutController {
     public ResponseEntity<?> getRecentCompletedWorkouts(@PathVariable Long userId, HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get recent completed workouts for user: {} by authenticated user: {}", userId, authenticatedUserId);
 
             if (!userId.equals(authenticatedUserId)) {
                 log.warn("User {} attempted to access recent completed workouts for user {}", authenticatedUserId, userId);
@@ -310,7 +299,6 @@ public class ScheduledWorkoutController {
             List<ScheduledWorkout> workouts = scheduledWorkoutService.findRecentCompletedWorkouts(authenticatedUserId);
             return ResponseEntity.ok(workouts);
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to access workout history");
         }
     }
@@ -322,17 +310,14 @@ public class ScheduledWorkoutController {
     public ResponseEntity<?> getUserStatistics(@PathVariable Long userId, HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get statistics for user: {} by authenticated user: {}", userId, authenticatedUserId);
 
             if (!userId.equals(authenticatedUserId)) {
-                log.warn("User {} attempted to access statistics for user {}", authenticatedUserId, userId);
                 return jwtUtils.createErrorResponse("You can only access your own statistics", HttpStatus.FORBIDDEN);
             }
 
             ScheduledWorkoutService.WorkoutStatistics stats = scheduledWorkoutService.getUserWorkoutStatistics(authenticatedUserId);
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to access statistics");
         }
     }
@@ -347,7 +332,6 @@ public class ScheduledWorkoutController {
             HttpServletRequest httpRequest) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(httpRequest);
-            log.info("REST request to reschedule workout: {} by user: {}", workoutId, authenticatedUserId);
 
             // Verify workout ownership before rescheduling
             Optional<ScheduledWorkout> workoutOpt = scheduledWorkoutService.findById(workoutId);
@@ -357,8 +341,6 @@ public class ScheduledWorkoutController {
 
             ScheduledWorkout workout = workoutOpt.get();
             if (!workout.getUser().getUserId().equals(authenticatedUserId)) {
-                log.warn("User {} attempted to reschedule workout {} owned by user {}",
-                        authenticatedUserId, workoutId, workout.getUser().getUserId());
                 return jwtUtils.createErrorResponse("You can only reschedule your own workouts", HttpStatus.FORBIDDEN);
             }
 
@@ -374,10 +356,8 @@ public class ScheduledWorkoutController {
                             .build());
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.error("Validation error rescheduling workout: {}", e.getMessage());
             return jwtUtils.createBadRequestResponse(e.getMessage());
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to reschedule workouts");
         }
     }
@@ -389,11 +369,9 @@ public class ScheduledWorkoutController {
     public ResponseEntity<?> getMyWorkouts(HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get my workouts for user: {}", authenticatedUserId);
 
             return getUserWorkouts(authenticatedUserId, request);
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to access workouts");
         }
     }
@@ -405,11 +383,9 @@ public class ScheduledWorkoutController {
     public ResponseEntity<?> getMyTodayWorkouts(HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get my today workouts for user: {}", authenticatedUserId);
 
             return getTodaysWorkouts(authenticatedUserId, request);
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to access today's workouts");
         }
     }
@@ -421,11 +397,9 @@ public class ScheduledWorkoutController {
     public ResponseEntity<?> getMyStatistics(HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get my statistics for user: {}", authenticatedUserId);
 
             return getUserStatistics(authenticatedUserId, request);
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to access statistics");
         }
     }
@@ -440,11 +414,9 @@ public class ScheduledWorkoutController {
             HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to check my availability for user: {}", authenticatedUserId);
 
             return checkAvailability(authenticatedUserId, date, time, request);
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to check availability");
         }
     }
@@ -452,21 +424,53 @@ public class ScheduledWorkoutController {
     /**
      * Exception handlers for error handling
      */
+    @ExceptionHandler(JwtTokenExpiredException.class)
+    public ResponseEntity<?> handleTokenExpired(JwtTokenExpiredException e) {
+        return jwtUtils.createUnauthorizedResponse("Token has expired. Please login again.");
+    }
+
+    @ExceptionHandler(InvalidJwtTokenException.class)
+    public ResponseEntity<?> handleInvalidToken(InvalidJwtTokenException e) {
+        return jwtUtils.createUnauthorizedResponse("Invalid authentication token");
+    }
+
+    @ExceptionHandler(JwtTokenException.class)
+    public ResponseEntity<?> handleJwtTokenException(JwtTokenException e) {
+        return jwtUtils.createUnauthorizedResponse("Authentication failed");
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<?> handleUserNotFound(UserNotFoundException e) {
+        return jwtUtils.createErrorResponse("User not found", HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(WorkoutPlanNotFoundException.class)
+    public ResponseEntity<?> handleWorkoutPlanNotFound(WorkoutPlanNotFoundException e) {
+        return jwtUtils.createErrorResponse("Workout plan not found", HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(WorkoutAlreadyScheduledException.class)
+    public ResponseEntity<?> handleWorkoutAlreadyScheduled(WorkoutAlreadyScheduledException e) {
+        return jwtUtils.createErrorResponse("Workout already scheduled", HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<?> handleDataAccessException(DataAccessException e) {
+        return jwtUtils.createErrorResponse("Database operation failed", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<?> handleIllegalArgument(IllegalArgumentException e) {
-        log.error("Illegal argument: {}", e.getMessage());
         return jwtUtils.createBadRequestResponse(e.getMessage());
     }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<?> handleIllegalState(IllegalStateException e) {
-        log.error("Illegal state: {}", e.getMessage());
         return jwtUtils.createErrorResponse(e.getMessage(), HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGenericException(Exception e) {
-        log.error("Unexpected error: {}", e.getMessage(), e);
         return jwtUtils.createErrorResponse("An unexpected error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 

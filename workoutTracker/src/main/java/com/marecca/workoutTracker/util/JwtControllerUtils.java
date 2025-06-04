@@ -1,5 +1,10 @@
 package com.marecca.workoutTracker.util;
 
+import com.marecca.workoutTracker.service.exceptions.InvalidJwtTokenException;
+import com.marecca.workoutTracker.service.exceptions.JwtTokenException;
+import com.marecca.workoutTracker.service.exceptions.JwtTokenExpiredException;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,25 +24,43 @@ public class JwtControllerUtils {
     /**
      * Extract user ID from JWT token in Authorization header
      */
-    public Long getUserIdFromToken(HttpServletRequest request) {
+    public Long getUserIdFromToken(HttpServletRequest request) throws JwtTokenException {
         String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            return jwtUtil.getUserIdFromToken(token);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new InvalidJwtTokenException("Missing or invalid Authorization header");
         }
-        throw new RuntimeException("No valid authentication token found");
+
+        String token = authHeader.substring(7);
+        try {
+            return jwtUtil.getUserIdFromToken(token);
+        } catch (ExpiredJwtException e) {
+            throw new JwtTokenExpiredException("Token has expired");
+        } catch (JwtException e) {
+            throw new InvalidJwtTokenException("Invalid token format");
+        } catch (Exception e) {
+            throw new JwtTokenException("Token validation failed");
+        }
     }
 
     /**
      * Extract email from JWT token in Authorization header
      */
-    public String getEmailFromToken(HttpServletRequest request) {
+    public String getEmailFromToken(HttpServletRequest request) throws JwtTokenException {
         String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            return jwtUtil.getEmailFromToken(token);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new InvalidJwtTokenException("Missing or invalid Authorization header");
         }
-        throw new RuntimeException("No valid authentication token found");
+
+        String token = authHeader.substring(7);
+        try {
+            return jwtUtil.getEmailFromToken(token);
+        } catch (ExpiredJwtException e) {
+            throw new JwtTokenExpiredException("Token has expired");
+        } catch (JwtException e) {
+            throw new InvalidJwtTokenException("Invalid token format");
+        } catch (Exception e) {
+            throw new JwtTokenException("Token validation failed");
+        }
     }
 
     /**
