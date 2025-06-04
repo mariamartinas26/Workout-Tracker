@@ -183,8 +183,7 @@ public class WorkoutRecommendationService {
     }
 
     private ExerciseStats calculateExerciseStats(Long userId, Exercise exercise) {
-        List<WorkoutExerciseLog> logs = workoutExerciseLogRepository
-                .findLogsByUserExerciseAndStatus(userId, exercise.getExerciseId(), WorkoutStatusType.COMPLETED);
+        List<WorkoutExerciseLog> logs = workoutExerciseLogRepository.findLogsByUserExerciseAndStatus(userId, exercise.getExerciseId(), WorkoutStatusType.COMPLETED);
 
         ExerciseStats stats = new ExerciseStats();
         stats.setTimesPerformed(logs.size());
@@ -225,7 +224,6 @@ public class WorkoutRecommendationService {
 
     /**
      * method for calculating priority score
-
      */
     private BigDecimal calculatePriorityScore(String goalType, Exercise exercise, ExerciseStats stats, boolean doneRecently) {
         // Calculate estimated calories per minute

@@ -26,9 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Dashboard controller for fitness tracking analytics - JWT Protected
- */
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
@@ -37,8 +34,10 @@ public class DashboardController {
 
     private final DashboardService dashboardService;
     private final JwtControllerUtils jwtUtils;
+
     @Autowired
     private GoalRepository goalRepository;
+
     @Autowired
     private ScheduledWorkoutRepository scheduledWorkoutRepository;
 
@@ -54,13 +53,12 @@ public class DashboardController {
             return ResponseEntity.ok(summary);
 
         } catch (Exception e) {
-            log.error("Error getting dashboard summary: {}", e.getMessage());
             return jwtUtils.createErrorResponse("Failed to get dashboard summary", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     /**
-     * Get dashboard summary for specific user (with validation)
+     * Get dashboard summary for specific user
      */
     @GetMapping("/summary/{userId}")
     public ResponseEntity<?> getDashboardSummaryForUser(@PathVariable Long userId, HttpServletRequest request) {
@@ -73,7 +71,6 @@ public class DashboardController {
             return ResponseEntity.ok(summary);
 
         } catch (Exception e) {
-            log.error("Error getting dashboard summary for user {}: {}", userId, e.getMessage());
             return jwtUtils.createErrorResponse("Failed to get dashboard summary", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -103,7 +100,6 @@ public class DashboardController {
             return ResponseEntity.ok(calendar);
 
         } catch (Exception e) {
-            log.error("Error getting workout calendar: {}", e.getMessage());
             return jwtUtils.createErrorResponse("Failed to get workout calendar", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -136,7 +132,6 @@ public class DashboardController {
             return ResponseEntity.ok(calendar);
 
         } catch (Exception e) {
-            log.error("Error getting workout calendar for user {}: {}", userId, e.getMessage());
             return jwtUtils.createErrorResponse("Failed to get workout calendar", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -178,7 +173,6 @@ public class DashboardController {
             return ResponseEntity.ok(trends);
 
         } catch (Exception e) {
-            log.error("Error getting workout trends: {}", e.getMessage());
             return jwtUtils.createErrorResponse("Failed to get workout trends", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -223,7 +217,6 @@ public class DashboardController {
             return ResponseEntity.ok(trends);
 
         } catch (Exception e) {
-            log.error("Error getting workout trends for user {}: {}", userId, e.getMessage());
             return jwtUtils.createErrorResponse("Failed to get workout trends", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -249,7 +242,6 @@ public class DashboardController {
             return ResponseEntity.ok(breakdown);
 
         } catch (Exception e) {
-            log.error("Error getting workout type breakdown: {}", e.getMessage());
             return jwtUtils.createErrorResponse("Failed to get workout type breakdown", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -278,11 +270,9 @@ public class DashboardController {
             return ResponseEntity.ok(breakdown);
 
         } catch (Exception e) {
-            log.error("Error getting workout type breakdown for user {}: {}", userId, e.getMessage());
             return jwtUtils.createErrorResponse("Failed to get workout type breakdown", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
 
     /**
      * Get recent achievements for authenticated user
@@ -294,7 +284,6 @@ public class DashboardController {
 
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.info("Achievements endpoint for authenticated user {} ", authenticatedUserId);
 
             // Calculează data de început
             LocalDateTime startDate = LocalDateTime.now().minusDays(daysBack);
@@ -302,54 +291,63 @@ public class DashboardController {
             List<Map<String, Object>> achievements = new ArrayList<>();
 
             // 1. Obține goal-urile completate recent
-            List<Goal> completedGoals = goalRepository.findCompletedGoalsInDateRange(
-                    authenticatedUserId, startDate, LocalDateTime.now());
+            try {
+                List<Goal> completedGoals = goalRepository.findCompletedGoalsInDateRange(
+                        authenticatedUserId, startDate, LocalDateTime.now());
 
-            for (Goal goal : completedGoals) {
-                Map<String, Object> achievement = new HashMap<>();
-                achievement.put("id", "goal_" + goal.getGoalId());
-                achievement.put("type", "COMPLETED_GOAL");
-                achievement.put("title", getGoalAchievementTitle(goal));
-                achievement.put("description", getGoalAchievementDescription(goal));
-                achievement.put("achievedAt", goal.getCompletedAt());
-                achievement.put("goalType", goal.getGoalType().getValue());
-                achievement.put("icon", getGoalAchievementIcon(goal.getGoalType()));
-                achievement.put("points", calculateAchievementPoints(goal));
-                achievements.add(achievement);
+                for (Goal goal : completedGoals) {
+                    Map<String, Object> achievement = new HashMap<>();
+                    achievement.put("id", "goal_" + goal.getGoalId());
+                    achievement.put("type", "COMPLETED_GOAL");
+                    achievement.put("title", getGoalAchievementTitle(goal));
+                    achievement.put("description", getGoalAchievementDescription(goal));
+                    achievement.put("achievedAt", goal.getCompletedAt());
+                    achievement.put("goalType", goal.getGoalType().getValue());
+                    achievement.put("icon", getGoalAchievementIcon(goal.getGoalType()));
+                    achievement.put("points", calculateAchievementPoints(goal));
+                    achievements.add(achievement);
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch completed goals: {}", e.getMessage());
             }
 
             // 2. Obține antrenamentele completate recent
-            List<ScheduledWorkout> recentWorkouts = scheduledWorkoutRepository
-                    .findCompletedWorkoutsInDateRange(authenticatedUserId, startDate);
+            try {
+                List<ScheduledWorkout> recentWorkouts = scheduledWorkoutRepository
+                        .findCompletedWorkoutsInDateRange(authenticatedUserId, startDate);
 
-            for (ScheduledWorkout workout : recentWorkouts) {
-                Map<String, Object> achievement = new HashMap<>();
-                achievement.put("id", "workout_" + workout.getScheduledWorkoutId());
-                achievement.put("type", "COMPLETED_WORKOUT");
-                achievement.put("title", "💪 Workout Completed!");
-                achievement.put("description", "You completed a " +
-                        (workout.getActualDurationMinutes() != null ? workout.getActualDurationMinutes() + " minute " : "") +
-                        "workout session");
-                achievement.put("achievedAt", workout.getActualEndTime());
-                achievement.put("icon", "🏃‍♂️");
-                achievement.put("points", 25);
-                achievements.add(achievement);
+                for (ScheduledWorkout workout : recentWorkouts) {
+                    Map<String, Object> achievement = new HashMap<>();
+                    achievement.put("id", "workout_" + workout.getScheduledWorkoutId());
+                    achievement.put("type", "COMPLETED_WORKOUT");
+                    achievement.put("title", "Workout Completed!");
+                    achievement.put("description", "You completed a " +
+                            (workout.getActualDurationMinutes() != null ? workout.getActualDurationMinutes() + " minute " : "") +
+                            "workout session");
+                    achievement.put("achievedAt", workout.getActualEndTime());
+                    achievement.put("icon", "🏃‍♂️");
+                    achievement.put("points", 25);
+                    achievements.add(achievement);
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch completed workouts: {}", e.getMessage());
             }
 
-            // 3. Verifică milestone-uri de greutate
-            //achievements.addAll(getWeightMilestones(authenticatedUserId, startDate));
-
-            // Sortează după dată (cel mai recent primul)
+            //sorting after recency
             achievements.sort((a, b) -> {
                 LocalDateTime dateA = (LocalDateTime) a.get("achievedAt");
                 LocalDateTime dateB = (LocalDateTime) b.get("achievedAt");
+
+                if (dateA == null && dateB == null) return 0;
+                if (dateA == null) return 1;
+                if (dateB == null) return -1;
+
                 return dateB.compareTo(dateA);
             });
 
             return ResponseEntity.ok(achievements);
 
         } catch (Exception e) {
-            log.error("Error getting recent achievements: {}", e.getMessage());
             return jwtUtils.createErrorResponse("Failed to get achievements", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -373,43 +371,57 @@ public class DashboardController {
             List<Map<String, Object>> achievements = new ArrayList<>();
 
             //recently completed goals
-            List<Goal> completedGoals = goalRepository.findCompletedGoalsInDateRange(userId, startDate, LocalDateTime.now());
+            try {
+                List<Goal> completedGoals = goalRepository.findCompletedGoalsInDateRange(
+                        userId, startDate, LocalDateTime.now());
 
-            for (Goal goal : completedGoals) {
-                Map<String, Object> achievement = new HashMap<>();
-                achievement.put("id", "goal_" + goal.getGoalId());
-                achievement.put("type", "COMPLETED_GOAL");
-                achievement.put("title", getGoalAchievementTitle(goal));
-                achievement.put("description", getGoalAchievementDescription(goal));
-                achievement.put("achievedAt", goal.getCompletedAt());
-                achievement.put("goalType", goal.getGoalType().getValue());
-                achievement.put("icon", getGoalAchievementIcon(goal.getGoalType()));
-                achievement.put("points", calculateAchievementPoints(goal));
-                achievements.add(achievement);
+                for (Goal goal : completedGoals) {
+                    Map<String, Object> achievement = new HashMap<>();
+                    achievement.put("id", "goal_" + goal.getGoalId());
+                    achievement.put("type", "COMPLETED_GOAL");
+                    achievement.put("title", getGoalAchievementTitle(goal));
+                    achievement.put("description", getGoalAchievementDescription(goal));
+                    achievement.put("achievedAt", goal.getCompletedAt());
+                    achievement.put("goalType", goal.getGoalType().getValue());
+                    achievement.put("icon", getGoalAchievementIcon(goal.getGoalType()));
+                    achievement.put("points", calculateAchievementPoints(goal));
+                    achievements.add(achievement);
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch completed goals for user {}: {}", userId, e.getMessage());
             }
 
             //recently completed workouts
-            List<ScheduledWorkout> recentWorkouts = scheduledWorkoutRepository
-                    .findCompletedWorkoutsInDateRange(userId, startDate);
+            try {
+                List<ScheduledWorkout> recentWorkouts = scheduledWorkoutRepository
+                        .findCompletedWorkoutsInDateRange(userId, startDate);
 
-            for (ScheduledWorkout workout : recentWorkouts) {
-                Map<String, Object> achievement = new HashMap<>();
-                achievement.put("id", "workout_" + workout.getScheduledWorkoutId());
-                achievement.put("type", "COMPLETED_WORKOUT");
-                achievement.put("title", "💪 Workout Completed!");
-                achievement.put("description", "You completed a " +
-                        (workout.getActualDurationMinutes() != null ? workout.getActualDurationMinutes() + " minute " : "") +
-                        "workout session");
-                achievement.put("achievedAt", workout.getActualEndTime());
-                achievement.put("icon", "🏃‍♂️");
-                achievement.put("points", 25);
-                achievements.add(achievement);
+                for (ScheduledWorkout workout : recentWorkouts) {
+                    Map<String, Object> achievement = new HashMap<>();
+                    achievement.put("id", "workout_" + workout.getScheduledWorkoutId());
+                    achievement.put("type", "COMPLETED_WORKOUT");
+                    achievement.put("title", "Workout Completed!");
+                    achievement.put("description", "You completed a " +
+                            (workout.getActualDurationMinutes() != null ? workout.getActualDurationMinutes() + " minute " : "") +
+                            "workout session");
+                    achievement.put("achievedAt", workout.getActualEndTime());
+                    achievement.put("icon", "🏃‍♂️");
+                    achievement.put("points", 25);
+                    achievements.add(achievement);
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch completed workouts for user {}: {}", userId, e.getMessage());
             }
 
             //sorting after date
             achievements.sort((a, b) -> {
                 LocalDateTime dateA = (LocalDateTime) a.get("achievedAt");
                 LocalDateTime dateB = (LocalDateTime) b.get("achievedAt");
+
+                if (dateA == null && dateB == null) return 0;
+                if (dateA == null) return 1;
+                if (dateB == null) return -1;
+
                 return dateB.compareTo(dateA);
             });
 
@@ -420,17 +432,67 @@ public class DashboardController {
         }
     }
 
+    /**
+     * Get quick statistics for authenticated user
+     */
+    @GetMapping("/quick-stats")
+    public ResponseEntity<?> getQuickStats(HttpServletRequest request) {
+        try {
+            Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
+
+            DashboardSummaryDTO summary = dashboardService.getDashboardSummary(authenticatedUserId);
+
+            QuickStatsDTO quickStats = QuickStatsDTO.builder()
+                    .weeklyWorkouts(summary.getWeeklyWorkouts())
+                    .weeklyCalories(summary.getWeeklyCalories())
+                    .currentStreak(summary.getCurrentStreak())
+                    .totalWorkouts(summary.getTotalWorkouts())
+                    .build();
+
+            return ResponseEntity.ok(quickStats);
+
+        } catch (Exception e) {
+            return jwtUtils.createErrorResponse("Failed to get quick stats", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Get quick stats for specific user (with validation)
+     */
+    @GetMapping("/quick-stats/{userId}")
+    public ResponseEntity<?> getQuickStatsForUser(@PathVariable Long userId, HttpServletRequest request) {
+        // Check user access
+        ResponseEntity<?> accessCheck = jwtUtils.checkUserAccess(request, userId);
+        if (accessCheck != null) return accessCheck;
+
+        try {
+            DashboardSummaryDTO summary = dashboardService.getDashboardSummary(userId);
+
+            QuickStatsDTO quickStats = QuickStatsDTO.builder()
+                    .weeklyWorkouts(summary.getWeeklyWorkouts())
+                    .weeklyCalories(summary.getWeeklyCalories())
+                    .currentStreak(summary.getCurrentStreak())
+                    .totalWorkouts(summary.getTotalWorkouts())
+                    .build();
+
+            return ResponseEntity.ok(quickStats);
+
+        } catch (Exception e) {
+            return jwtUtils.createErrorResponse("Failed to get quick stats", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
     private String getGoalAchievementTitle(Goal goal) {
         switch (goal.getGoalType()) {
             case LOSE_WEIGHT:
-                return "🎯 Weight Loss Goal Achieved!";
+                return "Weight Loss Goal Achieved!";
             case GAIN_MUSCLE:
-                return "💪 Muscle Gain Goal Achieved!";
+                return "Muscle Gain Goal Achieved!";
             case MAINTAIN_HEALTH:
-                return "⚖️ Health Maintenance Goal Achieved!";
+                return "Health Maintenance Goal Achieved!";
             default:
-                return "🏆 Goal Completed!";
+                return "Goal Completed!";
         }
     }
 
@@ -496,57 +558,5 @@ public class DashboardController {
         }
 
         return basePoints;
-    }
-
-    /**
-     * Get quick statistics for authenticated user
-     */
-    @GetMapping("/quick-stats")
-    public ResponseEntity<?> getQuickStats(HttpServletRequest request) {
-        try {
-            Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-
-            DashboardSummaryDTO summary = dashboardService.getDashboardSummary(authenticatedUserId);
-
-            QuickStatsDTO quickStats = QuickStatsDTO.builder()
-                    .weeklyWorkouts(summary.getWeeklyWorkouts())
-                    .weeklyCalories(summary.getWeeklyCalories())
-                    .currentStreak(summary.getCurrentStreak())
-                    .totalWorkouts(summary.getTotalWorkouts())
-                    .build();
-
-            return ResponseEntity.ok(quickStats);
-
-        } catch (Exception e) {
-            log.error("Error getting quick stats: {}", e.getMessage());
-            return jwtUtils.createErrorResponse("Failed to get quick stats", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Get quick stats for specific user (with validation)
-     */
-    @GetMapping("/quick-stats/{userId}")
-    public ResponseEntity<?> getQuickStatsForUser(@PathVariable Long userId, HttpServletRequest request) {
-        // Check user access
-        ResponseEntity<?> accessCheck = jwtUtils.checkUserAccess(request, userId);
-        if (accessCheck != null) return accessCheck;
-
-        try {
-            DashboardSummaryDTO summary = dashboardService.getDashboardSummary(userId);
-
-            QuickStatsDTO quickStats = QuickStatsDTO.builder()
-                    .weeklyWorkouts(summary.getWeeklyWorkouts())
-                    .weeklyCalories(summary.getWeeklyCalories())
-                    .currentStreak(summary.getCurrentStreak())
-                    .totalWorkouts(summary.getTotalWorkouts())
-                    .build();
-
-            return ResponseEntity.ok(quickStats);
-
-        } catch (Exception e) {
-            log.error("Error getting quick stats for user {}: {}", userId, e.getMessage());
-            return jwtUtils.createErrorResponse("Failed to get quick stats", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
     }
 }

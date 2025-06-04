@@ -547,9 +547,6 @@ const WorkoutRecommendations = ({ user, goal, onBack, onSavePlan }) => {
                                             }}>
                                                 {getDifficultyText(rec.priorityScore)}
                                             </span>
-                                            <span style={{fontSize: '12px', color: '#a0aec0'}}>
-                                                (Score: {parseFloat(rec.priorityScore).toFixed(1)})
-                                            </span>
                                         </div>
                                     </div>
                                 </div>

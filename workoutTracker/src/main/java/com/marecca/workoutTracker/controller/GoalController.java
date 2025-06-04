@@ -2,10 +2,12 @@ package com.marecca.workoutTracker.controller;
 
 import com.marecca.workoutTracker.dto.request.CreateGoalRequest;
 import com.marecca.workoutTracker.entity.Goal;
+import com.marecca.workoutTracker.repository.GoalRepository;
 import com.marecca.workoutTracker.service.GoalService;
 import com.marecca.workoutTracker.util.JwtControllerUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,10 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Controller for managing goals - JWT Protected
@@ -30,6 +29,9 @@ public class GoalController {
 
     private final GoalService goalService;
     private final JwtControllerUtils jwtUtils;
+
+    @Autowired
+    private GoalRepository goalRepository;
 
     /**
      * Create a new goal (requires authentication)
@@ -254,6 +256,74 @@ public class GoalController {
             log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to delete goals");
         }
+    }
+
+    /**
+     * Get completed goals as achievements for authenticated user
+     * Endpoint: GET /api/goals/achievements/completed-goals
+     */
+    @GetMapping("/achievements/completed-goals")
+    public ResponseEntity<?> getCompletedGoalsAchievements(
+            HttpServletRequest request,
+            @RequestParam(defaultValue = "30") Integer daysBack) {
+
+        try {
+            Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
+            log.info("Getting completed goals achievements for user {} for last {} days",
+                    authenticatedUserId, daysBack);
+
+            // Calculează data de început
+            LocalDateTime startDate = LocalDateTime.now().minusDays(daysBack);
+
+            List<Map<String, Object>> achievements = new ArrayList<>();
+
+            try {
+                List<Goal> completedGoals = goalRepository.findCompletedGoalsInDateRange(
+                        authenticatedUserId, startDate, LocalDateTime.now());
+
+                for (Goal goal : completedGoals) {
+                    Map<String, Object> achievement = new HashMap<>();
+                    achievement.put("id", goal.getGoalId());
+                    achievement.put("type", "COMPLETED_GOAL");
+                    achievement.put("title", getGoalAchievementTitle(goal));
+                    achievement.put("description", getGoalAchievementDescription(goal));
+                    achievement.put("achievedAt", goal.getCompletedAt());
+                    achievement.put("goalType", goal.getGoalType().getValue());
+                    achievement.put("originalGoal", convertGoalToMap(goal));
+                    achievement.put("icon", getGoalAchievementIcon(goal.getGoalType()));
+                    achievement.put("points", calculateAchievementPoints(goal));
+                    achievements.add(achievement);
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch completed goals: {}", e.getMessage());
+            }
+
+            // Returnează în formatul așteptat de frontend
+            Map<String, Object> response = new HashMap<>();
+            response.put("completedGoals", achievements);
+
+            log.info("Found {} completed goals for user {}", achievements.size(), authenticatedUserId);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error getting completed goals achievements: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to get completed goals achievements"));
+        }
+    }
+
+    private Map<String, Object> convertGoalToMap(Goal goal) {
+        Map<String, Object> goalMap = new HashMap<>();
+        goalMap.put("goalId", goal.getGoalId());
+        goalMap.put("goalType", goal.getGoalType().getValue());
+        goalMap.put("targetWeightLoss", goal.getTargetWeightLoss());
+        goalMap.put("targetWeightGain", goal.getTargetWeightGain());
+        goalMap.put("currentWeight", goal.getCurrentWeight());
+        goalMap.put("timeframeMonths", goal.getTimeframeMonths());
+        goalMap.put("status", goal.getStatus().toString());
+        goalMap.put("createdAt", goal.getCreatedAt());
+        goalMap.put("completedAt", goal.getCompletedAt());
+        return goalMap;
     }
 
     /**
