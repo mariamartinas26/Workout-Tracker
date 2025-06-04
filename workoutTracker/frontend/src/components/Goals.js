@@ -1,18 +1,75 @@
 import React, { useState, useEffect } from 'react';
 import WorkoutRecommendations from './WorkoutRecommendation';
 
+const getAuthToken = () => {
+    const token = localStorage.getItem('workout_tracker_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('authToken');
+    console.log('Getting token:', token ? 'Found' : 'Not found');
+    return token;
+};
+
+// Helper function to create authenticated headers
+const getAuthHeaders = () => {
+    const authToken = getAuthToken();
+    if (!authToken) {
+        throw new Error('No authentication token found. Please login again.');
+    }
+
+    console.log('Creating headers with token:', authToken.substring(0, 20) + '...');
+
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+    };
+};
+
+// Get current user from JWT token in localStorage
+const getCurrentUserId = () => {
+    try {
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+            const user = JSON.parse(userData);
+            return user.userId || user.id;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error parsing user data:', error);
+        return null;
+    }
+};
+
+// Get current user data from localStorage
+const getCurrentUser = () => {
+    try {
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+            return JSON.parse(userData);
+        }
+        return null;
+    } catch (error) {
+        console.error('Error parsing user data:', error);
+        return null;
+    }
+};
+
 const GoalsApi = {
     createGoal: async (goalData) => {
         try {
             const response = await fetch('http://localhost:8082/api/goals', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(goalData)
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
+
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to create goal');
             }
@@ -24,16 +81,22 @@ const GoalsApi = {
         }
     },
 
-    getUserGoals: async (userId) => {
+    getUserGoals: async () => {
         try {
-            const response = await fetch(`http://localhost:8082/api/goals/user/${userId}`, {
+            // Use the convenience endpoint instead of passing userId
+            const response = await fetch('http://localhost:8082/api/goals/my-goals', {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
+
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to fetch goals');
             }
@@ -49,13 +112,18 @@ const GoalsApi = {
         try {
             const response = await fetch(`http://localhost:8082/api/goals/${goalId}/status`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ status })
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
+
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to update goal status');
             }
@@ -71,12 +139,17 @@ const GoalsApi = {
         try {
             const response = await fetch(`http://localhost:8082/api/goals/${goalId}`, {
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
+
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to delete goal');
             }
@@ -89,20 +162,24 @@ const GoalsApi = {
     }
 };
 
-const Goals = ({ user, onBack, onGoalSet }) => {
+const Goals = ({onBack, onGoalSet }) => {
     const [currentStep, setCurrentStep] = useState(1);
     const [selectedGoal, setSelectedGoal] = useState('');
     const [goalDetails, setGoalDetails] = useState({
         targetWeightLoss: '',
         targetWeightGain: '',
         timeframe: 3,
-        currentWeight: user?.weightKg || ''
+        //currentWeight: user?.weightKg || ''
+        currentWeight: ''
     });
     const [userGoals, setUserGoals] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showGoalsList, setShowGoalsList] = useState(false);
     const [success, setSuccess] = useState('');
+    //const [showWorkoutRecommendations, setShowWorkoutRecommendations] = useState(false);
+   // const [selectedGoalForWorkout, setSelectedGoalForWorkout] = useState(null);
+
 
     const goals = [
         {
@@ -129,10 +206,18 @@ const Goals = ({ user, onBack, onGoalSet }) => {
     ];
 
     useEffect(() => {
-        if (user?.id) {
-            fetchUserGoals();
+        // Initialize current weight from localStorage user data
+        const currentUser = getCurrentUser();
+        if (currentUser?.weightKg) {
+            setGoalDetails(prev => ({
+                ...prev,
+                currentWeight: currentUser.weightKg
+            }));
         }
-    }, [user?.id]);
+
+        // Fetch user goals
+        fetchUserGoals();
+    }, []);
     useEffect(() => {
         return () => {
             setCurrentStep(1);
@@ -140,6 +225,8 @@ const Goals = ({ user, onBack, onGoalSet }) => {
             setSelectedGoal('');
             setError('');
             setSuccess('');
+            setShowWorkoutRecommendations(false);
+            setSelectedGoalForWorkout(null);
         };
     }, []);
     const fetchUserGoals = async () => {
@@ -148,7 +235,7 @@ const Goals = ({ user, onBack, onGoalSet }) => {
             setError('');
             setSuccess('');
 
-            const response = await GoalsApi.getUserGoals(user.id);
+            const response = await GoalsApi.getUserGoals();
             setUserGoals(response.goals || []);
 
             if (response.goals && response.goals.length > 0) {
@@ -156,8 +243,16 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                 setTimeout(() => setSuccess(''), 3000);
             }
         } catch (err) {
-            setError('Failed to load your goals. Please make sure the backend is running.');
+            setError(err.message || 'Failed to load your goals. Please make sure the backend is running.');
             console.error('Error fetching goals:', err);
+
+            // Handle authentication errors
+            if (err.message.includes('Authentication failed') || err.message.includes('User not found')) {
+                localStorage.removeItem('workout_tracker_token');
+                localStorage.removeItem('userData');
+                localStorage.removeItem('isAuthenticated');
+                setError('Session expired. Please login again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -230,8 +325,14 @@ const Goals = ({ user, onBack, onGoalSet }) => {
                 return;
             }
 
+            const userId = getCurrentUserId();
+            if (!userId) {
+                setError('User not found. Please login again.');
+                return;
+            }
+
             const goalData = {
-                userId: user.id,
+                userId: userId,
                 goalType: selectedGoal,
                 targetWeightLoss: selectedGoal === 'lose_weight' ? parseFloat(goalDetails.targetWeightLoss) : null,
                 targetWeightGain: selectedGoal === 'gain_muscle' ? parseFloat(goalDetails.targetWeightGain) : null,
@@ -271,21 +372,31 @@ const Goals = ({ user, onBack, onGoalSet }) => {
             setCurrentStep(3);
 
             // Reset form
+            const currentUser = getCurrentUser();
             setGoalDetails({
                 targetWeightLoss: '',
                 targetWeightGain: '',
                 timeframe: 3,
-                currentWeight: user?.weightKg || ''
+                currentWeight: currentUser?.weightKg || ''
             });
             setSelectedGoal('');
 
         } catch (err) {
             setError(err.message || 'Failed to save goal. Please check if the backend is running.');
             console.error('Error saving goal:', err);
+
+            // Handle authentication errors
+            if (err.message.includes('Authentication failed') || err.message.includes('User not found')) {
+                localStorage.removeItem('workout_tracker_token');
+                localStorage.removeItem('userData');
+                localStorage.removeItem('isAuthenticated');
+                setError('Session expired. Please login again.');
+            }
         } finally {
             setLoading(false);
         }
     };
+
 
     const handleUpdateGoalStatus = async (goalId, newStatus) => {
         try {
@@ -302,6 +413,14 @@ const Goals = ({ user, onBack, onGoalSet }) => {
         } catch (err) {
             setError(err.message || 'Failed to update goal status');
             console.error('Error updating goal status:', err);
+
+            // Handle authentication errors
+            if (err.message.includes('Authentication failed') || err.message.includes('User not found')) {
+                localStorage.removeItem('workout_tracker_token');
+                localStorage.removeItem('userData');
+                localStorage.removeItem('isAuthenticated');
+                setError('Session expired. Please login again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -326,6 +445,14 @@ const Goals = ({ user, onBack, onGoalSet }) => {
         } catch (err) {
             setError(err.message || 'Failed to delete goal');
             console.error('Error deleting goal:', err);
+
+            // Handle authentication errors
+            if (err.message.includes('Authentication failed') || err.message.includes('User not found')) {
+                localStorage.removeItem('workout_tracker_token');
+                localStorage.removeItem('userData');
+                localStorage.removeItem('isAuthenticated');
+                setError('Session expired. Please login again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -1349,9 +1476,17 @@ const Goals = ({ user, onBack, onGoalSet }) => {
     );
 
     if (showWorkoutRecommendations && selectedGoalForWorkout) {
+        const currentUser = getCurrentUser(); // Use your existing helper function
+
+        if (!currentUser) {
+            // Handle case where user data isn't available
+            console.error('User data not found');
+            return <div>Please log in to view workout recommendations</div>;
+        }
+
         return (
             <WorkoutRecommendations
-                user={user}
+                user={currentUser}
                 goal={selectedGoalForWorkout}
                 onBack={handleBackFromRecommendations}
                 onSavePlan={handleSaveWorkoutPlan}

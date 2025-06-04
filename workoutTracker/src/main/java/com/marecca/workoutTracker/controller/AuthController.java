@@ -2,6 +2,7 @@ package com.marecca.workoutTracker.controller;
 
 import com.marecca.workoutTracker.entity.User;
 import com.marecca.workoutTracker.service.UserService;
+import com.marecca.workoutTracker.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,9 @@ import java.util.Optional;
 public class AuthController {
 
     private final UserService userService;
+    private final JwtUtil jwtUtil;
 
+    // Your existing inner classes remain the same...
     public static class RegisterRequest {
         private String username;
         private String email;
@@ -46,7 +49,6 @@ public class AuthController {
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
         public String getPassword() { return password; }
-
     }
 
     public static class CompleteProfileRequest {
@@ -66,15 +68,10 @@ public class AuthController {
         public void setFitnessLevel(String fitnessLevel) { this.fitnessLevel = fitnessLevel; }
     }
 
-    /**
-     * register endpoint
-     * @param request
-     * @return
-     */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
-            //validations
+            // Your existing validation logic...
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 return createErrorResponse("Email is required", HttpStatus.BAD_REQUEST);
             }
@@ -88,30 +85,26 @@ public class AuthController {
                 return createErrorResponse("Last name is required", HttpStatus.BAD_REQUEST);
             }
 
-            //checks if user already exists
             if (userService.existsByEmail(request.getEmail())) {
                 return createErrorResponse("Email already exists", HttpStatus.BAD_REQUEST);
             }
 
-            //generates username
+            // Username generation logic...
             String username = request.getUsername();
             if (username == null || username.trim().isEmpty()) {
                 username = request.getEmail().split("@")[0];
-
                 String baseUsername = username;
                 int counter = 1;
                 while (userService.existsByUsername(username)) {
                     username = baseUsername + counter;
                     counter++;
                 }
-                log.info("Generated username: {}", username);
             } else {
                 if (userService.existsByUsername(username)) {
                     return createErrorResponse("Username already exists", HttpStatus.BAD_REQUEST);
                 }
             }
 
-            //creates user
             User newUser = new User();
             newUser.setUsername(username.trim());
             newUser.setEmail(request.getEmail().trim());
@@ -120,7 +113,13 @@ public class AuthController {
 
             User savedUser = userService.registerUser(newUser, request.getPassword());
 
+            // Generate JWT token
+            String token = jwtUtil.generateToken(savedUser.getEmail(), savedUser.getUserId());
+
             Map<String, Object> response = createUserResponse(savedUser);
+            response.put("token", token);
+            response.put("tokenType", "Bearer");
+
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -128,9 +127,6 @@ public class AuthController {
         }
     }
 
-    /**
-     * login user
-     */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
@@ -145,7 +141,13 @@ public class AuthController {
                 return createErrorResponse("Account is deactivated", HttpStatus.UNAUTHORIZED);
             }
 
+            // Generate JWT token
+            String token = jwtUtil.generateToken(user.getEmail(), user.getUserId());
+
             Map<String, Object> response = createUserResponse(user);
+            response.put("token", token);
+            response.put("tokenType", "Bearer");
+
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -153,9 +155,6 @@ public class AuthController {
         }
     }
 
-    /**
-     * complete profile
-     */
     @PutMapping("/complete-profile")
     public ResponseEntity<?> completeProfile(@RequestBody CompleteProfileRequest request) {
         try {
@@ -170,7 +169,6 @@ public class AuthController {
 
             User user = userOptional.get();
 
-            //updates profile
             if (request.getDateOfBirth() != null) {
                 user.setDateOfBirth(request.getDateOfBirth());
             }
@@ -192,6 +190,34 @@ public class AuthController {
         } catch (Exception e) {
             log.error("Error completing profile for user ID: {}", request.getUserId(), e);
             return createErrorResponse("Error completing profile: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return createErrorResponse("Invalid token format", HttpStatus.BAD_REQUEST);
+            }
+
+            String token = authHeader.substring(7);
+            if (!jwtUtil.validateToken(token)) {
+                return createErrorResponse("Invalid token", HttpStatus.UNAUTHORIZED);
+            }
+
+            String email = jwtUtil.getEmailFromToken(token);
+            Long userId = jwtUtil.getUserIdFromToken(token);
+
+            String newToken = jwtUtil.generateToken(email, userId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", newToken);
+            response.put("tokenType", "Bearer");
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return createErrorResponse("Token refresh failed: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

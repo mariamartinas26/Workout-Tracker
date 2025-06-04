@@ -2,9 +2,51 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE_URL = 'http://localhost:8082/api';
 
+const getAuthToken = () => {
+    const token = localStorage.getItem('workout_tracker_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('authToken');
+    console.log('Getting token:', token ? 'Found' : 'Not found');
+    return token;
+};
+
+// Helper function to create authenticated headers
+const getAuthHeaders = () => {
+    const authToken = getAuthToken();
+    if (!authToken) {
+        throw new Error('No authentication token found. Please login again.');
+    }
+
+    console.log('Creating headers with token:', authToken.substring(0, 20) + '...');
+
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+    };
+};
+
+const getCurrentUserId = () => {
+    try {
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+            const user = JSON.parse(userData);
+            return user.userId || user.id;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error parsing user data:', error);
+        return null;
+    }
+};
+
 const ScheduleWorkoutService = {
-    scheduleWorkout: async (userId, workoutPlanId, scheduledDate, scheduledTime) => {
+    scheduleWorkout: async (workoutPlanId, scheduledDate, scheduledTime) => {
         try {
+            const userId = getCurrentUserId();
+            if (!userId) {
+                throw new Error('User ID not found. Please login again.');
+            }
+
             const requestData = {
                 userId: parseInt(userId),
                 workoutPlanId: parseInt(workoutPlanId),
@@ -16,9 +58,7 @@ const ScheduleWorkoutService = {
 
             const response = await fetch(`${API_BASE_URL}/scheduled-workouts/schedule`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(requestData)
             });
 
@@ -27,14 +67,20 @@ const ScheduleWorkoutService = {
 
             if (!response.ok) {
                 let errorMessage = `HTTP ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || errorData.error || errorMessage;
-                    console.error('Error response data:', errorData);
-                } catch (parseError) {
-                    const errorText = await response.text();
-                    console.error('Error response text:', errorText);
-                    errorMessage = errorText || errorMessage;
+                if (response.status === 401) {
+                    errorMessage = 'Authentication failed. Please login again.';
+                } else if (response.status === 403) {
+                    errorMessage = 'Access forbidden. Please check your permissions.';
+                } else {
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message || errorData.error || errorMessage;
+                        console.error('Error response data:', errorData);
+                    } catch (parseError) {
+                        const errorText = await response.text();
+                        console.error('Error response text:', errorText);
+                        errorMessage = errorText || errorMessage;
+                    }
                 }
                 throw new Error(errorMessage);
             }
@@ -49,16 +95,21 @@ const ScheduleWorkoutService = {
         }
     },
 
-    checkConflictingSchedule: async (userId, scheduledDate, scheduledTime) => {
+    checkConflictingSchedule: async (scheduledDate, scheduledTime) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/scheduled-workouts/user/${userId}`, {
+            // Use the convenience endpoint instead of constructing userId URL
+            const response = await fetch(`${API_BASE_URL}/scheduled-workouts/my-workouts`, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
                 return false;
             }
 
@@ -87,7 +138,6 @@ const WorkoutSchedule = ({
                              isOpen,
                              onClose,
                              workoutPlan,
-                             currentUserId = 1,
                              onWorkoutScheduled
                          }) => {
     const [scheduleData, setScheduleData] = useState({
@@ -122,7 +172,6 @@ const WorkoutSchedule = ({
     const checkForConflicts = async () => {
         try {
             const conflict = await ScheduleWorkoutService.checkConflictingSchedule(
-                currentUserId,
                 scheduleData.scheduledDate,
                 scheduleData.scheduledTime
             );
@@ -130,8 +179,18 @@ const WorkoutSchedule = ({
         } catch (error) {
             console.error('Error checking conflicts:', error);
             setHasConflict(false);
+
+            // Handle authentication errors
+            if (error.message.includes('Authentication failed') || error.message.includes('User ID not found')) {
+                localStorage.removeItem('workout_tracker_token');
+                localStorage.removeItem('userData');
+                localStorage.removeItem('isAuthenticated');
+                setError('Session expired. Please login again.');
+            }
         }
     };
+
+
 
     const handleScheduleWorkout = async () => {
         if (!workoutPlan) {
@@ -174,8 +233,16 @@ const WorkoutSchedule = ({
             return;
         }
 
-        if (!currentUserId || isNaN(currentUserId)) {
-            setError('Invalid user ID');
+        // FIX: Definește userId înainte de a-l folosi
+        const userId = getCurrentUserId();
+        if (!userId) {
+            setError('User not found. Please login again.');
+            return;
+        }
+
+        // FIX: Verifică dacă există conflict înainte de a continua
+        if (hasConflict) {
+            setError('You already have a workout scheduled at this time. Please choose a different time.');
             return;
         }
 
@@ -184,15 +251,15 @@ const WorkoutSchedule = ({
         setSuccess('');
 
         try {
+            // FIX: Folosește userId în loc de currentUserId
             console.log('Scheduling workout with params:', {
-                userId: currentUserId,
+                userId: userId,
                 workoutPlanId: workoutPlan.workoutPlanId,
                 scheduledDate: scheduleData.scheduledDate,
                 scheduledTime: scheduleData.scheduledTime
             });
 
             const result = await ScheduleWorkoutService.scheduleWorkout(
-                currentUserId,
                 workoutPlan.workoutPlanId,
                 scheduleData.scheduledDate,
                 scheduleData.scheduledTime
@@ -204,6 +271,7 @@ const WorkoutSchedule = ({
                 onWorkoutScheduled(result);
             }
 
+            // FIX: Folosește handleCloseModal în loc de o funcție nedefinită
             setTimeout(() => {
                 handleCloseModal();
             }, 2000);
@@ -213,12 +281,20 @@ const WorkoutSchedule = ({
 
             let errorMessage = 'An error occurred while scheduling the workout';
             if (error.message) {
-                if (error.message.includes('Type definition error')) {
+                // FIX: Adaugă gestionarea erorilor de autentificare
+                if (error.message.includes('Authentication failed') || error.message.includes('User ID not found')) {
+                    localStorage.removeItem('workout_tracker_token');
+                    localStorage.removeItem('userData');
+                    localStorage.removeItem('isAuthenticated');
+                    errorMessage = 'Session expired. Please login again.';
+                } else if (error.message.includes('Type definition error')) {
                     errorMessage = 'Data validation error. Please check that all fields are completed correctly.';
                 } else if (error.message.includes('400')) {
                     errorMessage = 'Invalid data entered. Please check the selected date and time.';
                 } else if (error.message.includes('401')) {
-                    errorMessage = 'You are not authorized to schedule workouts.';
+                    errorMessage = 'Authentication failed. Please login again.';
+                } else if (error.message.includes('403')) {
+                    errorMessage = 'Access forbidden. Please check your permissions.';
                 } else if (error.message.includes('404')) {
                     errorMessage = 'Workout plan not found.';
                 } else if (error.message.includes('500')) {
@@ -717,7 +793,7 @@ const WorkoutSchedule = ({
                     </button>
                 </div>
 
-                <style jsx>{`
+                <style>{`
                     @keyframes spin {
                         0% { transform: rotate(0deg); }
                         100% { transform: rotate(360deg); }

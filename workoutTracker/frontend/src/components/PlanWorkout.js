@@ -4,19 +4,60 @@ import WorkoutSchedule from './WorkoutSchedule';
 
 const API_BASE_URL = 'http://localhost:8082/api';
 
+const getAuthToken = () => {
+    const token = localStorage.getItem('workout_tracker_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('authToken');
+    console.log('Getting token:', token ? 'Found' : 'Not found');
+    return token;
+};
+
+// Helper function to create authenticated headers
+const getAuthHeaders = () => {
+    const authToken = getAuthToken();
+    if (!authToken) {
+        throw new Error('No authentication token found. Please login again.');
+    }
+
+    console.log('Creating headers with token:', authToken.substring(0, 20) + '...');
+
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+    };
+};
 
 const WorkoutPlanService = {
 
-    getUserWorkoutPlans: async (userId) => {
+    getCurrentUserId: () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/workout-plans/user/${userId}`, {
+            const userData = localStorage.getItem('userData');
+            if (userData) {
+                const user = JSON.parse(userData);
+                return user.userId || user.id;
+            }
+            return null;
+        } catch (error) {
+            console.error('Error parsing user data:', error);
+            return null;
+        }
+    },
+
+    getUserWorkoutPlans: async () => {
+        try {
+            // Use the convenience endpoint that doesn't conflict with /{planId}
+            const response = await fetch(`${API_BASE_URL}/workout-plans/my-plans`, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
                 throw new Error(`Failed to fetch workout plans: ${response.status}`);
             }
 
@@ -34,12 +75,16 @@ const WorkoutPlanService = {
         try {
             const response = await fetch(`${API_BASE_URL}/workout-plans/${workoutPlanId}`, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
                 throw new Error(`Failed to fetch workout plan: ${response.status}`);
             }
 
@@ -55,12 +100,16 @@ const WorkoutPlanService = {
         try {
             const response = await fetch(`${API_BASE_URL}/workout-plans/${workoutPlanId}`, {
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
                 throw new Error(`Failed to delete workout plan: ${response.status}`);
             }
 
@@ -72,16 +121,26 @@ const WorkoutPlanService = {
         }
     },
 
-    countUserWorkoutPlans: async (userId) => {
+    countUserWorkoutPlans: async () => {
         try {
+            // Keep using the parameterized endpoint for count since there's no convenience endpoint
+            const userId = WorkoutPlanService.getCurrentUserId();
+            if (!userId) {
+                throw new Error('User ID not found. Please login again.');
+            }
+
             const response = await fetch(`${API_BASE_URL}/workout-plans/user/${userId}/count`, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
                 throw new Error(`Failed to count workout plans: ${response.status}`);
             }
 
@@ -98,16 +157,21 @@ const WorkoutPlanService = {
 
 const ScheduledWorkoutService = {
 
-    getUserScheduledWorkouts: async (userId) => {
+    getUserScheduledWorkouts: async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/scheduled-workouts/user/${userId}`, {
+            // FOLOSEȘTE CONVENIENCE ENDPOINT-UL!
+            const response = await fetch(`${API_BASE_URL}/scheduled-workouts/my-workouts`, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
                 throw new Error(`Failed to fetch scheduled workouts: ${response.status}`);
             }
 
@@ -118,23 +182,28 @@ const ScheduledWorkoutService = {
             throw error;
         }
     },
-    getTodaysWorkouts: async (userId) => {
+    getTodaysWorkouts: async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/scheduled-workouts/user/${userId}/today`, {
+            // FOLOSEȘTE CONVENIENCE ENDPOINT-UL!
+            const response = await fetch(`${API_BASE_URL}/scheduled-workouts/my-today`, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
                 let errorMessage = `HTTP ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || errorData.error || errorMessage;
-                } catch (parseError) {
-                    const errorText = await response.text();
-                    errorMessage = errorText || errorMessage;
+                if (response.status === 401) {
+                    errorMessage = 'Authentication failed. Please login again.';
+                } else if (response.status === 403) {
+                    errorMessage = 'Access forbidden. Please check your permissions.';
+                } else {
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message || errorData.error || errorMessage;
+                    } catch (parseError) {
+                        const errorText = await response.text();
+                        errorMessage = errorText || errorMessage;
+                    }
                 }
                 throw new Error(errorMessage);
             }
@@ -149,13 +218,12 @@ const ScheduledWorkoutService = {
         }
     },
 
+
     rescheduleWorkout: async (scheduledWorkoutId, newDate, newTime) => {
         try {
             const response = await fetch(`${API_BASE_URL}/scheduled-workouts/${scheduledWorkoutId}/reschedule`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({
                     scheduledDate: newDate,
                     scheduledTime: newTime
@@ -163,6 +231,12 @@ const ScheduledWorkoutService = {
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to reschedule workout');
             }
@@ -179,12 +253,16 @@ const ScheduledWorkoutService = {
         try {
             const response = await fetch(`${API_BASE_URL}/scheduled-workouts/${workoutId}/start`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to start workout');
             }
@@ -201,9 +279,7 @@ const ScheduledWorkoutService = {
         try {
             const response = await fetch(`${API_BASE_URL}/scheduled-workouts/${workoutId}/complete`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({
                     caloriesBurned: caloriesBurned,
                     rating: rating
@@ -211,6 +287,12 @@ const ScheduledWorkoutService = {
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to complete workout');
             }
@@ -227,12 +309,16 @@ const ScheduledWorkoutService = {
         try {
             const response = await fetch(`${API_BASE_URL}/scheduled-workouts/${workoutId}/cancel`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
+                headers: getAuthHeaders()
             });
 
             if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please login again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access forbidden. Please check your permissions.');
+                }
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to cancel workout');
             }
@@ -306,7 +392,7 @@ const WorkoutHelpers = {
     }
 };
 
-const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
+const PlanWorkout = ({ isOpen, onClose }) => {
     const [workoutPlans, setWorkoutPlans] = useState([]);
     const [loadingPlans, setLoadingPlans] = useState(false);
 
@@ -341,7 +427,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
             setScheduleData(prev => ({...prev, scheduledDate: today}));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, currentUserId]);
+    }, [isOpen]);
 
     const isWorkoutToday = (workout) => {
         const today = new Date().toISOString().split('T')[0];
@@ -350,7 +436,6 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
 
     const getWorkoutActionButton = (workout) => {
         if (!WorkoutHelpers.isWorkoutToday(workout)) return null;
-
 
         const actualStatus = WorkoutHelpers.getActualWorkoutStatus(workout);
         const status = actualStatus.toLowerCase();
@@ -413,26 +498,33 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
         setLoadingPlans(true);
         setError('');
         try {
-            const plans = await WorkoutPlanService.getUserWorkoutPlans(currentUserId);
+            const plans = await WorkoutPlanService.getUserWorkoutPlans();
             setWorkoutPlans(plans);
             console.log('Loaded workout plans:', plans);
         } catch (error) {
             console.error('Error loading workout plans:', error);
-            setError('Could not load workout plans');
+            setError('Could not load workout plans: ' + error.message);
+
+            // Handle authentication errors
+            if (error.message.includes('Authentication failed') || error.message.includes('User ID not found')) {
+                localStorage.removeItem('workout_tracker_token');
+                localStorage.removeItem('userData');
+                localStorage.removeItem('isAuthenticated');
+                setError('Session expired. Please login again.');
+            }
         } finally {
             setLoadingPlans(false);
         }
     };
 
-
     const loadScheduledWorkouts = async () => {
         setLoadingWorkouts(true);
         setError('');
         try {
-            const allWorkouts = await ScheduledWorkoutService.getUserScheduledWorkouts(currentUserId);
+            const allWorkouts = await ScheduledWorkoutService.getUserScheduledWorkouts();
+            const todaysWorkouts = await ScheduledWorkoutService.getTodaysWorkouts();
 
-            const todaysWorkouts = await ScheduledWorkoutService.getTodaysWorkouts(currentUserId);
-
+            // Combine and process workouts as needed
             const todaysWorkoutsMap = new Map();
             todaysWorkouts.forEach(workout => {
                 todaysWorkoutsMap.set(workout.scheduledWorkoutId, workout);
@@ -455,7 +547,15 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
             console.log('Loaded scheduled workouts with missed detection:', updatedWorkouts);
         } catch (error) {
             console.error('Error loading scheduled workouts:', error);
-            setError('Could not load scheduled workouts');
+            setError('Could not load scheduled workouts: ' + error.message);
+
+            // Handle authentication errors
+            if (error.message.includes('Authentication failed') || error.message.includes('User ID not found')) {
+                localStorage.removeItem('workout_tracker_token');
+                localStorage.removeItem('userData');
+                localStorage.removeItem('isAuthenticated');
+                setError('Session expired. Please login again.');
+            }
         } finally {
             setLoadingWorkouts(false);
         }
@@ -1925,7 +2025,7 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                     </div>
 
                     {/* CSS for animations */}
-                    <style jsx>{`
+                    <style >{`
                         @keyframes spin {
                             0% {
                                 transform: rotate(0deg);
@@ -1946,7 +2046,6 @@ const PlanWorkout = ({ isOpen, onClose, currentUserId = 1 }) => {
                     setSelectedPlanForScheduling(null);
                 }}
                 workoutPlan={selectedPlanForScheduling}
-                currentUserId={currentUserId}
                 onWorkoutScheduled={handleWorkoutScheduled}
             />
         </>
