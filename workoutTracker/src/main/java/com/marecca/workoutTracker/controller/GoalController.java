@@ -38,7 +38,6 @@ public class GoalController {
     public ResponseEntity<?> createGoal(@RequestBody CreateGoalRequest request, HttpServletRequest httpRequest) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(httpRequest);
-            log.info("REST request to create goal by user: {}", authenticatedUserId);
 
             // Validation
             if (request.getUserId() == null) {
@@ -47,7 +46,6 @@ public class GoalController {
 
             // Verify user can only create goals for themselves
             if (!request.getUserId().equals(authenticatedUserId)) {
-                log.warn("User {} attempted to create goal for user {}", authenticatedUserId, request.getUserId());
                 return jwtUtils.createErrorResponse("You can only create goals for yourself", HttpStatus.FORBIDDEN);
             }
 
@@ -70,10 +68,8 @@ public class GoalController {
             return ResponseEntity.ok(response);
 
         } catch (IllegalArgumentException e) {
-            log.error("Invalid goal type: {}", request.getGoalType());
             return jwtUtils.createBadRequestResponse("Invalid goal type: " + request.getGoalType());
         } catch (Exception e) {
-            log.error("Authentication error or unexpected error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to create goals");
         }
     }
@@ -85,7 +81,6 @@ public class GoalController {
     public ResponseEntity<?> getGoal(@PathVariable Long goalId, HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get goal: {} by user: {}", goalId, authenticatedUserId);
 
             Optional<Goal> goalOptional = goalService.getGoalById(goalId);
             if (goalOptional.isEmpty()) {
@@ -94,13 +89,10 @@ public class GoalController {
 
             Goal goal = goalOptional.get();
 
-            // Verify goal ownership - need to check if this goal belongs to the authenticated user
-            // This assumes Goal entity has a way to get the user ID (you might need to add this)
             List<Goal> userGoals = goalService.getUserGoals(authenticatedUserId);
             boolean isUserGoal = userGoals.stream().anyMatch(g -> g.getGoalId().equals(goalId));
 
             if (!isUserGoal) {
-                log.warn("User {} attempted to access goal {} that they don't own", authenticatedUserId, goalId);
                 return jwtUtils.createErrorResponse("You can only access your own goals", HttpStatus.FORBIDDEN);
             }
 
@@ -108,7 +100,6 @@ public class GoalController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to access goals");
         }
     }
@@ -122,7 +113,6 @@ public class GoalController {
                                               HttpServletRequest httpRequest) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(httpRequest);
-            log.info("REST request to update goal status: {} by user: {}", goalId, authenticatedUserId);
 
             String statusStr = request.get("status");
             if (statusStr == null) {
@@ -140,7 +130,6 @@ public class GoalController {
             boolean isUserGoal = userGoals.stream().anyMatch(g -> g.getGoalId().equals(goalId));
 
             if (!isUserGoal) {
-                log.warn("User {} attempted to update goal {} that they don't own", authenticatedUserId, goalId);
                 return jwtUtils.createErrorResponse("You can only update your own goals", HttpStatus.FORBIDDEN);
             }
 
@@ -151,10 +140,8 @@ public class GoalController {
             return ResponseEntity.ok(response);
 
         } catch (IllegalArgumentException e) {
-            log.error("Invalid status value: {}", request.get("status"));
             return jwtUtils.createBadRequestResponse("Invalid status value");
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to update goals");
         }
     }
@@ -166,7 +153,6 @@ public class GoalController {
     public ResponseEntity<?> deleteGoal(@PathVariable Long goalId, HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.info("REST request to delete goal: {} by user: {}", goalId, authenticatedUserId);
 
             // Verify goal ownership before deleting
             Optional<Goal> goalOptional = goalService.getGoalById(goalId);
@@ -193,7 +179,6 @@ public class GoalController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to delete goals");
         }
     }
@@ -209,10 +194,7 @@ public class GoalController {
 
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.info("Getting completed goals achievements for user {} for last {} days",
-                    authenticatedUserId, daysBack);
 
-            // Calculează data de început
             LocalDateTime startDate = LocalDateTime.now().minusDays(daysBack);
 
             List<Map<String, Object>> achievements = new ArrayList<>();
@@ -238,15 +220,12 @@ public class GoalController {
                 log.warn("Could not fetch completed goals: {}", e.getMessage());
             }
 
-            // Returnează în formatul așteptat de frontend
             Map<String, Object> response = new HashMap<>();
             response.put("completedGoals", achievements);
 
-            log.info("Found {} completed goals for user {}", achievements.size(), authenticatedUserId);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Error getting completed goals achievements: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to get completed goals achievements"));
         }
@@ -274,7 +253,6 @@ public class GoalController {
     public ResponseEntity<?> getMyGoals(HttpServletRequest request) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get my goals for user: {}", authenticatedUserId);
 
             List<Goal> goals = goalService.getUserGoals(authenticatedUserId);
 
@@ -286,7 +264,6 @@ public class GoalController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to access goals");
         }
     }
@@ -394,19 +371,16 @@ public class GoalController {
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<?> handleIllegalArgument(IllegalArgumentException e) {
-        log.error("Illegal argument: {}", e.getMessage());
         return jwtUtils.createBadRequestResponse(e.getMessage());
     }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<?> handleIllegalState(IllegalStateException e) {
-        log.error("Illegal state: {}", e.getMessage());
         return jwtUtils.createErrorResponse(e.getMessage(), HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGenericException(Exception e) {
-        log.error("Unexpected error: {}", e.getMessage(), e);
         return jwtUtils.createErrorResponse("An unexpected error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
