@@ -39,45 +39,6 @@ public class JwtControllerUtils {
         }
     }
 
-
-    public String getEmailFromToken(HttpServletRequest request) throws JwtTokenException {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new InvalidJwtTokenException("Missing or invalid Authorization header");
-        }
-
-        String token = authHeader.substring(7);
-        try {
-            return jwtUtil.getEmailFromToken(token);
-        } catch (ExpiredJwtException e) {
-            throw new JwtTokenExpiredException("Token has expired");
-        } catch (JwtException e) {
-            throw new InvalidJwtTokenException("Invalid token format");
-        } catch (Exception e) {
-            throw new JwtTokenException("Token validation failed");
-        }
-    }
-    public String getTokenFromRequest(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7);
-        }
-        throw new RuntimeException("No valid authentication token found");
-    }
-
-
-    public ResponseEntity<?> validateUserAccess(Long requestedUserId, Long authenticatedUserId) {
-        if (!requestedUserId.equals(authenticatedUserId)) {
-            return createForbiddenResponse("You can only access your own data");
-        }
-        return null; // Access granted
-    }
-
-
-    public boolean canAccessUserData(Long requestedUserId, Long authenticatedUserId) {
-        return requestedUserId.equals(authenticatedUserId);
-    }
-
     /**
      * Create standardized error response
      */
@@ -111,16 +72,4 @@ public class JwtControllerUtils {
         return createErrorResponse(message, HttpStatus.BAD_REQUEST);
     }
 
-    /**
-     * Validate user access and return error response if invalid
-     * Returns null if access is granted
-     */
-    public ResponseEntity<?> checkUserAccess(HttpServletRequest request, Long requestedUserId) {
-        try {
-            Long authenticatedUserId = getUserIdFromToken(request);
-            return validateUserAccess(requestedUserId, authenticatedUserId);
-        } catch (Exception e) {
-            return createUnauthorizedResponse("Authentication failed: " + e.getMessage());
-        }
-    }
 }

@@ -46,11 +46,9 @@ public class ScheduledWorkoutController {
     public ResponseEntity<?> scheduleWorkout(@Valid @RequestBody ScheduleWorkoutRequest request, HttpServletRequest httpRequest) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(httpRequest);
-            log.info("REST request to schedule workout by user: {} for plan: {}", authenticatedUserId, request.getWorkoutPlanId());
 
             // Verify user can only schedule workouts for themselves
             if (!request.getUserId().equals(authenticatedUserId)) {
-                log.warn("User {} attempted to schedule workout for user {}", authenticatedUserId, request.getUserId());
                 return jwtUtils.createErrorResponse("You can only schedule workouts for yourself", HttpStatus.FORBIDDEN);
             }
 

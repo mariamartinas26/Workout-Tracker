@@ -39,8 +39,6 @@ public class WorkoutRecommendationController {
                                                        HttpServletRequest httpRequest) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(httpRequest);
-            log.info("REST request for workout recommendations by user: {} with goal: {}",
-                    authenticatedUserId, request.getGoalType());
 
             // Verify user can only get recommendations for themselves
             if (request.getUserId() == null) {
@@ -48,7 +46,6 @@ public class WorkoutRecommendationController {
             }
 
             if (!request.getUserId().equals(authenticatedUserId)) {
-                log.warn("User {} attempted to get recommendations for user {}", authenticatedUserId, request.getUserId());
                 return jwtUtils.createErrorResponse("You can only get recommendations for yourself", HttpStatus.FORBIDDEN);
             }
 
@@ -63,7 +60,6 @@ public class WorkoutRecommendationController {
             List<WorkoutRecommendationDTO> recommendations = workoutRecommendationService
                     .getRecommendations(authenticatedUserId, request.getGoalType()); // Use authenticated user ID
 
-            log.info("Generated {} recommendations for user {}", recommendations.size(), authenticatedUserId);
 
             // Response
             Map<String, Object> response = new HashMap<>();
@@ -76,16 +72,13 @@ public class WorkoutRecommendationController {
             return ResponseEntity.ok(response);
 
         } catch (IllegalArgumentException e) {
-            log.error("Invalid request for workout recommendations: {}", e.getMessage());
             return jwtUtils.createBadRequestResponse(e.getMessage());
 
         } catch (RuntimeException e) {
-            log.error("Runtime error getting workout recommendations: {}", e.getMessage(), e);
             return jwtUtils.createErrorResponse("Failed to generate recommendations: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
 
         } catch (Exception e) {
-            log.error("Authentication error or unexpected error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to get workout recommendations");
         }
     }
@@ -99,8 +92,6 @@ public class WorkoutRecommendationController {
                                                         HttpServletRequest httpRequest) {
         try {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(httpRequest);
-            log.info("REST request to save workout plan by user: {} with goal: {} and planName: {}",
-                    authenticatedUserId, request.getGoalId(), request.getPlanName());
 
             // Verify user can only save plans for themselves
             if (request.getUserId() == null) {
@@ -108,7 +99,6 @@ public class WorkoutRecommendationController {
             }
 
             if (!request.getUserId().equals(authenticatedUserId)) {
-                log.warn("User {} attempted to save plan for user {}", authenticatedUserId, request.getUserId());
                 return jwtUtils.createErrorResponse("You can only save workout plans for yourself", HttpStatus.FORBIDDEN);
             }
 
@@ -124,8 +114,6 @@ public class WorkoutRecommendationController {
             Map<String, Object> savedPlan = workoutRecommendationService
                     .saveWorkoutPlan(authenticatedUserId, request.getRecommendations(), request.getGoalId(), planName); // Use authenticated user ID
 
-            log.info("Successfully saved workout plan with ID: {} for user: {}",
-                    savedPlan.get("workoutPlanId"), authenticatedUserId);
 
             // Response
             Map<String, Object> response = new HashMap<>();
@@ -136,16 +124,13 @@ public class WorkoutRecommendationController {
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
         } catch (IllegalArgumentException e) {
-            log.error("Invalid request for saving workout plan: {}", e.getMessage());
             return jwtUtils.createBadRequestResponse(e.getMessage());
 
         } catch (RuntimeException e) {
-            log.error("Runtime error saving workout plan: {}", e.getMessage(), e);
             return jwtUtils.createErrorResponse("Failed to save workout plan: " + e.getMessage(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
 
         } catch (Exception e) {
-            log.error("Authentication error or unexpected error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to save workout plans");
         }
     }
@@ -194,19 +179,16 @@ public class WorkoutRecommendationController {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<?> handleIllegalArgument(IllegalArgumentException e) {
-        log.error("Illegal argument: {}", e.getMessage());
         return jwtUtils.createBadRequestResponse(e.getMessage());
     }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<?> handleIllegalState(IllegalStateException e) {
-        log.error("Illegal state: {}", e.getMessage());
         return jwtUtils.createErrorResponse(e.getMessage(), HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGenericException(Exception ex) {
-        log.error("Unexpected error in WorkoutRecommendationController", ex);
         return jwtUtils.createErrorResponse("An unexpected error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
