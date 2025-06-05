@@ -41,7 +41,6 @@ const getCurrentUserId = () => {
     }
 };
 
-
 const WorkoutPlanService = {
     createWorkoutPlan: async (planData) => {
         try {
@@ -100,8 +99,45 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [] }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // Helper function to validate and handle numeric input
+    const handleNumericInput = (value, setter, fieldName) => {
+        // Allow empty string for clearing the field
+        if (value === '') {
+            setter(prev => ({ ...prev, [fieldName]: '' }));
+            return;
+        }
+
+        const numValue = parseFloat(value);
+        // Only allow positive numbers (including 0 for some fields like weight)
+        if (numValue >= 0) {
+            setter(prev => ({ ...prev, [fieldName]: value }));
+        }
+    };
+
+    // Helper function for workout data numeric inputs
+    const handleWorkoutNumericInput = (value, fieldName) => {
+        if (value === '') {
+            setWorkoutData(prev => ({ ...prev, [fieldName]: '' }));
+            return;
+        }
+
+        const numValue = parseFloat(value);
+        if (numValue >= 0) {
+            setWorkoutData(prev => ({ ...prev, [fieldName]: value }));
+        }
+    };
+
     const handleAddExercise = () => {
         if (!selectedExercise) return;
+
+        // Validate that min reps is not greater than max reps
+        const minReps = exerciseDetails.target_reps_min ? parseInt(exerciseDetails.target_reps_min) : 0;
+        const maxReps = exerciseDetails.target_reps_max ? parseInt(exerciseDetails.target_reps_max) : 0;
+
+        if (exerciseDetails.target_reps_min && exerciseDetails.target_reps_max && minReps > maxReps) {
+            setError('Minimum reps cannot be greater than maximum reps');
+            return;
+        }
 
         const exercise = sampleExercises.find(ex => ex.exercise_id === parseInt(selectedExercise));
         const newExercise = {
@@ -125,6 +161,9 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [] }) => {
             rest_time_seconds: 60,
             notes: ''
         });
+
+        // Clear any previous error when successfully adding exercise
+        setError('');
     };
 
     const handleRemoveExercise = (index) => {
@@ -405,8 +444,9 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [] }) => {
                                 </label>
                                 <input
                                     type="number"
+                                    min="0"
                                     value={workoutData.estimated_duration_minutes}
-                                    onChange={(e) => setWorkoutData(prev => ({ ...prev, estimated_duration_minutes: e.target.value }))}
+                                    onChange={(e) => handleWorkoutNumericInput(e.target.value, 'estimated_duration_minutes')}
                                     placeholder="45"
                                     disabled={loading}
                                     style={{
@@ -606,8 +646,9 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [] }) => {
                                     </label>
                                     <input
                                         type="number"
+                                        min="0"
                                         value={exerciseDetails.target_sets}
-                                        onChange={(e) => setExerciseDetails(prev => ({ ...prev, target_sets: e.target.value }))}
+                                        onChange={(e) => handleNumericInput(e.target.value, setExerciseDetails, 'target_sets')}
                                         placeholder="3"
                                         disabled={loading}
                                         style={{
@@ -632,8 +673,9 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [] }) => {
                                     </label>
                                     <input
                                         type="number"
+                                        min="0"
                                         value={exerciseDetails.target_reps_min}
-                                        onChange={(e) => setExerciseDetails(prev => ({ ...prev, target_reps_min: e.target.value }))}
+                                        onChange={(e) => handleNumericInput(e.target.value, setExerciseDetails, 'target_reps_min')}
                                         placeholder="8"
                                         disabled={loading}
                                         style={{
@@ -658,8 +700,9 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [] }) => {
                                     </label>
                                     <input
                                         type="number"
+                                        min="0"
                                         value={exerciseDetails.target_reps_max}
-                                        onChange={(e) => setExerciseDetails(prev => ({ ...prev, target_reps_max: e.target.value }))}
+                                        onChange={(e) => handleNumericInput(e.target.value, setExerciseDetails, 'target_reps_max')}
                                         placeholder="12"
                                         disabled={loading}
                                         style={{
@@ -684,9 +727,10 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [] }) => {
                                     </label>
                                     <input
                                         type="number"
+                                        min="0"
                                         step="0.1"
                                         value={exerciseDetails.target_weight_kg}
-                                        onChange={(e) => setExerciseDetails(prev => ({ ...prev, target_weight_kg: e.target.value }))}
+                                        onChange={(e) => handleNumericInput(e.target.value, setExerciseDetails, 'target_weight_kg')}
                                         placeholder="20"
                                         disabled={loading}
                                         style={{
@@ -711,8 +755,9 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [] }) => {
                                     </label>
                                     <input
                                         type="number"
+                                        min="0"
                                         value={exerciseDetails.target_duration_seconds}
-                                        onChange={(e) => setExerciseDetails(prev => ({ ...prev, target_duration_seconds: e.target.value }))}
+                                        onChange={(e) => handleNumericInput(e.target.value, setExerciseDetails, 'target_duration_seconds')}
                                         placeholder="30"
                                         disabled={loading}
                                         style={{
@@ -737,8 +782,9 @@ const CreatePlan = ({ isOpen, onClose, sampleExercises = [] }) => {
                                     </label>
                                     <input
                                         type="number"
+                                        min="0"
                                         value={exerciseDetails.rest_time_seconds}
-                                        onChange={(e) => setExerciseDetails(prev => ({ ...prev, rest_time_seconds: e.target.value }))}
+                                        onChange={(e) => handleNumericInput(e.target.value, setExerciseDetails, 'rest_time_seconds')}
                                         placeholder="60"
                                         disabled={loading}
                                         style={{
