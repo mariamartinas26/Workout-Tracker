@@ -20,7 +20,6 @@ import java.util.Optional;
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "http://localhost:3000")
 @RequiredArgsConstructor
-@Slf4j
 public class AuthController {
 
     private final UserService userService;
