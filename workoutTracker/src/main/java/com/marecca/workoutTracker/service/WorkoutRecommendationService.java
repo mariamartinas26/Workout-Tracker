@@ -114,10 +114,10 @@ public class WorkoutRecommendationService {
         return user;
     }
 
+    //user experience
     private int getCompletedWorkoutCount(Long userId) {
         LocalDateTime startDate = LocalDateTime.now().minusDays(90);
-        return (int) scheduledWorkoutRepository.countWorkoutsByUserStatusAndDate(
-                userId, WorkoutStatusType.COMPLETED, startDate);
+        return (int) scheduledWorkoutRepository.countWorkoutsByUserStatusAndDate(userId, WorkoutStatusType.COMPLETED, startDate);
     }
 
     private BigDecimal calculateStrengthMultiplier(int workoutCount) {
