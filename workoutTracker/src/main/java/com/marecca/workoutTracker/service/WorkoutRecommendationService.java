@@ -68,10 +68,10 @@ public class WorkoutRecommendationService {
 
             //Filter and sort by priority score
             List<WorkoutRecommendationDTO> filteredRecommendations = recommendations.stream()
-                    .filter(rec -> rec.getPriorityScore().compareTo(BigDecimal.valueOf(1.0)) > 0)
-                    .sorted((r1, r2) -> r2.getPriorityScore().compareTo(r1.getPriorityScore()))
-                    .limit(8)
-                    .collect(Collectors.toList());
+                    .filter(rec -> rec.getPriorityScore().compareTo(BigDecimal.valueOf(1.0)) > 0) //keep recommendations with a priority score >1
+                    .sorted((r1, r2) -> r2.getPriorityScore().compareTo(r1.getPriorityScore())) //sort in descending order
+                    .limit(8) //take the first 8 exercises
+                    .collect(Collectors.toList()); //collect the final results into a list
 
             if (filteredRecommendations.isEmpty()) {
                 throw new NoExercisesFoundException("No suitable exercises found for user " + userId + " with goal type " + goalType + " and fitness level " + user.getFitnessLevel());
@@ -150,7 +150,7 @@ public class WorkoutRecommendationService {
      * calculates priority score
      * gets final recommendation
      */
-    private List<WorkoutRecommendationDTO> calculateRecommendations(Long userId, String goalType, User user, BigDecimal strengthMultiplier,List<Exercise> exercises) {
+    private List<WorkoutRecommendationDTO> calculateRecommendations(Long userId, String goalType, User user, BigDecimal strengthMultiplier, List<Exercise> exercises) {
 
         List<WorkoutRecommendationDTO> recommendations = new ArrayList<>();
         LocalDateTime recentDate = LocalDateTime.now().minusDays(7);
@@ -182,29 +182,33 @@ public class WorkoutRecommendationService {
         stats.setTimesPerformed(logs.size());
 
         if (!logs.isEmpty()) {
+            //avg weight used
             stats.setAvgWeightUsed(logs.stream()
-                    .filter(log -> log.getWeightUsedKg() != null)
+                    .filter(log -> log.getWeightUsedKg() != null) //eliminates null values
                     .map(WorkoutExerciseLog::getWeightUsedKg)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add)
-                    .divide(BigDecimal.valueOf(logs.size()), 2, RoundingMode.HALF_UP));
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)//adds all weights into one value
+                    .divide(BigDecimal.valueOf(logs.size()), 2, RoundingMode.HALF_UP)); //avg
 
+            //avg reps
             stats.setAvgReps(logs.stream()
                     .filter(log -> log.getRepsCompleted() != null)
                     .mapToInt(WorkoutExerciseLog::getRepsCompleted)
                     .average()
                     .orElse(0.0));
 
+            //avg sets
             stats.setAvgSets(logs.stream()
                     .filter(log -> log.getSetsCompleted() != null)
                     .mapToInt(WorkoutExerciseLog::getSetsCompleted)
                     .average()
                     .orElse(0.0));
 
+            //avg difficulty
             stats.setAvgDifficulty(logs.stream()
                     .filter(log -> log.getDifficultyRating() != null)
                     .mapToInt(WorkoutExerciseLog::getDifficultyRating)
                     .average()
-                    .orElse(3.0));
+                    .orElse(3.0)); //default difficulty 3
         } else {
             stats.setAvgWeightUsed(BigDecimal.ZERO);
             stats.setAvgReps(0.0);
@@ -262,10 +266,16 @@ public class WorkoutRecommendationService {
         return priorityScore;
     }
 
+    /**
+     * estimates how many calories are burned per minute for a given exercise
+     *
+     * @param exercise
+     * @return
+     */
     private BigDecimal calculateCaloriesPerMinute(Exercise exercise) {
         switch (exercise.getCategory()) {
             case CARDIO:
-                return BigDecimal.valueOf(12.0);
+                return BigDecimal.valueOf(12.0); //12 calories per minute
             case STRENGTH:
                 MuscleGroupType muscleGroup = exercise.getPrimaryMuscleGroup();
                 if (muscleGroup == MuscleGroupType.FULL_BODY) {
@@ -282,6 +292,12 @@ public class WorkoutRecommendationService {
         }
     }
 
+    /**
+     * calculates a muscle-building score
+     *
+     * @param exercise
+     * @return
+     */
     private int calculateMuscleBuildingPotential(Exercise exercise) {
         if (ExerciseCategoryType.STRENGTH.equals(exercise.getCategory())) {
             MuscleGroupType muscleGroup = exercise.getPrimaryMuscleGroup();
@@ -529,70 +545,6 @@ public class WorkoutRecommendationService {
         }
     }
 
-    private Map<String, Object> calculateUserWorkoutStatsInJava(Long userId) {
-        LocalDateTime startDate = LocalDateTime.now().minusDays(90);
-        List<ScheduledWorkout> workouts = scheduledWorkoutRepository.findWorkoutsByUserAndDate(userId, startDate);
-
-        Map<String, Object> stats = new HashMap<>();
-
-        long totalWorkouts = workouts.size();
-        long completedWorkouts = workouts.stream()
-                .filter(sw -> WorkoutStatusType.COMPLETED.equals(sw.getStatus()))
-                .count();
-        long missedWorkouts = workouts.stream()
-                .filter(sw -> WorkoutStatusType.MISSED.equals(sw.getStatus()))
-                .count();
-
-        // Calculate average weight used
-        double avgWeightUsed = workouts.stream()
-                .flatMap(sw -> sw.getExerciseLogs().stream())
-                .filter(log -> log.getWeightUsedKg() != null)
-                .mapToDouble(log -> log.getWeightUsedKg().doubleValue())
-                .average()
-                .orElse(0.0);
-
-        // Get unique muscle groups worked
-        String muscleGroupsWorked = workouts.stream()
-                .flatMap(sw -> sw.getExerciseLogs().stream())
-                .map(log -> log.getExercise().getPrimaryMuscleGroup().toString())
-                .distinct()
-                .collect(Collectors.joining(", "));
-
-        // Get last workout date
-        LocalDateTime lastWorkoutDate = workouts.stream()
-                .filter(sw -> sw.getActualStartTime() != null)
-                .map(ScheduledWorkout::getActualStartTime)
-                .max(LocalDateTime::compareTo)
-                .orElse(null);
-
-        // Count unique exercises
-        long uniqueExercises = workouts.stream()
-                .flatMap(sw -> sw.getExerciseLogs().stream())
-                .map(log -> log.getExercise().getExerciseId())
-                .distinct()
-                .count();
-
-        // Calculate average workout rating
-        double avgWorkoutRating = workouts.stream()
-                .filter(sw -> sw.getOverallRating() != null)
-                .mapToInt(ScheduledWorkout::getOverallRating)
-                .average()
-                .orElse(0.0);
-
-        stats.put("total_workouts", totalWorkouts);
-        stats.put("avg_weight_used", avgWeightUsed);
-        stats.put("muscle_groups_worked", muscleGroupsWorked);
-        stats.put("last_workout_date", lastWorkoutDate != null ? lastWorkoutDate.toLocalDate() : null);
-        stats.put("unique_exercises", uniqueExercises);
-        stats.put("avg_workout_rating", avgWorkoutRating);
-        stats.put("completed_workouts", completedWorkouts);
-        stats.put("missed_workouts", missedWorkouts);
-        stats.put("userId", userId);
-        stats.put("periodDays", 90);
-        stats.put("workoutFrequencyPerWeek", calculateWorkoutFrequency(completedWorkouts));
-
-        return stats;
-    }
 
     private int calculateEstimatedDuration(List<WorkoutRecommendationDTO> recommendations) {
         int totalMinutes = 0;
@@ -690,10 +642,5 @@ public class WorkoutRecommendationService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to update existing workout plan: " + e.getMessage(), e);
         }
-    }
-
-    private double calculateWorkoutFrequency(Number completedWorkouts) {
-        if (completedWorkouts == null) return 0.0;
-        return Math.round(completedWorkouts.doubleValue() / 13.0 * 100.0) / 100.0;
     }
 }
