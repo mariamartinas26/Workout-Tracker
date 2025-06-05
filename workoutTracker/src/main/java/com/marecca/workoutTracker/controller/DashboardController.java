@@ -58,24 +58,6 @@ public class DashboardController {
     }
 
     /**
-     * Get dashboard summary for specific user
-     */
-    @GetMapping("/summary/{userId}")
-    public ResponseEntity<?> getDashboardSummaryForUser(@PathVariable Long userId, HttpServletRequest request) {
-        //checks user access
-        ResponseEntity<?> accessCheck = jwtUtils.checkUserAccess(request, userId);
-        if (accessCheck != null) return accessCheck;
-
-        try {
-            DashboardSummaryDTO summary = dashboardService.getDashboardSummary(userId);
-            return ResponseEntity.ok(summary);
-
-        } catch (Exception e) {
-            return jwtUtils.createErrorResponse("Failed to get dashboard summary", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
      * Get workout calendar data for authenticated user
      */
     @GetMapping("/calendar")
@@ -97,38 +79,6 @@ public class DashboardController {
             }
 
             List<WorkoutCalendarDTO> calendar = dashboardService.getWorkoutCalendar(authenticatedUserId, startDate, endDate);
-            return ResponseEntity.ok(calendar);
-
-        } catch (Exception e) {
-            return jwtUtils.createErrorResponse("Failed to get workout calendar", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Get workout calendar for specific user (with validation)
-     */
-    @GetMapping("/calendar/{userId}")
-    public ResponseEntity<?> getWorkoutCalendarForUser(
-            @PathVariable Long userId,
-            HttpServletRequest request,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-
-        // Check user access
-        ResponseEntity<?> accessCheck = jwtUtils.checkUserAccess(request, userId);
-        if (accessCheck != null) return accessCheck;
-
-        try {
-            if (startDate == null || endDate == null) {
-                endDate = LocalDate.now();
-                startDate = endDate.minusDays(365);
-            }
-
-            if (ChronoUnit.DAYS.between(startDate, endDate) > 730) {
-                return jwtUtils.createBadRequestResponse("Date range cannot exceed 730 days");
-            }
-
-            List<WorkoutCalendarDTO> calendar = dashboardService.getWorkoutCalendar(userId, startDate, endDate);
             return ResponseEntity.ok(calendar);
 
         } catch (Exception e) {
@@ -178,50 +128,6 @@ public class DashboardController {
     }
 
     /**
-     * Get workout trends for specific user (with validation)
-     */
-    @GetMapping("/trends/{userId}")
-    public ResponseEntity<?> getWorkoutTrendsForUser(
-            @PathVariable Long userId,
-            HttpServletRequest request,
-            @RequestParam String period,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-
-        // Check user access
-        ResponseEntity<?> accessCheck = jwtUtils.checkUserAccess(request, userId);
-        if (accessCheck != null) return accessCheck;
-
-        try {
-            // Validate period type
-            if (!period.matches("daily|weekly|monthly")) {
-                return jwtUtils.createBadRequestResponse("Invalid period");
-            }
-
-            if (startDate == null || endDate == null) {
-                endDate = LocalDate.now();
-                switch (period) {
-                    case "daily":
-                        startDate = endDate.minusDays(30);
-                        break;
-                    case "weekly":
-                        startDate = endDate.minusWeeks(12);
-                        break;
-                    case "monthly":
-                        startDate = endDate.minusMonths(12);
-                        break;
-                }
-            }
-
-            List<WorkoutTrendDTO> trends = dashboardService.getWorkoutTrends(userId, period, startDate, endDate);
-            return ResponseEntity.ok(trends);
-
-        } catch (Exception e) {
-            return jwtUtils.createErrorResponse("Failed to get workout trends", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
      * Get workout type breakdown for authenticated user
      */
     @GetMapping("/workout-types")
@@ -239,34 +145,6 @@ public class DashboardController {
             }
 
             List<WorkoutTypeBreakdownDTO> breakdown = dashboardService.getWorkoutTypeBreakdown(authenticatedUserId, startDate, endDate);
-            return ResponseEntity.ok(breakdown);
-
-        } catch (Exception e) {
-            return jwtUtils.createErrorResponse("Failed to get workout type breakdown", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * Get workout type breakdown for specific user (with validation)
-     */
-    @GetMapping("/workout-types/{userId}")
-    public ResponseEntity<?> getWorkoutTypeBreakdownForUser(
-            @PathVariable Long userId,
-            HttpServletRequest request,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-
-        // Check user access
-        ResponseEntity<?> accessCheck = jwtUtils.checkUserAccess(request, userId);
-        if (accessCheck != null) return accessCheck;
-
-        try {
-            if (startDate == null || endDate == null) {
-                endDate = LocalDate.now();
-                startDate = endDate.minusDays(90);
-            }
-
-            List<WorkoutTypeBreakdownDTO> breakdown = dashboardService.getWorkoutTypeBreakdown(userId, startDate, endDate);
             return ResponseEntity.ok(breakdown);
 
         } catch (Exception e) {
@@ -329,63 +207,6 @@ public class DashboardController {
     }
 
     /**
-     * Get recent achievements for specific user
-     * Returns only workout achievements - goal achievements are handled by GoalController
-     */
-    @GetMapping("/achievements/{userId}")
-    public ResponseEntity<?> getRecentAchievementsForUser(@PathVariable Long userId, HttpServletRequest request, @RequestParam(defaultValue = "30") Integer daysBack) {
-
-        // Check user access
-        ResponseEntity<?> accessCheck = jwtUtils.checkUserAccess(request, userId);
-        if (accessCheck != null) return accessCheck;
-
-        try {
-            LocalDateTime startDate = LocalDateTime.now().minusDays(daysBack);
-
-            List<Map<String, Object>> achievements = new ArrayList<>();
-
-
-            //recently completed workouts
-            try {
-                List<ScheduledWorkout> recentWorkouts = scheduledWorkoutRepository
-                        .findCompletedWorkoutsInDateRange(userId, startDate);
-
-                for (ScheduledWorkout workout : recentWorkouts) {
-                    Map<String, Object> achievement = new HashMap<>();
-                    achievement.put("id", "workout_" + workout.getScheduledWorkoutId());
-                    achievement.put("type", "COMPLETED_WORKOUT");
-                    achievement.put("title", "Workout Completed!");
-                    achievement.put("description", "You completed a " +
-                            (workout.getActualDurationMinutes() != null ? workout.getActualDurationMinutes() + " minute " : "") +
-                            "workout session");
-                    achievement.put("achievedAt", workout.getActualEndTime());
-                    achievement.put("points", 25);
-                    achievements.add(achievement);
-                }
-            } catch (Exception e) {
-                log.warn("Could not fetch completed workouts for user {}: {}", userId, e.getMessage());
-            }
-
-            //sorting after date
-            achievements.sort((a, b) -> {
-                LocalDateTime dateA = (LocalDateTime) a.get("achievedAt");
-                LocalDateTime dateB = (LocalDateTime) b.get("achievedAt");
-
-                if (dateA == null && dateB == null) return 0;
-                if (dateA == null) return 1;
-                if (dateB == null) return -1;
-
-                return dateB.compareTo(dateA);
-            });
-
-            return ResponseEntity.ok(achievements);
-
-        } catch (Exception e) {
-            return jwtUtils.createErrorResponse("Failed to get achievements", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
      * Get quick statistics for authenticated user
      */
     @GetMapping("/quick-stats")
@@ -408,31 +229,4 @@ public class DashboardController {
             return jwtUtils.createErrorResponse("Failed to get quick stats", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
-    /**
-     * Get quick stats for specific user (with validation)
-     */
-    @GetMapping("/quick-stats/{userId}")
-    public ResponseEntity<?> getQuickStatsForUser(@PathVariable Long userId, HttpServletRequest request) {
-        // Check user access
-        ResponseEntity<?> accessCheck = jwtUtils.checkUserAccess(request, userId);
-        if (accessCheck != null) return accessCheck;
-
-        try {
-            DashboardSummaryDTO summary = dashboardService.getDashboardSummary(userId);
-
-            QuickStatsDTO quickStats = QuickStatsDTO.builder()
-                    .weeklyWorkouts(summary.getWeeklyWorkouts())
-                    .weeklyCalories(summary.getWeeklyCalories())
-                    .currentStreak(summary.getCurrentStreak())
-                    .totalWorkouts(summary.getTotalWorkouts())
-                    .build();
-
-            return ResponseEntity.ok(quickStats);
-
-        } catch (Exception e) {
-            return jwtUtils.createErrorResponse("Failed to get quick stats", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
 }

@@ -153,23 +153,7 @@ public class ScheduledWorkoutService {
         return scheduledWorkoutRepository.findByUserUserIdOrderByScheduledDateDesc(userId);
     }
 
-    @Transactional(readOnly = true)
-    public List<ScheduledWorkout> findByUserIdAndDateRange(Long userId, LocalDate startDate, LocalDate endDate) {
-        validateUserExists(userId);
-        validateDateRange(startDate, endDate);
 
-        return scheduledWorkoutRepository.findByUserUserIdAndScheduledDateBetweenOrderByScheduledDate(
-                userId, startDate, endDate);
-    }
-
-    @Transactional(readOnly = true)
-    public List<ScheduledWorkout> findByUserIdAndStatus(Long userId, WorkoutStatusType status) {
-        validateUserExists(userId);
-        return scheduledWorkoutRepository.findByUserUserIdAndStatus(userId, status);
-    }
-
-
-    //?????????NU FACE NIMIC CRED
     @Transactional
     public List<ScheduledWorkout> findTodaysWorkouts(Long userId) {
         validateUserExists(userId);
@@ -263,18 +247,6 @@ public class ScheduledWorkoutService {
         scheduledWorkoutRepository.updateWorkoutStatus(scheduledWorkoutId, WorkoutStatusType.CANCELLED);
 
         return findScheduledWorkoutById(scheduledWorkoutId);
-    }
-
-    @Transactional(readOnly = true)
-    public Long countCompletedWorkouts(Long userId) {
-        validateUserExists(userId);
-        return scheduledWorkoutRepository.countCompletedWorkoutsForUser(userId);
-    }
-
-    @Transactional(readOnly = true)
-    public Double getAverageWorkoutDuration(Long userId) {
-        validateUserExists(userId);
-        return scheduledWorkoutRepository.getAverageWorkoutDurationForUser(userId);
     }
 
     @Transactional(readOnly = true)
@@ -395,15 +367,6 @@ public class ScheduledWorkoutService {
         }
     }
 
-    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
-        if (startDate == null || endDate == null) {
-            throw new IllegalArgumentException("Start date and end date are required");
-        }
-
-        if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("Start date must be before end date");
-        }
-    }
 
     private void validateCompletionData(Integer caloriesBurned, Integer rating) {
         if (caloriesBurned != null && caloriesBurned < 0) {

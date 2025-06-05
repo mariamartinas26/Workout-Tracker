@@ -47,12 +47,7 @@ public class GoalService {
         return goalRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
-    /**
-     * Get active goals for a user
-     */
-    public List<Goal> getActiveUserGoals(Long userId) {
-        return goalRepository.findActiveGoalsByUserId(userId);
-    }
+
 
     /**
      * Get a specific goal by ID
@@ -133,22 +128,5 @@ public class GoalService {
                 goal.setTargetWeight(targetWeight);
             }
         }
-    }
-
-
-    /**
-     * Gets completed goals for a user at a specific time
-     */
-    public List<Goal> getCompletedGoalsByUserAndTimeframe(Long userId, Integer daysBack) {
-        LocalDateTime startDate = LocalDateTime.now().minusDays(daysBack);
-
-        List<Goal> allUserGoals = getUserGoals(userId);
-
-        return allUserGoals.stream()
-                .filter(goal -> goal.getStatus() == Goal.GoalStatus.COMPLETED)
-                .filter(goal -> goal.getCompletedAt() != null)
-                .filter(goal -> goal.getCompletedAt().isAfter(startDate))
-                .sorted((g1, g2) -> g2.getCompletedAt().compareTo(g1.getCompletedAt())) //descendent order
-                .collect(Collectors.toList());
     }
 }

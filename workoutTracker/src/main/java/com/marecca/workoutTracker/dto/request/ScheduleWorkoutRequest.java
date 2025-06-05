@@ -18,4 +18,5 @@ public  class ScheduleWorkoutRequest {
     private LocalDate scheduledDate;
 
     private LocalTime scheduledTime;
+
 }

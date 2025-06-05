@@ -17,9 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
-/**
- * Controller for managing goals - JWT Protected
- */
+
 @RestController
 @RequestMapping("/api/goals")
 @CrossOrigin(origins = "http://localhost:3000")
@@ -34,7 +32,7 @@ public class GoalController {
     private GoalRepository goalRepository;
 
     /**
-     * Create a new goal (requires authentication)
+     * Create a new goal
      */
     @PostMapping
     public ResponseEntity<?> createGoal(@RequestBody CreateGoalRequest request, HttpServletRequest httpRequest) {
@@ -77,64 +75,6 @@ public class GoalController {
         } catch (Exception e) {
             log.error("Authentication error or unexpected error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to create goals");
-        }
-    }
-
-    /**
-     * Get all goals for a user (requires authentication)
-     */
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getUserGoals(@PathVariable Long userId, HttpServletRequest request) {
-        try {
-            Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get goals for user: {} by authenticated user: {}", userId, authenticatedUserId);
-
-            // Users can only access their own goals
-            if (!userId.equals(authenticatedUserId)) {
-                log.warn("User {} attempted to access goals for user {}", authenticatedUserId, userId);
-                return jwtUtils.createErrorResponse("You can only access your own goals", HttpStatus.FORBIDDEN);
-            }
-
-            List<Goal> goals = goalService.getUserGoals(authenticatedUserId);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("goals", goals.stream().map(this::createGoalResponse).toList());
-            response.put("totalGoals", goals.size());
-            response.put("activeGoals", goals.stream().filter(g -> g.getStatus() == Goal.GoalStatus.ACTIVE).count());
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
-            return jwtUtils.createUnauthorizedResponse("Authentication required to access goals");
-        }
-    }
-
-    /**
-     * Get active goals for a user (requires authentication)
-     */
-    @GetMapping("/user/{userId}/active")
-    public ResponseEntity<?> getActiveUserGoals(@PathVariable Long userId, HttpServletRequest request) {
-        try {
-            Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get active goals for user: {} by authenticated user: {}", userId, authenticatedUserId);
-
-            if (!userId.equals(authenticatedUserId)) {
-                log.warn("User {} attempted to access active goals for user {}", authenticatedUserId, userId);
-                return jwtUtils.createErrorResponse("You can only access your own goals", HttpStatus.FORBIDDEN);
-            }
-
-            List<Goal> activeGoals = goalService.getActiveUserGoals(authenticatedUserId);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("goals", activeGoals.stream().map(this::createGoalResponse).toList());
-            response.put("count", activeGoals.size());
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
-            return jwtUtils.createUnauthorizedResponse("Authentication required to access active goals");
         }
     }
 
@@ -326,46 +266,9 @@ public class GoalController {
         return goalMap;
     }
 
-    /**
-     * Endpoint for completed goals (requires authentication)
-     */
-    @GetMapping("/achievements/{userId}/completed-goals")
-    public ResponseEntity<?> getCompletedGoalsAsAchievements(
-            @PathVariable Long userId,
-            @RequestParam(defaultValue = "30") Integer daysBack,
-            HttpServletRequest request) {
-        try {
-            Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get completed goals for user: {} by authenticated user: {}", userId, authenticatedUserId);
-
-            // Users can only access their own achievements
-            if (!userId.equals(authenticatedUserId)) {
-                log.warn("User {} attempted to access achievements for user {}", authenticatedUserId, userId);
-                return jwtUtils.createErrorResponse("You can only access your own achievements", HttpStatus.FORBIDDEN);
-            }
-
-            if (daysBack < 1 || daysBack > 365) {
-                daysBack = 30;
-            }
-
-            List<Goal> completedGoals = goalService.getCompletedGoalsByUserAndTimeframe(authenticatedUserId, daysBack);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("completedGoals", completedGoals.stream().map(this::createGoalAchievementResponse).toList());
-            response.put("count", completedGoals.size());
-            response.put("daysBack", daysBack);
-            response.put("timestamp", LocalDateTime.now());
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
-            return jwtUtils.createUnauthorizedResponse("Authentication required to access achievements");
-        }
-    }
 
     /**
-     * Get current user's goals (convenience endpoint)
+     * Get current user's goals
      */
     @GetMapping("/my-goals")
     public ResponseEntity<?> getMyGoals(HttpServletRequest request) {
@@ -373,60 +276,19 @@ public class GoalController {
             Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
             log.debug("REST request to get my goals for user: {}", authenticatedUserId);
 
-            return getUserGoals(authenticatedUserId, request);
+            List<Goal> goals = goalService.getUserGoals(authenticatedUserId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("goals", goals.stream().map(this::createGoalResponse).toList());
+            response.put("totalGoals", goals.size());
+            response.put("activeGoals", goals.stream().filter(g -> g.getStatus() == Goal.GoalStatus.ACTIVE).count());
+
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
             log.error("Authentication error: {}", e.getMessage());
             return jwtUtils.createUnauthorizedResponse("Authentication required to access goals");
         }
-    }
-
-    /**
-     * Get current user's active goals (convenience endpoint)
-     */
-    @GetMapping("/my-active")
-    public ResponseEntity<?> getMyActiveGoals(HttpServletRequest request) {
-        try {
-            Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get my active goals for user: {}", authenticatedUserId);
-
-            return getActiveUserGoals(authenticatedUserId, request);
-        } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
-            return jwtUtils.createUnauthorizedResponse("Authentication required to access active goals");
-        }
-    }
-
-    /**
-     * Get current user's achievements (convenience endpoint)
-     */
-    @GetMapping("/my-achievements")
-    public ResponseEntity<?> getMyAchievements(@RequestParam(defaultValue = "30") Integer daysBack, HttpServletRequest request) {
-        try {
-            Long authenticatedUserId = jwtUtils.getUserIdFromToken(request);
-            log.debug("REST request to get my achievements for user: {}", authenticatedUserId);
-
-            return getCompletedGoalsAsAchievements(authenticatedUserId, daysBack, request);
-        } catch (Exception e) {
-            log.error("Authentication error: {}", e.getMessage());
-            return jwtUtils.createUnauthorizedResponse("Authentication required to access achievements");
-        }
-    }
-
-    /**
-     * Creates answer for completed goals as achievements
-     */
-    private Map<String, Object> createGoalAchievementResponse(Goal goal) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", goal.getGoalId());
-        response.put("type", "COMPLETED_GOAL");
-        response.put("title", getGoalAchievementTitle(goal));
-        response.put("description", getGoalAchievementDescription(goal));
-        response.put("achievedAt", goal.getCompletedAt());
-        response.put("goalType", goal.getGoalType().getValue());
-        response.put("originalGoal", createGoalResponse(goal));
-        response.put("icon", getGoalAchievementIcon(goal.getGoalType()));
-        response.put("points", calculateAchievementPoints(goal));
-        return response;
     }
 
     /**

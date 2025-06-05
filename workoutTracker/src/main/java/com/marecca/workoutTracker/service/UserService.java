@@ -25,15 +25,6 @@ public class UserService {
         return userRepository.findById(id);
     }
 
-    /**
-     * Finds user by email
-     * @param email
-     * @return
-     */
-    @Transactional(readOnly = true)
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email.toLowerCase());
-    }
 
     /**
      * Update user info
@@ -62,26 +53,6 @@ public class UserService {
         return userRepository.save(existingUser);
     }
 
-    /**
-     * Deactivates user
-     * @param userId
-     * @throws IllegalArgumentException if user does not exist
-     */
-    public void deactivateUser(Long userId) {
-        validateUserExists(userId);
-        userRepository.deactivateUser(userId);
-    }
-
-    /**
-     * Activates user
-     * @param userId
-     */
-    public void activateUser(Long userId) {
-        User user = findUserById(userId);
-        user.setIsActive(true);
-
-        userRepository.save(user);
-    }
 
     /**
      * Register a new user with encrypted password
@@ -120,38 +91,6 @@ public class UserService {
     }
 
     /**
-     * Finds all active users
-     */
-    @Transactional(readOnly = true)
-    public List<User> findActiveUsers() {
-        return userRepository.findByIsActiveTrue();
-    }
-
-    /**
-     * Finds user by fitness level
-     */
-    @Transactional(readOnly = true)
-    public List<User> findByFitnessLevel(String fitnessLevel) {
-        return userRepository.findByFitnessLevel(fitnessLevel);
-    }
-
-    /**
-     * Find Users With Minimum workout Plans
-     */
-    @Transactional(readOnly = true)
-    public List<User> findUsersWithMinimumPlans(Long minPlans) {
-        return userRepository.findUsersWithAtLeastMinPlans(minPlans);
-    }
-
-    /**
-     * Find Users With Minimum Completed Workouts
-     */
-    @Transactional(readOnly = true)
-    public List<User> findUsersWithMinimumCompletedWorkouts(Integer minWorkouts) {
-        return userRepository.findUsersWithMinimumCompletedWorkouts(minWorkouts);
-    }
-
-    /**
      * Checks if a user exists with a given email
      */
     public boolean existsByEmail(String email) {
@@ -165,14 +104,4 @@ public class UserService {
         return userRepository.existsByUsername(username);
     }
 
-    private User findUserById(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User was not found with ID: " + userId));
-    }
-
-    private void validateUserExists(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new IllegalArgumentException("User was not found with ID: " + userId);
-        }
-    }
 }

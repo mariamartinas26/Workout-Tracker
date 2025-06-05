@@ -1,16 +1,17 @@
 package com.marecca.workoutTracker.controller;
 
+import com.marecca.workoutTracker.dto.request.CompleteProfileRequest;
+import com.marecca.workoutTracker.dto.request.LoginRequest;
+import com.marecca.workoutTracker.dto.request.RegisterRequest;
 import com.marecca.workoutTracker.entity.User;
 import com.marecca.workoutTracker.service.UserService;
 import com.marecca.workoutTracker.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,47 +25,6 @@ public class AuthController {
 
     private final UserService userService;
     private final JwtUtil jwtUtil;
-
-    public static class RegisterRequest {
-        private String username;
-        private String email;
-        private String password;
-        private String firstName;
-        private String lastName;
-
-        public String getUsername() { return username; }
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-        public String getPassword() { return password; }
-        public String getFirstName() { return firstName; }
-        public String getLastName() { return lastName; }
-    }
-
-    public static class LoginRequest {
-        private String email;
-        private String password;
-
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-        public String getPassword() { return password; }
-    }
-
-    public static class CompleteProfileRequest {
-        private Long userId;
-        private LocalDate dateOfBirth;
-        private Integer heightCm;
-        private BigDecimal weightKg;
-        private String fitnessLevel;
-
-        public Long getUserId() { return userId; }
-        public void setUserId(Long userId) { this.userId = userId; }
-        public LocalDate getDateOfBirth() { return dateOfBirth; }
-        public Integer getHeightCm() { return heightCm; }
-        public BigDecimal getWeightKg() { return weightKg; }
-        public void setWeightKg(BigDecimal weightKg) { this.weightKg = weightKg; }
-        public String getFitnessLevel() { return fitnessLevel; }
-        public void setFitnessLevel(String fitnessLevel) { this.fitnessLevel = fitnessLevel; }
-    }
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {

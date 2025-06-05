@@ -657,12 +657,6 @@ const Analytics = ({ isOpen, onClose }) => {
                                                     }}>
                                                         {formatNumber(type.workoutCount)} workouts
                                                     </div>
-                                                    <div style={{
-                                                        color: '#718096',
-                                                        fontSize: '12px'
-                                                    }}>
-                                                        {type.percentage}% of total
-                                                    </div>
                                                 </div>
                                             ))}
                                         </div>

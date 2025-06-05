@@ -529,20 +529,6 @@ public class WorkoutRecommendationService {
         }
     }
 
-    public Map<String, Object> getUserWorkoutStats(Long userId) {
-        try {
-            if (!userRepository.existsById(userId)) {
-                throw new IllegalArgumentException("User with ID " + userId + " does not exist");
-            }
-
-            // Use Java-based calculation for reliability
-            return calculateUserWorkoutStatsInJava(userId);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to retrieve user workout stats: " + e.getMessage(), e);
-        }
-    }
-
     private Map<String, Object> calculateUserWorkoutStatsInJava(Long userId) {
         LocalDateTime startDate = LocalDateTime.now().minusDays(90);
         List<ScheduledWorkout> workouts = scheduledWorkoutRepository.findWorkoutsByUserAndDate(userId, startDate);
