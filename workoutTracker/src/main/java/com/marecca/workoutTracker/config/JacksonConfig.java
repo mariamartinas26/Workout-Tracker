@@ -18,8 +18,8 @@ public class JacksonConfig {
 
         return new ObjectMapper()
                 .registerModule(hibernate6Module)
-                .registerModule(new JavaTimeModule())  // Adaugă acest modul pentru Java 8 time
+                .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // Pentru a scrie datele ca string-uri, nu timestamps
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 }

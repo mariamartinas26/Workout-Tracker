@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 @Transactional
 public class GoalService {
 
@@ -46,8 +45,6 @@ public class GoalService {
     public List<Goal> getUserGoals(Long userId) {
         return goalRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
-
-
 
     /**
      * Get a specific goal by ID

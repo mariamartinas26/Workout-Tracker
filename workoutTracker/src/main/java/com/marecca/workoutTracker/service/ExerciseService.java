@@ -17,12 +17,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Business logic for operations with exercises
- */
+
 @Service
 @RequiredArgsConstructor
-@Slf4j
 @Transactional
 public class ExerciseService {
 
@@ -45,19 +42,17 @@ public class ExerciseService {
 
     @Transactional(readOnly = true)
     public Page<Exercise> findByCategory(ExerciseCategoryType category, Pageable pageable) {
-        log.debug("Finding exercises by category: {} with pagination", category);
         return exerciseRepository.findByCategory(category, pageable);
     }
 
 
     @Transactional(readOnly = true)
     public Page<Exercise> findByPrimaryMuscleGroup(MuscleGroupType muscleGroup, Pageable pageable) {
-        log.debug("Finding exercises by primary muscle group: {} with pagination", muscleGroup);
         return exerciseRepository.findByPrimaryMuscleGroup(muscleGroup, pageable);
     }
 
     /**
-     * find exercises by any timpe of muscle group
+     * find exercises by any type of muscle group
      */
     @Transactional(readOnly = true)
     public List<Exercise> findByAnyMuscleGroup(MuscleGroupType muscleGroup) {

@@ -21,12 +21,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Business logic for operations with workout plans
- */
+
 @Service
 @RequiredArgsConstructor
-@Slf4j
 @Transactional
 public class WorkoutPlanService {
 
@@ -69,7 +66,6 @@ public class WorkoutPlanService {
 
                 workoutExerciseDetailRepository.save(exerciseDetail);
             }
-
         }
         return savedPlan;
     }

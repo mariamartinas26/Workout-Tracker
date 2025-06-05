@@ -20,7 +20,6 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class DashboardService {
 
     private final ScheduledWorkoutRepository scheduledWorkoutRepository;

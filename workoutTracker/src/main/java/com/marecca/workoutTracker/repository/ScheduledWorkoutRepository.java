@@ -24,10 +24,6 @@ public interface ScheduledWorkoutRepository extends JpaRepository<ScheduledWorko
             "ORDER BY sw.scheduledDate DESC")
     List<ScheduledWorkout> findByUserUserIdOrderByScheduledDateDesc(@Param("userId") Long userId);
 
-    List<ScheduledWorkout> findByUserUserIdAndScheduledDateBetweenOrderByScheduledDate(
-            Long userId, LocalDate startDate, LocalDate endDate);
-
-    List<ScheduledWorkout> findByUserUserIdAndStatus(Long userId, WorkoutStatusType status);
 
     @Query("SELECT sw FROM ScheduledWorkout sw WHERE sw.user.userId = :userId AND sw.scheduledDate = CURRENT_DATE")
     List<ScheduledWorkout> findTodaysWorkoutsForUser(@Param("userId") Long userId);

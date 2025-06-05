@@ -2,9 +2,7 @@ package com.marecca.workoutTracker.service.exceptions;
 
 import com.marecca.workoutTracker.entity.enums.WorkoutStatusType;
 
-/**
- * Exception thrown when trying to perform an operation on a workout with an invalid status
- */
+
 public class InvalidWorkoutStatusException extends RuntimeException {
 
     public InvalidWorkoutStatusException(String message) {

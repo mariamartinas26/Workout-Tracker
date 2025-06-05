@@ -48,7 +48,6 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ✅ Folosește allowedOrigins în loc de allowedOriginPatterns
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:3001",

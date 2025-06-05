@@ -21,16 +21,8 @@ public class UserWorkoutStreak {
     @Column(name = "streak_id")
     private Long streakId;
 
-    // Option 1: Keep it simple with just userId (recommended for your existing code)
     @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
-
-    // Option 2: If you want JPA relationship (comment out userId above and uncomment below)
-    /*
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
-    private User user;
-    */
 
     @Column(name = "current_streak")
     @Builder.Default

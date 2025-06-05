@@ -418,17 +418,15 @@ const WorkoutSchedule = ({
                 </button>
 
                 <h2 style={{
-                    color: '#1a202c',
+                    color: '#000000',
                     fontSize: '28px',
                     fontWeight: '800',
                     marginBottom: '24px',
                     textAlign: 'center',
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
                     backgroundClip: 'text',
                     WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent'
                 }}>
-                    📅 Schedule Workout
+                    Schedule Workout
                 </h2>
 
                 {workoutPlan && (
@@ -789,7 +787,7 @@ const WorkoutSchedule = ({
                             fontWeight: '600'
                         }}
                     >
-                        {loading ? 'Scheduling...' : '📅 Schedule Workout'}
+                        {loading ? 'Scheduling...' : 'Schedule Workout'}
                     </button>
                 </div>
 

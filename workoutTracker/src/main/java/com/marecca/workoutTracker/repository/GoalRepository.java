@@ -18,9 +18,6 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
     @Query("SELECT g FROM Goal g WHERE g.user.userId = :userId ORDER BY g.createdAt DESC")
     List<Goal> findByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
 
-    //find active goals for a user
-    @Query("SELECT g FROM Goal g WHERE g.user.userId = :userId AND g.status = 'ACTIVE' ORDER BY g.createdAt DESC")
-    List<Goal> findActiveGoalsByUserId(@Param("userId") Long userId);
 
     @Query("SELECT g FROM Goal g WHERE g.user.userId = :userId " +
             "AND g.status = 'COMPLETED' " +

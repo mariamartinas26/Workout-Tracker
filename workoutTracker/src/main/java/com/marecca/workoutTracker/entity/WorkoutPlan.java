@@ -1,6 +1,5 @@
 package com.marecca.workoutTracker.entity;
 
-import com.marecca.workoutTracker.repository.WorkoutPlanRepository;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -11,9 +10,6 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
-
-
 
 @Entity
 @Table(name = "workout_plans")
@@ -73,20 +69,5 @@ public class WorkoutPlan {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
-    }
-
-    public void addExerciseDetail(WorkoutExerciseDetail detail) {
-        exerciseDetails.add(detail);
-        detail.setWorkoutPlan(this);
-    }
-
-    public void removeExerciseDetail(WorkoutExerciseDetail detail) {
-        exerciseDetails.remove(detail);
-        detail.setWorkoutPlan(null);
-    }
-
-    public void addScheduledWorkout(ScheduledWorkout scheduledWorkout) {
-        scheduledWorkouts.add(scheduledWorkout);
-        scheduledWorkout.setWorkoutPlan(this);
     }
 }

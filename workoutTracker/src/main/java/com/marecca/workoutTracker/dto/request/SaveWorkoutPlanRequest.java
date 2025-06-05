@@ -12,7 +12,7 @@ public class SaveWorkoutPlanRequest {
     @Positive(message = "User ID must be positive")
     private Long userId;
 
-    private Long goalId; // Optional - poate fi null
+    private Long goalId;
 
     private String planName;
 
@@ -27,7 +27,6 @@ public class SaveWorkoutPlanRequest {
     @NotEmpty(message = "Recommendations list cannot be empty")
     private List<WorkoutRecommendationDTO> recommendations;
 
-    // Constructors
     public SaveWorkoutPlanRequest() {}
 
     public SaveWorkoutPlanRequest(Long userId, Long goalId, List<WorkoutRecommendationDTO> recommendations) {

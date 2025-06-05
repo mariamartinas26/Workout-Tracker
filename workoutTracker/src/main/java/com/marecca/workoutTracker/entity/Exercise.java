@@ -16,9 +16,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Exercise entity coresponding to the exercises table in the database
- */
 @Entity
 @Table(name = "exercises")
 @Getter
@@ -47,9 +44,7 @@ public class Exercise {
     @Column(name = "primary_muscle_group", nullable = false)
     private MuscleGroupType primaryMuscleGroup;
 
-    /**
-     * This field maps to a SQL ARRAY type in the database
-     */
+
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "secondary_muscle_groups", columnDefinition = "muscle_group_type[]")
     @Builder.Default
@@ -88,13 +83,5 @@ public class Exercise {
         if (this.secondaryMuscleGroups == null) {
             this.secondaryMuscleGroups = new ArrayList<>();
         }
-    }
-
-    public String getEquipmentNeeded() {
-        return this.equipment;
-    }
-
-    public void setEquipmentNeeded(String equipment) {
-        this.equipment = equipment;
     }
 }

@@ -3,9 +3,6 @@ package com.marecca.workoutTracker.service.exceptions;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-/**
- * Exception thrown when trying to schedule a workout at a time slot that's already occupied
- */
 public class WorkoutAlreadyScheduledException extends RuntimeException {
 
     public WorkoutAlreadyScheduledException(String message) {

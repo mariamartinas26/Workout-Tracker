@@ -24,9 +24,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Business logic for operations with scheduled workout
- */
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -161,7 +158,6 @@ public class ScheduledWorkoutService {
         List<ScheduledWorkout> workouts = scheduledWorkoutRepository.findTodaysWorkoutsForUser(userId);
 
         LocalTime currentTime = LocalTime.now();
-        int missedWorkoutsCount = 0;
 
         for (ScheduledWorkout workout : workouts) {
             if (workout.getStatus() == WorkoutStatusType.PLANNED &&
@@ -173,16 +169,16 @@ public class ScheduledWorkoutService {
 
                     // Update the workout object status for the response
                     workout.setStatus(WorkoutStatusType.MISSED);
-                    missedWorkoutsCount++;
 
                 } catch (Exception e) {
-                    // Silently continue if marking as missed fails
+                    System.err.println("Warning: Failed to mark workout as MISSED. ID: "
+                            + workout.getScheduledWorkoutId() + " — " + e.getMessage());
                 }
             }
         }
 
         return workouts;
-    }
+}
 
     /**
      * start a workout( status IN_PROGRESS)

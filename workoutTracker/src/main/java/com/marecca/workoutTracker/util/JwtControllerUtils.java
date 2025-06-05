@@ -21,9 +21,6 @@ public class JwtControllerUtils {
 
     private final JwtUtil jwtUtil;
 
-    /**
-     * Extract user ID from JWT token in Authorization header
-     */
     public Long getUserIdFromToken(HttpServletRequest request) throws JwtTokenException {
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -42,9 +39,7 @@ public class JwtControllerUtils {
         }
     }
 
-    /**
-     * Extract email from JWT token in Authorization header
-     */
+
     public String getEmailFromToken(HttpServletRequest request) throws JwtTokenException {
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -62,10 +57,6 @@ public class JwtControllerUtils {
             throw new JwtTokenException("Token validation failed");
         }
     }
-
-    /**
-     * Get the raw JWT token from Authorization header
-     */
     public String getTokenFromRequest(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -74,9 +65,7 @@ public class JwtControllerUtils {
         throw new RuntimeException("No valid authentication token found");
     }
 
-    /**
-     * Validate that the authenticated user can access the requested user's data
-     */
+
     public ResponseEntity<?> validateUserAccess(Long requestedUserId, Long authenticatedUserId) {
         if (!requestedUserId.equals(authenticatedUserId)) {
             return createForbiddenResponse("You can only access your own data");
@@ -84,9 +73,7 @@ public class JwtControllerUtils {
         return null; // Access granted
     }
 
-    /**
-     * Check if authenticated user matches the requested user ID
-     */
+
     public boolean canAccessUserData(Long requestedUserId, Long authenticatedUserId) {
         return requestedUserId.equals(authenticatedUserId);
     }

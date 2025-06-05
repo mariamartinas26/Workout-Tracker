@@ -1,8 +1,6 @@
 package com.marecca.workoutTracker.service.exceptions;
 
-/**
- * Exception thrown when a scheduled workout is not found in the database
- */
+
 public class WorkoutNotFoundException extends RuntimeException {
 
     public WorkoutNotFoundException(String message) {

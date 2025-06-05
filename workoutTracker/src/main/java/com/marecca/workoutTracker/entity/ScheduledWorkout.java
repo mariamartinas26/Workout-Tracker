@@ -44,8 +44,8 @@ public class ScheduledWorkout {
     @Column(name = "scheduled_time")
     private LocalTime scheduledTime;
 
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM) // This tells Hibernate to treat it as a named DB enum type
-    @Column(name = "status", nullable = false) // Ensure this matches your DB schema (e.g., NOT NULL)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "status", nullable = false)
     private WorkoutStatusType status = WorkoutStatusType.PLANNED;
 
     @Column(name = "actual_start_time")
@@ -90,15 +90,5 @@ public class ScheduledWorkout {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
-    }
-
-    public void addExerciseLog(WorkoutExerciseLog log) {
-        exerciseLogs.add(log);
-        log.setScheduledWorkout(this);
-    }
-
-    public void removeExerciseLog(WorkoutExerciseLog log) {
-        exerciseLogs.remove(log);
-        log.setScheduledWorkout(null);
     }
 }

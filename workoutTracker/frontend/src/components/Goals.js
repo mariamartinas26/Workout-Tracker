@@ -55,6 +55,128 @@ const getCurrentUser = () => {
     }
 };
 
+const validateWeightLoss = (currentWeight, targetLoss) => {
+    const current = parseFloat(currentWeight);
+    const target = parseFloat(targetLoss);
+
+    if (!current || !target) return { isValid: false, message: '' };
+
+    // Verificări critice - OPRESC salvarea
+    if (target <= 0) {
+        return { isValid: false, message: 'Target weight loss must be positive' };
+    }
+
+    if (target >= current) {
+        return { isValid: false, message: 'Cannot lose more weight than your current weight' };
+    }
+
+    const finalWeight = current - target;
+    if (finalWeight < 40) {
+        return { isValid: false, message: 'Final weight would be dangerously low (under 40kg)' };
+    }
+
+    // Maxim 25% din greutatea corporală
+    const maxSafeLoss = current * 0.25;
+    if (target > maxSafeLoss) {
+        return {
+            isValid: false,
+            message: `Losing ${target}kg would be unsafe. Maximum recommended: ${maxSafeLoss.toFixed(1)}kg`
+        };
+    }
+
+    // Avertismente - PERMIT salvarea dar avertizează
+    if (target > 15) {
+        return {
+            isValid: true,
+            isWarning: true,
+            message: `⚠️ Losing more than 15kg requires careful planning. Consider consulting a healthcare professional.`
+        };
+    }
+
+    if (target > current * 0.15) {
+        return {
+            isValid: true,
+            isWarning: true,
+            message: `⚠️ This is a significant weight loss (${((target/current)*100).toFixed(1)}% of body weight). Consider a longer timeframe.`
+        };
+    }
+
+    return { isValid: true, message: '' };
+};
+
+const validateWeightGain = (targetGain) => {
+    const target = parseFloat(targetGain);
+
+    if (!target) return { isValid: false, message: '' };
+
+    if (target <= 0) {
+        return { isValid: false, message: 'Target weight gain must be positive' };
+    }
+
+    if (target > 25) {
+        return {
+            isValid: false,
+            message: 'Gaining more than 25kg at once is not recommended for health reasons'
+        };
+    }
+
+    // Avertismente
+    if (target > 15) {
+        return {
+            isValid: true,
+            isWarning: true,
+            message: `⚠️ Gaining ${target}kg is a significant increase. Consider a longer timeframe for healthier results.`
+        };
+    }
+
+    if (target > 10) {
+        return {
+            isValid: true,
+            isWarning: true,
+            message: `⚠️ Large weight gain should focus on muscle building with proper nutrition and exercise.`
+        };
+    }
+
+    return { isValid: true, message: '' };
+};
+
+const validateTimeframe = (targetValue, timeframe, goalType) => {
+    const target = parseFloat(targetValue);
+    const time = parseInt(timeframe);
+
+    if (!target || !time) return { isValid: true, message: '' };
+
+    const monthlyRate = target / time;
+
+    if (goalType === 'lose_weight') {
+        if (monthlyRate > 2) {
+            return {
+                isValid: true,
+                isWarning: true,
+                message: `⚠️ This pace (${monthlyRate.toFixed(1)}kg/month) is very aggressive. Consider a longer timeframe.`
+            };
+        }
+        if (monthlyRate > 1.5) {
+            return {
+                isValid: true,
+                isWarning: true,
+                message: `⚠️ Fast weight loss (${monthlyRate.toFixed(1)}kg/month). Ensure adequate nutrition.`
+            };
+        }
+    } else if (goalType === 'gain_muscle') {
+        if (monthlyRate > 1.5) {
+            return {
+                isValid: true,
+                isWarning: true,
+                message: `⚠️ Rapid weight gain (${monthlyRate.toFixed(1)}kg/month) may include excess fat. Consider slower pace.`
+            };
+        }
+    }
+
+    return { isValid: true, message: '' };
+};
+
+
 const GoalsApi = {
     createGoal: async (goalData) => {
         try {
@@ -179,6 +301,8 @@ const Goals = ({onBack, onGoalSet }) => {
     const [error, setError] = useState('');
     const [showGoalsList, setShowGoalsList] = useState(false);
     const [success, setSuccess] = useState('');
+    const [warning, setWarning] = useState('');
+    const [validationErrors, setValidationErrors] = useState({});
     //const [showWorkoutRecommendations, setShowWorkoutRecommendations] = useState(false);
    // const [selectedGoalForWorkout, setSelectedGoalForWorkout] = useState(null);
 
@@ -231,6 +355,32 @@ const Goals = ({onBack, onGoalSet }) => {
             setSelectedGoalForWorkout(null);
         };
     }, []);
+
+    useEffect(() => {
+        const errors = {};
+        setWarning('');
+
+        if (selectedGoal === 'lose_weight' && goalDetails.targetWeightLoss && goalDetails.currentWeight) {
+            const validation = validateWeightLoss(goalDetails.currentWeight, goalDetails.targetWeightLoss);
+            if (!validation.isValid) {
+                errors.targetWeightLoss = validation.message;
+            } else if (validation.isWarning) {
+                setWarning(validation.message);
+            }
+        }
+
+        if (selectedGoal === 'gain_muscle' && goalDetails.targetWeightGain) {
+            const validation = validateWeightGain(goalDetails.targetWeightGain);
+            if (!validation.isValid) {
+                errors.targetWeightGain = validation.message;
+            } else if (validation.isWarning) {
+                setWarning(validation.message);
+            }
+        }
+
+        setValidationErrors(errors);
+    }, [goalDetails, selectedGoal]);
+
     const fetchUserGoals = async () => {
         try {
             setLoading(true);
@@ -312,6 +462,12 @@ const Goals = ({onBack, onGoalSet }) => {
             setError('');
             setSuccess('');
 
+            // Verifică dacă sunt erori de validare
+            if (Object.keys(validationErrors).length > 0) {
+                setError('Please fix the validation errors before saving');
+                return;
+            }
+
             if (!goalDetails.currentWeight) {
                 setError('Current weight is required');
                 return;
@@ -324,13 +480,42 @@ const Goals = ({onBack, onGoalSet }) => {
 
             if (selectedGoal === 'gain_muscle' && !goalDetails.targetWeightGain) {
                 setError('Target weight gain is required');
-                return;
             }
 
             const userId = getCurrentUserId();
             if (!userId) {
                 setError('User not found. Please login again.');
                 return;
+            }
+
+            let finalValidation = { isValid: true };
+            if (selectedGoal === 'lose_weight') {
+                finalValidation = validateWeightLoss(goalDetails.currentWeight, goalDetails.targetWeightLoss);
+            } else if (selectedGoal === 'gain_muscle') {
+                finalValidation = validateWeightGain(goalDetails.targetWeightGain);
+            }
+
+            if (!finalValidation.isValid) {
+                setError(finalValidation.message);
+                return;
+            }
+
+            // Dacă e avertisment, întreabă utilizatorul
+            if (finalValidation.isWarning) {
+                const result = await Swal.fire({
+                    title: '⚠️ Safety Warning',
+                    text: finalValidation.message + ' Do you want to continue?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#f59e0b',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Continue Anyway',
+                    cancelButtonText: 'Cancel'
+                });
+
+                if (!result.isConfirmed) {
+                    return;
+                }
             }
 
             const goalData = {
@@ -347,16 +532,8 @@ const Goals = ({onBack, onGoalSet }) => {
 
             const response = await GoalsApi.createGoal(goalData);
             console.log('Goal created successfully:', response);
-            console.log('Backend calculated values:', {
-                dailyCalorieDeficit: response.dailyCalorieDeficit,
-                dailyCalorieSurplus: response.dailyCalorieSurplus,
-                weeklyWeightChange: response.weeklyWeightChange,
-                targetWeight: response.targetWeight
-            });
-
 
             await fetchUserGoals();
-
 
             if (onGoalSet) {
                 onGoalSet(response);
@@ -382,12 +559,13 @@ const Goals = ({onBack, onGoalSet }) => {
                 currentWeight: currentUser?.weightKg || ''
             });
             setSelectedGoal('');
+            setWarning('');
+            setValidationErrors({});
 
         } catch (err) {
             setError(err.message || 'Failed to save goal. Please check if the backend is running.');
             console.error('Error saving goal:', err);
 
-            // Handle authentication errors
             if (err.message.includes('Authentication failed') || err.message.includes('User not found')) {
                 localStorage.removeItem('workout_tracker_token');
                 localStorage.removeItem('userData');
@@ -398,6 +576,8 @@ const Goals = ({onBack, onGoalSet }) => {
             setLoading(false);
         }
     };
+
+
 
 
     const handleUpdateGoalStatus = async (goalId, newStatus) => {
@@ -665,7 +845,12 @@ const Goals = ({onBack, onGoalSet }) => {
                                 step="0.1"
                                 min="0"
                                 value={goalDetails.currentWeight}
-                                onChange={(e) => setGoalDetails({...goalDetails, currentWeight: e.target.value})}
+                                onChange={(e) => {
+                                    const value = parseFloat(e.target.value);
+                                    if (value >= 0 || e.target.value === '') {
+                                        setGoalDetails({...goalDetails, currentWeight: e.target.value})
+                                    }
+                                }}
                                 style={{
                                     width: '100%',
                                     padding: '16px',
@@ -699,21 +884,38 @@ const Goals = ({onBack, onGoalSet }) => {
                                     step="0.1"
                                     min="0"
                                     value={goalDetails.targetWeightLoss}
-                                    onChange={(e) => setGoalDetails({...goalDetails, targetWeightLoss: e.target.value})}
+                                    min="0"
+                                    max={goalDetails.currentWeight ? parseFloat(goalDetails.currentWeight) * 0.25 : undefined}
+                                    onChange={(e) => {
+                                        const value = parseFloat(e.target.value);
+                                        if (value >= 0 || e.target.value === '') {
+                                            setGoalDetails({...goalDetails, targetWeightLoss: e.target.value})
+                                        }
+                                    }}
                                     style={{
                                         width: '100%',
                                         padding: '16px',
-                                        border: '2px solid rgba(102, 126, 234, 0.1)',
                                         borderRadius: '12px',
                                         fontSize: '16px',
                                         fontWeight: '500',
                                         background: 'rgba(255,255,255,0.8)',
                                         transition: 'all 0.2s',
                                         outline: 'none',
-                                        boxSizing: 'border-box'
+                                        boxSizing: 'border-box',
+                                        border: validationErrors.targetWeightLoss ? '2px solid #ef4444' : '2px solid rgba(102, 126, 234, 0.1)',
                                     }}
                                     placeholder="How much weight do you want to lose?"
                                 />
+                                {validationErrors.targetWeightLoss && (
+                                    <div style={{
+                                        color: '#ef4444',
+                                        fontSize: '14px',
+                                        marginTop: '8px',
+                                        fontWeight: '500'
+                                    }}>
+                                        {validationErrors.targetWeightLoss}
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -734,21 +936,38 @@ const Goals = ({onBack, onGoalSet }) => {
                                     step="0.1"
                                     min="0"
                                     value={goalDetails.targetWeightGain}
-                                    onChange={(e) => setGoalDetails({...goalDetails, targetWeightGain: e.target.value})}
+                                    min="0"
+                                    max="25"
+                                    onChange={(e) => {
+                                        const value = parseFloat(e.target.value);
+                                        if (value >= 0 || e.target.value === '') {
+                                            setGoalDetails({...goalDetails, targetWeightGain: e.target.value})
+                                        }
+                                    }}
                                     style={{
                                         width: '100%',
                                         padding: '16px',
-                                        border: '2px solid rgba(102, 126, 234, 0.1)',
                                         borderRadius: '12px',
                                         fontSize: '16px',
                                         fontWeight: '500',
                                         background: 'rgba(255,255,255,0.8)',
                                         transition: 'all 0.2s',
                                         outline: 'none',
-                                        boxSizing: 'border-box'
+                                        boxSizing: 'border-box',
+                                        border: validationErrors.targetWeightGain ? '2px solid #ef4444' : '2px solid rgba(102, 126, 234, 0.1)',
                                     }}
                                     placeholder="How much muscle do you want to gain?"
                                 />
+                                {validationErrors.targetWeightGain && (
+                                    <div style={{
+                                        color: '#ef4444',
+                                        fontSize: '14px',
+                                        marginTop: '8px',
+                                        fontWeight: '500'
+                                    }}>
+                                        {validationErrors.targetWeightGain}
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -978,6 +1197,22 @@ const Goals = ({onBack, onGoalSet }) => {
                         fontWeight: '500'
                     }}>
                         {success}
+                    </div>
+                )}
+
+                {/* Warning message */}
+                {warning && (
+                    <div style={{
+                        background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.05))',
+                        border: '1px solid rgba(251, 191, 36, 0.2)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        marginBottom: '24px',
+                        color: '#d97706',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                    }}>
+                        {warning}
                     </div>
                 )}
 

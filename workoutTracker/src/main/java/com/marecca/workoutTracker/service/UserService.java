@@ -25,7 +25,6 @@ public class UserService {
         return userRepository.findById(id);
     }
 
-
     /**
      * Update user info
      * @param userId
@@ -52,7 +51,6 @@ public class UserService {
 
         return userRepository.save(existingUser);
     }
-
 
     /**
      * Register a new user with encrypted password
@@ -86,7 +84,6 @@ public class UserService {
                 return Optional.of(user);
             }
         }
-
         return Optional.empty();
     }
 

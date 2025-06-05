@@ -10,13 +10,12 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 
 @Component
-@Slf4j
 public class JwtUtil {
 
     @Value("${jwt.secret:mySecretKey12345678901234567890123456789012345678901234567890}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration:86400000}") // 24 hours in milliseconds
+    @Value("${jwt.expiration:86400000}") // 24 hours
     private long jwtExpiration;
 
     private SecretKey getSigningKey() {
@@ -62,7 +61,6 @@ public class JwtUtil {
                     .parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
-            log.error("JWT token validation failed: {}", e.getMessage());
             return false;
         }
     }

@@ -43,24 +43,5 @@ public class DashboardSummaryDTO {
     private BigDecimal lifetimeAvgDuration;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate firstWorkoutDate;
-
-    // Helper methods for frontend
-    public String getWeeklyAvgDurationFormatted() {
-        return weeklyAvgDuration != null ? weeklyAvgDuration + " min" : "0 min";
-    }
-
-    public String getMonthlyAvgDurationFormatted() {
-        return monthlyAvgDuration != null ? monthlyAvgDuration + " min" : "0 min";
-    }
-
-    public String getLifetimeAvgDurationFormatted() {
-        return lifetimeAvgDuration != null ? lifetimeAvgDuration + " min" : "0 min";
-    }
-
-    public String getCurrentStreakFormatted() {
-        return currentStreak != null ? currentStreak + " days" : "0 days";
-    }
-
-
 }
 

@@ -24,66 +24,7 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long> {
 
     Page<Exercise> findByCategory(ExerciseCategoryType category, Pageable pageable);
 
-    List<Exercise> findByDifficultyLevel(Integer difficultyLevel);
-
     List<Exercise> findByExerciseNameContainingIgnoreCase(String name);
 
     List<Exercise> findByDifficultyLevelLessThanEqual(Integer difficultyLevel);
-
-    List<Exercise> findByDifficultyLevelGreaterThanEqual(Integer difficultyLevel);
-
-    boolean existsByExerciseName(String exerciseName);
-
-    long countByCategory(ExerciseCategoryType category);
-
-    long countByPrimaryMuscleGroup(MuscleGroupType muscleGroup);
-
-    @Query(value = "SELECT * FROM exercises ORDER BY created_at DESC LIMIT ?1", nativeQuery = true)
-    List<Exercise> findMostPopularExercises(int limit);
-
-    @Query("SELECT e FROM Exercise e WHERE e.primaryMuscleGroup = :muscleGroup AND e.category = :category AND e.exerciseId != :excludeId")
-    List<Exercise> findSimilarExercises(@Param("muscleGroup") MuscleGroupType muscleGroup,
-                                        @Param("category") ExerciseCategoryType category,
-                                        @Param("excludeId") Long excludeId,
-                                        Pageable pageable);
-
-    @Query("SELECT e FROM Exercise e WHERE e.category = :category ORDER BY e.createdAt DESC")
-    List<Exercise> findPopularExercisesByCategory(@Param("category") String category);
-
-    @Query(value = "SELECT * FROM exercises ORDER BY created_at DESC LIMIT ?1", nativeQuery = true)
-    List<Exercise> findMostLoggedExercises(int limit);
-
-    @Query("SELECT e FROM Exercise e")
-    List<Exercise> findUnusedExercises();
-
-    @Query(value = "SELECT COUNT(DISTINCT wp.id) " +
-            "FROM workout_plans wp " +
-            "JOIN workout_plan_exercises wpe ON wp.id = wpe.workout_plan_id " +
-            "WHERE wpe.exercise_id = :exerciseId",
-            nativeQuery = true)
-    long countWorkoutPlansUsingExercise(@Param("exerciseId") Long exerciseId);
-
-    @Query("SELECT e FROM Exercise e WHERE e.secondaryMuscleGroups IN :muscleGroups")
-    List<Exercise> findBySecondaryMuscleGroupsIn(@Param("muscleGroups") String[] muscleGroups);
-
-    @Query("SELECT e FROM Exercise e WHERE " +
-            "(:category IS NULL OR e.category = :category) AND " +
-            "(:muscleGroup IS NULL OR e.primaryMuscleGroup = :muscleGroup) AND " +
-            "(:maxDifficulty IS NULL OR e.difficultyLevel <= :maxDifficulty) AND " +
-            "(:equipment IS NULL OR e.equipment LIKE CONCAT('%', :equipment, '%'))")
-    List<Exercise> findFilteredExercises(@Param("category") ExerciseCategoryType category,
-                                         @Param("muscleGroup") MuscleGroupType muscleGroup,
-                                         @Param("maxDifficulty") Integer maxDifficulty,
-                                         @Param("equipment") String equipment);
-
-    @Query(value = "SELECT * FROM exercises e WHERE " +
-            "(:keyword IS NULL OR LOWER(e.exercise_name) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
-            "(:category IS NULL OR e.category = CAST(:category AS exercise_category_type)) AND " +
-            "(:muscleGroup IS NULL OR e.primary_muscle_group = CAST(:muscleGroup AS muscle_group_type) OR :muscleGroup = ANY(e.secondary_muscle_groups)) AND " +
-            "(:maxDifficulty IS NULL OR e.difficulty_level <= :maxDifficulty)", nativeQuery = true)
-    Page<Exercise> searchExercises(@Param("keyword") String keyword,
-                                   @Param("category") String category,
-                                   @Param("muscleGroup") String muscleGroup,
-                                   @Param("maxDifficulty") Integer maxDifficulty,
-                                   Pageable pageable);
 }
