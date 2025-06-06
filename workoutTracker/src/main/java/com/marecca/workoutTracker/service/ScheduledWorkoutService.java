@@ -10,7 +10,6 @@ import com.marecca.workoutTracker.repository.WorkoutPlanRepository;
 import com.marecca.workoutTracker.service.exceptions.UserNotFoundException;
 import com.marecca.workoutTracker.service.exceptions.WorkoutAlreadyScheduledException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.marecca.workoutTracker.service.exceptions.WorkoutPlanNotFoundException;
@@ -152,7 +151,7 @@ public class ScheduledWorkoutService {
 
 
     @Transactional
-    public List<ScheduledWorkout> findTodaysWorkouts(Long userId) {
+    public List<ScheduledWorkout> MissedWorkouts(Long userId) {
         validateUserExists(userId);
 
         List<ScheduledWorkout> workouts = scheduledWorkoutRepository.findTodaysWorkoutsForUser(userId);

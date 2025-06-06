@@ -2,7 +2,6 @@ package com.marecca.workoutTracker.controller;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.marecca.workoutTracker.dto.response.AvailabilityResponse;
-import com.marecca.workoutTracker.dto.response.ErrorResponse;
 import com.marecca.workoutTracker.dto.request.RescheduleWorkoutRequest;
 import com.marecca.workoutTracker.dto.response.SuccessResponse;
 import com.marecca.workoutTracker.entity.ScheduledWorkout;
@@ -129,7 +128,7 @@ public class ScheduledWorkoutController {
                 return jwtUtils.createErrorResponse("You can only access your own workouts", HttpStatus.FORBIDDEN);
             }
 
-            List<ScheduledWorkout> workouts = scheduledWorkoutService.findTodaysWorkouts(authenticatedUserId);
+            List<ScheduledWorkout> workouts = scheduledWorkoutService.MissedWorkouts(authenticatedUserId);
             return ResponseEntity.ok(workouts);
         } catch (Exception e) {
             log.error("Authentication error: {}", e.getMessage());
