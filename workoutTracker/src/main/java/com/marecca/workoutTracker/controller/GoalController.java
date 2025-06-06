@@ -22,7 +22,6 @@ import java.util.*;
 @RequestMapping("/api/goals")
 @CrossOrigin(origins = "http://localhost:3000")
 @RequiredArgsConstructor
-@Slf4j
 public class GoalController {
 
     private final GoalService goalService;
@@ -165,7 +164,7 @@ public class GoalController {
             boolean isUserGoal = userGoals.stream().anyMatch(g -> g.getGoalId().equals(goalId));
 
             if (!isUserGoal) {
-                log.warn("User {} attempted to delete goal {} that they don't own", authenticatedUserId, goalId);
+
                 return jwtUtils.createErrorResponse("You can only delete your own goals", HttpStatus.FORBIDDEN);
             }
 
@@ -217,8 +216,9 @@ public class GoalController {
                     achievements.add(achievement);
                 }
             } catch (Exception e) {
-                log.warn("Could not fetch completed goals: {}", e.getMessage());
+                System.out.println("An error occurred: " + e.getMessage());
             }
+
 
             Map<String, Object> response = new HashMap<>();
             response.put("completedGoals", achievements);

@@ -29,7 +29,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
-@Slf4j
 public class DashboardController {
 
     private final DashboardService dashboardService;
@@ -184,7 +183,7 @@ public class DashboardController {
                     achievements.add(achievement);
                 }
             } catch (Exception e) {
-                log.warn("Could not fetch completed workouts: {}", e.getMessage());
+                System.out.println("An error occurred: " + e.getMessage());
             }
 
             //sorting after recency
