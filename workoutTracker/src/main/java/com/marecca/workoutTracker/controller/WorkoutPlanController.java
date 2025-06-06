@@ -21,10 +21,6 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Controller for managing workout plans - JWT Protected
- * Provides endpoints for creating, updating and viewing workout plans
- */
 @RestController
 @RequestMapping("/api/workout-plans")
 @RequiredArgsConstructor
@@ -35,7 +31,7 @@ public class WorkoutPlanController {
     private final JwtControllerUtils jwtUtils;
 
     /**
-     * Create a new workout plan (requires authentication)
+     * Create a new workout plan
      */
     @PostMapping
     public ResponseEntity<?> createWorkoutPlan(@Valid @RequestBody CreateWorkoutPlanRequest request,
@@ -85,7 +81,7 @@ public class WorkoutPlanController {
     }
 
     /**
-     * Find all plans for a user (requires authentication)
+     * Find all plans for a user
      */
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getUserWorkoutPlans(@PathVariable Long userId, HttpServletRequest request) {
@@ -105,7 +101,7 @@ public class WorkoutPlanController {
     }
 
     /**
-     * Find a specific plan with all exercise details (requires authentication)
+     * Find a specific plan with all exercise details
      */
     @GetMapping("/{planId}")
     public ResponseEntity<?> getWorkoutPlanDetails(@PathVariable Long planId, HttpServletRequest request) {
@@ -137,7 +133,7 @@ public class WorkoutPlanController {
     }
 
     /**
-     * Update a workout plan (requires authentication)
+     * Update a workout plan
      */
     @PutMapping("/{planId}")
     public ResponseEntity<?> updateWorkoutPlan(
@@ -180,7 +176,7 @@ public class WorkoutPlanController {
     }
 
     /**
-     * Delete a workout plan (requires authentication)
+     * Delete a workout plan
      */
     @DeleteMapping("/{planId}")
     public ResponseEntity<?> deleteWorkoutPlan(@PathVariable Long planId, HttpServletRequest request) {
@@ -209,7 +205,7 @@ public class WorkoutPlanController {
     }
 
     /**
-     * Add an exercise to an existing plan (requires authentication)
+     * Add an exercise to an existing plan
      */
     @PostMapping("/{planId}/exercises")
     public ResponseEntity<?> addExerciseToWorkoutPlan(
@@ -240,7 +236,7 @@ public class WorkoutPlanController {
     }
 
     /**
-     * Remove an exercise from plan (requires authentication)
+     * Remove an exercise from plan
      */
     @DeleteMapping("/{planId}/exercises/{detailId}")
     public ResponseEntity<?> removeExerciseFromWorkoutPlan(
@@ -271,7 +267,7 @@ public class WorkoutPlanController {
     }
 
     /**
-     * Get current user's workout plans (convenience endpoint)
+     * Get current user's workout plans
      */
     @GetMapping("/my-plans")
     public ResponseEntity<?> getMyWorkoutPlans(HttpServletRequest request) {

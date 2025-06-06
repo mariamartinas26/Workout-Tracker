@@ -74,7 +74,7 @@ public class GoalController {
     }
 
     /**
-     * Get a specific goal by ID (requires authentication)
+     * Get a specific goal by ID
      */
     @GetMapping("/{goalId}")
     public ResponseEntity<?> getGoal(@PathVariable Long goalId, HttpServletRequest request) {
@@ -104,7 +104,7 @@ public class GoalController {
     }
 
     /**
-     * Update goal status (requires authentication)
+     * Update goal status
      */
     @PutMapping("/{goalId}/status")
     public ResponseEntity<?> updateGoalStatus(@PathVariable Long goalId,
@@ -146,7 +146,7 @@ public class GoalController {
     }
 
     /**
-     * Delete a goal (requires authentication)
+     * Delete a goal
      */
     @DeleteMapping("/{goalId}")
     public ResponseEntity<?> deleteGoal(@PathVariable Long goalId, HttpServletRequest request) {
@@ -184,7 +184,6 @@ public class GoalController {
 
     /**
      * Get completed goals as achievements for authenticated user
-     * Endpoint: GET /api/goals/achievements/completed-goals
      */
     @GetMapping("/achievements/completed-goals")
     public ResponseEntity<?> getCompletedGoalsAchievements(

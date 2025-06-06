@@ -41,7 +41,7 @@ public class DashboardController {
     private ScheduledWorkoutRepository scheduledWorkoutRepository;
 
     /**
-     * Get complete dashboard summary for authenticated user
+     * Get complete dashboard summary
      */
     @GetMapping("/summary")
     public ResponseEntity<?> getDashboardSummary(HttpServletRequest request) {
@@ -57,7 +57,7 @@ public class DashboardController {
     }
 
     /**
-     * Get workout calendar data for authenticated user
+     * Get workout calendar data
      */
     @GetMapping("/calendar")
     public ResponseEntity<?> getWorkoutCalendar(
@@ -86,7 +86,7 @@ public class DashboardController {
     }
 
     /**
-     * Get workout trends for authenticated user
+     * Get workout trends
      */
     @GetMapping("/trends")
     public ResponseEntity<?> getWorkoutTrends(
@@ -127,7 +127,7 @@ public class DashboardController {
     }
 
     /**
-     * Get workout type breakdown for authenticated user
+     * Get workout type breakdown
      */
     @GetMapping("/workout-types")
     public ResponseEntity<?> getWorkoutTypeBreakdown(
@@ -152,8 +152,7 @@ public class DashboardController {
     }
 
     /**
-     * Get recent achievements for authenticated user
-     * Returns only workout achievements - goal achievements are handled by GoalController
+     * Get recent achievements
      */
     @GetMapping("/achievements")
     public ResponseEntity<?> getRecentAchievements(HttpServletRequest request, @RequestParam(defaultValue = "30") Integer daysBack) {
@@ -206,7 +205,7 @@ public class DashboardController {
     }
 
     /**
-     * Get quick statistics for authenticated user
+     * Get quick statistics
      */
     @GetMapping("/quick-stats")
     public ResponseEntity<?> getQuickStats(HttpServletRequest request) {

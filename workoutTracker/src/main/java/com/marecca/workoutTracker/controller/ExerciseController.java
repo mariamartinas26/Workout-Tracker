@@ -72,8 +72,7 @@ public class ExerciseController {
     }
 
     /**
-     * Find exercises by category (authenticated)
-     * GET /api/exercises/category/{category}
+     * Find exercises by category
      */
     @GetMapping("/category/{category}")
     public ResponseEntity<?> getExercisesByCategory(
@@ -95,8 +94,7 @@ public class ExerciseController {
     }
 
     /**
-     * Find exercises by primary muscle group (authenticated)
-     * GET /api/exercises/muscle-group/{muscleGroup}
+     * Find exercises by primary muscle group
      */
     @GetMapping("/muscle-group/{muscleGroup}")
     public ResponseEntity<?> getExercisesByMuscleGroup(
@@ -118,8 +116,7 @@ public class ExerciseController {
     }
 
     /**
-     * Find exercises by any muscle group (authenticated)
-     * GET /api/exercises/any-muscle-group/{muscleGroup}
+     * Find exercises by any muscle group
      */
     @GetMapping("/any-muscle-group/{muscleGroup}")
     public ResponseEntity<?> getExercisesByAnyMuscleGroup(
@@ -137,8 +134,7 @@ public class ExerciseController {
     }
 
     /**
-     * Simple search by name (authenticated)
-     * GET /api/exercises/search-by-name
+     * Simple search by name
      */
     @GetMapping("/search-by-name")
     public ResponseEntity<?> searchExercisesByName(

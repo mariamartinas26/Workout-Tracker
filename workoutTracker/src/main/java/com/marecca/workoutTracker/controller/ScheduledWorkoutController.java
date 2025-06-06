@@ -26,9 +26,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Controller for managing scheduled workouts - JWT Protected
- */
+
 @RestController
 @RequestMapping("/api/scheduled-workouts")
 @RequiredArgsConstructor
@@ -38,7 +36,7 @@ public class ScheduledWorkoutController {
     private final JwtControllerUtils jwtUtils;
 
     /**
-     * Schedule a new workout (requires authentication)
+     * Schedule a new workout
      */
     @PostMapping("/schedule")
     public ResponseEntity<?> scheduleWorkout(@Valid @RequestBody ScheduleWorkoutRequest request, HttpServletRequest httpRequest) {
@@ -85,7 +83,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Find all scheduled workouts for a user (requires authentication)
+     * Find all scheduled workouts for a user
      */
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getUserWorkouts(@PathVariable Long userId, HttpServletRequest request) {
@@ -104,7 +102,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Shows the scheduled workouts for today for a user (requires authentication)
+     * Shows the scheduled workouts for today for a user
      */
     @GetMapping("/user/{userId}/today")
     public ResponseEntity<?> getTodaysWorkouts(@PathVariable Long userId, HttpServletRequest request) {
@@ -123,7 +121,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Start a workout (requires authentication)
+     * Start a workout
      */
     @PutMapping("/{workoutId}/start")
     public ResponseEntity<?> startWorkout(@PathVariable Long workoutId, HttpServletRequest request) {
@@ -155,7 +153,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Complete a workout (requires authentication)
+     * Complete a workout
      */
     @PutMapping("/{workoutId}/complete")
     public ResponseEntity<?> completeWorkout(
@@ -194,7 +192,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Cancel a workout (requires authentication)
+     * Cancel a workout
      */
     @PutMapping("/{workoutId}/cancel")
     public ResponseEntity<?> cancelWorkout(@PathVariable Long workoutId, HttpServletRequest request) {
@@ -275,7 +273,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Shows how many completed workouts are for a user (requires authentication)
+     * Shows how many completed workouts are for a user
      */
     @GetMapping("/user/{userId}/statistics")
     public ResponseEntity<?> getUserStatistics(@PathVariable Long userId, HttpServletRequest request) {
@@ -294,7 +292,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Reschedule an existing workout (requires authentication)
+     * Reschedule an existing workout
      */
     @PutMapping("/{workoutId}/reschedule")
     public ResponseEntity<?> rescheduleWorkout(
@@ -334,7 +332,7 @@ public class ScheduledWorkoutController {
     }
 
     /**
-     * Get current user's workouts (convenience endpoint)
+     * Get current user's workouts
      */
     @GetMapping("/my-workouts")
     public ResponseEntity<?> getMyWorkouts(HttpServletRequest request) {
