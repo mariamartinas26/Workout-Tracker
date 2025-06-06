@@ -1849,49 +1849,6 @@ const PlanWorkout = ({ isOpen, onClose }) => {
                                 gap: '12px',
                                 flexWrap: 'wrap'
                             }}>
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const planDetails = await WorkoutPlanService.getWorkoutPlanById(selectedPlan.workoutPlanId);
-                                            console.log('Plan details with exercises:', planDetails);
-
-                                        } catch (error) {
-                                            console.error('Error loading plan details:', error);
-
-                                        }
-                                    }}
-                                    style={{
-                                        background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '10px 16px',
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        fontSize: '14px',
-                                        fontWeight: '600'
-                                    }}
-                                >
-                                     View Exercises
-                                </button>
-
-                                <button
-                                    onClick={() => {
-                                        console.log('Edit plan:', selectedPlan.workoutPlanId);
-
-                                    }}
-                                    style={{
-                                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '10px 16px',
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        fontSize: '14px',
-                                        fontWeight: '600'
-                                    }}
-                                >
-                                    Edit Plan
-                                </button>
 
                                 <button
                                     onClick={async () => {
